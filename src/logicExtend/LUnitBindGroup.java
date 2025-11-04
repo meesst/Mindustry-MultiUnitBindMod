@@ -6,6 +6,7 @@ import arc.struct.Seq;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.UnitType;
+import mindustry.game.Team;
 
 public class LUnitBindGroup {
     
@@ -63,7 +64,7 @@ public class LUnitBindGroup {
         private final LVar indexVar;
         
         // 存储每个逻辑控制器的单位组和当前索引
-        private static final ObjectMap<LogicControllable, UnitGroupInfo> groups = new ObjectMap<>();
+        private static final ObjectMap<Building, UnitGroupInfo> groups = new ObjectMap<>();
         
         public UnitBindGroupInstruction(LVar unitType, LVar count, LVar unitVar, LVar indexVar) {
             this.unitType = unitType;
@@ -75,7 +76,7 @@ public class LUnitBindGroup {
         @Override
         public void run(LExecutor exec) {
             // 获取当前逻辑控制器
-            LogicControllable controller = exec.build;
+            Building controller = exec.build;
             
             // 获取或创建单位组信息
             UnitGroupInfo info = groups.get(controller);
@@ -100,17 +101,17 @@ public class LUnitBindGroup {
                 Unit unit = info.units.get(info.currentIndex);
                 
                 // 写入返回变量
-                exec.setVariable(unitVar.name, unit);
+                exec.set(unitVar.name, unit);
                 
                 // 如果指定了索引变量，写入单位索引
                 if (indexVar != null) {
-                    exec.setVariable(indexVar.name, info.currentIndex + 1); // 从1开始计数
+                    exec.set(indexVar.name, info.currentIndex + 1); // 从1开始计数
                 }
             } else {
                 // 没有找到单位，清空返回变量
-                exec.setVariable(unitVar.name, null);
+                exec.set(unitVar.name, null);
                 if (indexVar != null) {
-                    exec.setVariable(indexVar.name, 0);
+                    exec.set(indexVar.name, 0);
                 }
             }
         }
