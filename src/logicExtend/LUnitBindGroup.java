@@ -233,12 +233,46 @@ public class LUnitBindGroup {
         private Seq<Unit> collectAvailableUnits(Object typeObj, Team team, Building controller) {
             Seq<Unit> result = new Seq<>();
             
+            // 获取所有单位池信息，用于检查单位是否已被其他控制器占用
+            ObjectMap<Building, UnitGroupInfo> allGroups = groups;
+            
             if (typeObj instanceof UnitType type && type.logicControllable) {
                 // 针对特定单位类型
                 Seq<Unit> units = team.data().unitCache(type);
                 if (units != null) {
                     for (Unit unit : units) {
-                        if (isValidAndNotControlled(unit, controller)) {
+                        // 先检查基本条件
+                        if (!unit.isValid() || unit.team != team || unit.dead || unit.isPlayer()) continue;
+                        
+                        // 检查单位是否被当前控制器控制或未被控制
+                        boolean isAvailable = true;
+                        
+                        // 检查单位是否被当前LogicAI控制
+                        if (unit.controller() instanceof LogicAI) {
+                            LogicAI logicAI = (LogicAI)unit.controller();
+                            // 只有当单位未被任何控制器控制或被当前控制器控制时才可用
+                            isAvailable = logicAI.controller == null || logicAI.controller == controller;
+                        } 
+                        // 检查单位是否被Building控制器控制
+                        else if (unit.controller() instanceof Building) {
+                            isAvailable = ((Building)unit.controller()) == controller;
+                        }
+                        
+                        // 检查单位是否已被其他控制器的单位池包含
+                        if (isAvailable) {
+                            for (Building otherController : allGroups.keys()) {
+                                // 跳过当前控制器
+                                if (otherController == controller) continue;
+                                
+                                UnitGroupInfo otherInfo = allGroups.get(otherController);
+                                if (otherInfo != null && otherInfo.units.contains(unit)) {
+                                    isAvailable = false;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (isAvailable) {
                             result.add(unit);
                         }
                     }
@@ -246,7 +280,41 @@ public class LUnitBindGroup {
             } else if (typeObj instanceof String && ((String)typeObj).equals("@poly")) {
                 // 处理@poly类型，表示任意可控制单位
                 for (Unit unit : team.data().units) {
-                    if (unit.type.logicControllable && isValidAndNotControlled(unit, controller)) {
+                    // 确保单位可以被逻辑控制
+                    if (!unit.type.logicControllable) continue;
+                    
+                    // 先检查基本条件
+                    if (!unit.isValid() || unit.team != team || unit.dead || unit.isPlayer()) continue;
+                    
+                    // 检查单位是否被当前控制器控制或未被控制
+                    boolean isAvailable = true;
+                    
+                    // 检查单位是否被当前LogicAI控制
+                    if (unit.controller() instanceof LogicAI) {
+                        LogicAI logicAI = (LogicAI)unit.controller();
+                        // 只有当单位未被任何控制器控制或被当前控制器控制时才可用
+                        isAvailable = logicAI.controller == null || logicAI.controller == controller;
+                    } 
+                    // 检查单位是否被Building控制器控制
+                    else if (unit.controller() instanceof Building) {
+                        isAvailable = ((Building)unit.controller()) == controller;
+                    }
+                    
+                    // 检查单位是否已被其他控制器的单位池包含
+                    if (isAvailable) {
+                        for (Building otherController : allGroups.keys()) {
+                            // 跳过当前控制器
+                            if (otherController == controller) continue;
+                            
+                            UnitGroupInfo otherInfo = allGroups.get(otherController);
+                            if (otherInfo != null && otherInfo.units.contains(unit)) {
+                                isAvailable = false;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (isAvailable) {
                         result.add(unit);
                     }
                 }
@@ -258,27 +326,28 @@ public class LUnitBindGroup {
         // 检查单位是否有效且未被其他处理器控制
         private boolean isValidAndNotControlled(Unit unit, Building controller) {
             if (!unit.isValid() || unit.team != controller.team) return false;
-            
+
             // 检查单位是否死亡
             if (unit.dead) return false;
-            
+
             // 检查单位是否被玩家控制
             if (unit.isPlayer()) return false;
-            
+
             // 检查单位是否被其他处理器控制
-            // 处理LogicAI控制器的情况
+            // 关键修复：确保正确识别单位是否被其他LogicAI控制器控制
             if (unit.controller() instanceof LogicAI) {
                 LogicAI logicAI = (LogicAI)unit.controller();
-                return logicAI.controller == null || logicAI.controller == controller;
+                // 只有当单位被当前控制器控制或未被任何控制器控制时才返回true
+                return logicAI.controller == controller;
             }
-            
+
             // 处理Building控制器的情况
             if (unit.controller() instanceof Building) {
                 Building controllingBuilding = (Building)unit.controller();
                 return controllingBuilding == controller;
             }
-            
-            // 单位未被控制
+
+            // 单位未被控制，可供当前控制器使用
             return true;
         }
         
