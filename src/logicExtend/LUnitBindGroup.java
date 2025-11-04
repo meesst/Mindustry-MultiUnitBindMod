@@ -156,8 +156,8 @@ public class LUnitBindGroup {
             Object typeObj = unitType.obj();
             int maxCount = Math.max(1, (int)count.num());
             
-            // 确保单位组是最新的
-            updateUnitGroup(info, typeObj, maxCount, exec.team);
+            // 确保单位组是最新的，传入控制器信息用于状态检查
+            updateUnitGroup(info, typeObj, maxCount, exec.team, controller);
             
             // 循环遍历单位组
             if (!info.units.isEmpty()) {
@@ -184,21 +184,133 @@ public class LUnitBindGroup {
         }
         
         // 更新单位组
-        private void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team) {
-            // 清除无效单位并重新填充
-            info.units.clear();
+        private void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller) {
+            // 记录更新前的单位数量，用于检测变化
+            int previousSize = info.units.size;
             
-            if (typeObj instanceof UnitType type && type.logicControllable) {
-                Seq<Unit> units = team.data().unitCache(type);
-                if (units != null) {
-                    for (Unit unit : units) {
-                        if (unit.isValid() && unit.team == team) {
-                            info.units.add(unit);
-                            if (info.units.size >= maxCount) break;
-                        }
+            // 彻底清理无效单位，确保只保留符合所有条件的单位
+            Seq<Unit> validUnits = new Seq<>();
+            for (Unit unit : info.units) {
+                // 全面检查单位状态
+                if (isValidAndNotControlled(unit, controller)) {
+                    validUnits.add(unit);
+                    // 重新锁定有效的单位，确保控制关系持续存在
+                    lockUnit(unit, controller);
+                }
+            }
+            info.units = validUnits;
+            
+            // 检查是否有单位数量减少或状态变化
+            boolean needSupplementation = info.units.size < previousSize || info.units.size < maxCount;
+            
+            // 如果需要补充单位
+            if (needSupplementation) {
+                // 获取符合条件的所有可用单位
+                Seq<Unit> availableUnits = collectAvailableUnits(typeObj, team, controller);
+                
+                // 从可用单位中补充到单位池
+                int needed = maxCount - info.units.size;
+                int added = 0;
+                
+                for (Unit unit : availableUnits) {
+                    // 确保单位尚未在池中
+                    if (!info.units.contains(unit)) {
+                        info.units.add(unit);
+                        // 锁定新加入的单位
+                        lockUnit(unit, controller);
+                        added++;
+                        
+                        if (added >= needed) break;
                     }
                 }
             }
+        }
+        
+        // 收集所有符合条件的可用单位
+        private Seq<Unit> collectAvailableUnits(Object typeObj, Team team, Building controller) {
+            Seq<Unit> result = new Seq<>();
+            
+            if (typeObj instanceof UnitType type && type.logicControllable) {
+                // 针对特定单位类型
+                Seq<Unit> units = team.data().unitCache(type);
+                if (units != null) {
+                    for (Unit unit : units) {
+                        if (isValidAndNotControlled(unit, controller)) {
+                            result.add(unit);
+                        }
+                    }
+                }
+            } else if (typeObj instanceof String && ((String)typeObj).equals("@poly")) {
+                // 处理@poly类型，表示任意可控制单位
+                for (Unit unit : team.data().units) {
+                    if (unit.type.logicControllable && isValidAndNotControlled(unit, controller)) {
+                        result.add(unit);
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
+        // 检查单位是否有效且未被其他处理器控制
+        private boolean isValidAndNotControlled(Unit unit, Building controller) {
+            if (!unit.isValid() || unit.team != controller.team) return false;
+            
+            // 检查单位是否死亡（@dead）
+            if (unit.dead) return false;
+            
+            // 检查单位是否被玩家附身
+            if (unit.isPlayer()) return false;
+            
+            // 检查单位是否被玩家操控（处于编队中）
+            if (unit.playerControlled) return false;
+            
+            // 检查单位是否被其他处理器控制（@controlled）
+            Building controlling = unit.controller() instanceof Building ? (Building)unit.controller() : null;
+            return controlling == null || controlling == controller;
+        }
+        
+        // 锁定单位，防止被其他处理器控制
+        private void lockUnit(Unit unit, Building controller) {
+            if (!unit.isValid()) return;
+            
+            // 首先确保单位的控制器设置为当前处理器
+            unit.takeControl(controller);
+            
+            // 实现类似ucontrol within 0 0 0 0 0的锁定效果
+            // 设置单位的控制目标为处理器位置，创建一个控制区域
+            unit.command().commandPosition(controller.x, controller.y);
+            
+            // 记录锁定状态，用于后续验证
+            if (unit.getFlag(UnitFlag.controlLock) != controller.id) {
+                unit.setFlag(UnitFlag.controlLock, controller.id);
+            }
+        }
+        
+        // 增强版单位有效性检查，包含锁定状态验证
+        private boolean isValidAndNotControlled(Unit unit, Building controller) {
+            if (!unit.isValid() || unit.team != controller.team) return false;
+            
+            // 检查单位是否死亡（@dead）
+            if (unit.dead) return false;
+            
+            // 检查单位是否被玩家附身
+            if (unit.isPlayer()) return false;
+            
+            // 检查单位是否被玩家操控（处于编队中）
+            if (unit.playerControlled) return false;
+            
+            // 检查单位是否被其他处理器控制（@controlled）
+            Building controlling = unit.controller() instanceof Building ? (Building)unit.controller() : null;
+            
+            // 检查锁定标志，确保单位属于当前控制器
+            long lockId = unit.getFlag(UnitFlag.controlLock);
+            boolean isLockedByThisController = lockId == controller.id;
+            
+            // 两种情况认为单位可用：
+            // 1. 单位未被任何处理器控制
+            // 2. 单位已被当前处理器控制（通过controller或锁定标志）
+            return controlling == null || controlling == controller || isLockedByThisController;
         }
     }
     
