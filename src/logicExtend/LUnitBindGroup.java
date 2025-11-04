@@ -47,7 +47,7 @@ public class LUnitBindGroup {
         public void build(Table table) {
             // 单位类型参数
             Cell<Label> typeLabel = table.add("type");
-            tooltip(typeLabel, "单位类型: 指定要绑定的单位类型，@poly表示任意类型");
+            // 移除错误的悬浮提示，与原始unit bind功能保持一致
             
             TextField field = field(table, unitType, str -> unitType = str).get();
             
