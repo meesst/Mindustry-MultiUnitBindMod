@@ -1,19 +1,50 @@
 package logicExtend;
 
 import arc.scene.ui.layout.Table;
+import arc.scene.ui.layout.Cell;
+import arc.scene.ui.Label;
+import arc.scene.ui.TextField;
+import arc.scene.ui.ImageButton;
+import arc.graphics.g2d.TextureRegionDrawable;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.UnitType;
 import mindustry.game.Team;
-import mindustry.annotations.Annotations.RegisterStatement;
+import mindustry.Vars;
+import mindustry.ui.Styles;
+import mindustry.annotations.*;
+import mindustry.ui.dialogs.BaseDialog;
 
 public class LUnitBindGroup {
+    // 常量定义
+    private static final float iconSmall = 24f;
     
     @RegisterStatement("ubindgroup")
     public static class UnitBindGroupStatement extends LStatement {
         public String unitType = "@poly", count = "10", unitVar = "currentUnit", indexVar = "unitIndex";
+        
+        // 实现tooltip方法，用于为标签添加悬浮提示
+        private void tooltip(Cell<Label> labelCell, String text) {
+            if (labelCell != null && labelCell.get() != null) {
+                labelCell.tooltip(text);
+            }
+        }
+        
+        // 实现showSelectTable方法，用于显示单位类型选择对话框
+        private void showSelectTable(Cell<?> button, UnitTypeSelectListener listener) {
+            BaseDialog dialog = new BaseDialog("选择单位类型");
+            dialog.addCloseButton();
+            
+            listener.build(dialog.cont, () -> dialog.hide());
+            dialog.show();
+        }
+        
+        // 接口定义，用于构建选择表格内容
+        private interface UnitTypeSelectListener {
+            void build(Table table, Runnable hide);
+        }
         
         @Override
         public void build(Table table) {
