@@ -101,17 +101,17 @@ public class LUnitBindGroup {
                 Unit unit = info.units.get(info.currentIndex);
                 
                 // 写入返回变量
-                exec.set(unitVar.name, unit);
+                exec.vars.put(unitVar.name, unit);
                 
                 // 如果指定了索引变量，写入单位索引
                 if (indexVar != null) {
-                    exec.set(indexVar.name, info.currentIndex + 1); // 从1开始计数
+                    exec.vars.put(indexVar.name, (double)(info.currentIndex + 1)); // 从1开始计数
                 }
             } else {
                 // 没有找到单位，清空返回变量
-                exec.set(unitVar.name, null);
+                exec.vars.put(unitVar.name, null);
                 if (indexVar != null) {
-                    exec.set(indexVar.name, 0);
+                    exec.vars.put(indexVar.name, 0.0);
                 }
             }
         }
