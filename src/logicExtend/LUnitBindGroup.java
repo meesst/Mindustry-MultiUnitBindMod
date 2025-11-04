@@ -6,6 +6,7 @@ import arc.scene.ui.Label;
 import arc.scene.ui.TextField;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
+import arc.scene.style.TextureRegionDrawable;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.UnitType;
@@ -59,7 +60,7 @@ public class LUnitBindGroup {
                         int c = 0;
                         for(UnitType item : Vars.content.units()){
                             if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                            i.button(item.uiIcon, Styles.flati, iconSmall, () -> {
+                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
                                 unitType = "@" + item.name;
                                 field.setText(unitType);
                                 hide.run();
