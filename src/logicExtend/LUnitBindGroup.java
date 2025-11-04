@@ -270,47 +270,33 @@ public class LUnitBindGroup {
             return controlling == null || controlling == controller;
         }
         
-        // 锁定单位，防止被其他处理器控制
+        // 锁定单位，与ucontrol within指令效果相似
         private void lockUnit(Unit unit, Building controller) {
             if (!unit.isValid()) return;
             
-            // 首先确保单位的控制器设置为当前处理器
+            // 设置单位的控制器为当前处理器，与ucontrol指令效果一致
             unit.takeControl(controller);
             
-            // 实现类似ucontrol within 0 0 0 0 0的锁定效果
-            // 设置单位的控制目标为处理器位置，创建一个控制区域
+            // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
             unit.command().commandPosition(controller.x, controller.y);
-            
-            // 记录锁定状态，用于后续验证
-            if (unit.getFlag(UnitFlag.controlLock) != controller.id) {
-                unit.setFlag(UnitFlag.controlLock, controller.id);
-            }
         }
         
-        // 增强版单位有效性检查，包含锁定状态验证
+        // 检查单位是否有效且可被当前处理器控制
         private boolean isValidAndNotControlled(Unit unit, Building controller) {
             if (!unit.isValid() || unit.team != controller.team) return false;
             
-            // 检查单位是否死亡（@dead）
+            // 检查单位是否死亡
             if (unit.dead) return false;
             
             // 检查单位是否被玩家附身
             if (unit.isPlayer()) return false;
             
-            // 检查单位是否被玩家操控（处于编队中）
+            // 检查单位是否被玩家操控
             if (unit.playerControlled) return false;
             
-            // 检查单位是否被其他处理器控制（@controlled）
+            // 单位可用的条件：未被任何处理器控制，或已被当前处理器控制
             Building controlling = unit.controller() instanceof Building ? (Building)unit.controller() : null;
-            
-            // 检查锁定标志，确保单位属于当前控制器
-            long lockId = unit.getFlag(UnitFlag.controlLock);
-            boolean isLockedByThisController = lockId == controller.id;
-            
-            // 两种情况认为单位可用：
-            // 1. 单位未被任何处理器控制
-            // 2. 单位已被当前处理器控制（通过controller或锁定标志）
-            return controlling == null || controlling == controller || isLockedByThisController;
+            return controlling == null || controlling == controller;
         }
     }
     
