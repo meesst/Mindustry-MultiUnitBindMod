@@ -280,24 +280,6 @@ public class LUnitBindGroup {
             // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
             unit.command().commandPosition(controller.x, controller.y);
         }
-        
-        // 检查单位是否有效且可被当前处理器控制
-        private boolean isValidAndNotControlled(Unit unit, Building controller) {
-            if (!unit.isValid() || unit.team != controller.team) return false;
-            
-            // 检查单位是否死亡
-            if (unit.dead) return false;
-            
-            // 检查单位是否被玩家附身
-            if (unit.isPlayer()) return false;
-            
-            // 检查单位是否被玩家操控
-            if (unit.playerControlled) return false;
-            
-            // 单位可用的条件：未被任何处理器控制，或已被当前处理器控制
-            Building controlling = unit.controller() instanceof Building ? (Building)unit.controller() : null;
-            return controlling == null || controlling == controller;
-        }
     }
     
     // 单位组信息类
