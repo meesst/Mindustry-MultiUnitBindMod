@@ -264,7 +264,7 @@ public class LUnitBindGroup {
             if (unit.isPlayer()) return false;
             
             // 检查单位是否被玩家操控（处于编队中）
-            if (unit.playerControlled) return false;
+                if (unit.isPlayer()) return false;
             
             // 检查单位是否被其他处理器控制（@controlled）
             Building controlling = unit.controller() instanceof Building ? (Building)unit.controller() : null;
@@ -276,7 +276,7 @@ public class LUnitBindGroup {
             if (!unit.isValid()) return;
             
             // 设置单位的控制器为当前处理器，与ucontrol指令效果一致
-            unit.takeControl(controller);
+            unit.controller(controller);
             
             // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
             unit.command().commandPosition(new Vec2(controller.x, controller.y));
