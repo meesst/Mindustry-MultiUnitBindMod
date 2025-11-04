@@ -274,25 +274,41 @@ public class LUnitBindGroup {
         
         // 锁定单位，与ucontrol within指令效果相似
         private void lockUnit(Unit unit, Building controller) {
-            if (!unit.isValid()) return;
+            // 添加多层安全检查，防止任何可能的空指针或无效状态
+            if (unit == null || !unit.isValid() || controller == null || !controller.isValid()) return;
             
             // 设置单位的控制器为当前处理器，与ucontrol指令效果一致
             // 使用LogicAI来控制单位，而不是直接使用Building
-            if(unit.controller() instanceof LogicAI la){
-                la.controller = controller;
-            }else{
-                var la = new LogicAI();
-                la.controller = controller;
+            try {
+                if(unit.controller() instanceof LogicAI la){
+                    la.controller = controller;
+                }else{
+                    var la = new LogicAI();
+                    la.controller = controller;
+                    
+                    unit.controller(la);
+                    //clear old state
+                    unit.mineTile = null;
+                    unit.clearBuilding();
+                }
                 
-                unit.controller(la);
-                //clear old state
-                unit.mineTile = null;
-                unit.clearBuilding();
-            }
-            
-            // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
-            if(unit.isCommandable()){
-                unit.command().commandPosition(new Vec2(controller.x, controller.y));
+                // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
+                // 添加双重安全检查：先检查isCommandable()，然后在调用command()时使用try-catch
+                if(unit.isCommandable()){
+                    try {
+                        // 再次检查单位有效性，防止状态变化
+                        if(unit.isValid() && unit.isCommandable()){
+                            CommandAI ai = unit.command();
+                            if(ai != null){
+                                ai.commandPosition(new Vec2(controller.x, controller.y));
+                            }
+                        }
+                    } catch (IllegalArgumentException e) {
+                        // 捕获可能的"Unit cannot be commanded"异常，安全地忽略
+                    }
+                }
+            } catch (Exception e) {
+                // 捕获所有可能的异常，确保MOD不会崩溃
             }
         }
     }
