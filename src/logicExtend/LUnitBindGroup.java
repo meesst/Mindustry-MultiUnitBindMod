@@ -15,6 +15,7 @@ import mindustry.game.Team;
 import mindustry.Vars;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
+import mindustry.ai.types.LogicAI;
 
 public class LUnitBindGroup {
     // 常量定义
@@ -276,7 +277,18 @@ public class LUnitBindGroup {
             if (!unit.isValid()) return;
             
             // 设置单位的控制器为当前处理器，与ucontrol指令效果一致
-            unit.controller(controller);
+            // 使用LogicAI来控制单位，而不是直接使用Building
+            if(unit.controller() instanceof LogicAI la){
+                la.controller = controller;
+            }else{
+                var la = new LogicAI();
+                la.controller = controller;
+                
+                unit.controller(la);
+                //clear old state
+                unit.mineTile = null;
+                unit.clearBuilding();
+            }
             
             // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
             unit.command().commandPosition(new Vec2(controller.x, controller.y));
