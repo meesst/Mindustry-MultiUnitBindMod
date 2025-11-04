@@ -194,7 +194,7 @@ public class LUnitBindGroup {
             // 彻底清理无效单位，确保只保留符合所有条件的单位
             Seq<Unit> validUnits = new Seq<>();
             for (Unit unit : info.units) {
-                // 全面检查单位状态
+                // 全面检查单位状态，只保留属于当前控制器的有效单位
                 if (isValidAndNotControlled(unit, controller)) {
                     validUnits.add(unit);
                     // 重新锁定有效的单位，确保控制关系持续存在
@@ -216,8 +216,8 @@ public class LUnitBindGroup {
                 int added = 0;
                 
                 for (Unit unit : availableUnits) {
-                    // 确保单位尚未在池中
-                    if (!info.units.contains(unit)) {
+                    // 确保单位尚未在池中，并且完全可用（未被其他控制器控制）
+                    if (!info.units.contains(unit) && isValidAndNotControlled(unit, controller)) {
                         info.units.add(unit);
                         // 锁定新加入的单位
                         lockUnit(unit, controller);
@@ -259,18 +259,27 @@ public class LUnitBindGroup {
         private boolean isValidAndNotControlled(Unit unit, Building controller) {
             if (!unit.isValid() || unit.team != controller.team) return false;
             
-            // 检查单位是否死亡（@dead）
+            // 检查单位是否死亡
             if (unit.dead) return false;
             
-            // 检查单位是否被玩家附身
+            // 检查单位是否被玩家控制
             if (unit.isPlayer()) return false;
             
-            // 检查单位是否被玩家操控（处于编队中）
-                if (unit.isPlayer()) return false;
+            // 检查单位是否被其他处理器控制
+            // 处理LogicAI控制器的情况
+            if (unit.controller() instanceof LogicAI) {
+                LogicAI logicAI = (LogicAI)unit.controller();
+                return logicAI.controller == null || logicAI.controller == controller;
+            }
             
-            // 检查单位是否被其他处理器控制（@controlled）
-            Building controlling = unit.controller() instanceof Building ? (Building)unit.controller() : null;
-            return controlling == null || controlling == controller;
+            // 处理Building控制器的情况
+            if (unit.controller() instanceof Building) {
+                Building controllingBuilding = (Building)unit.controller();
+                return controllingBuilding == controller;
+            }
+            
+            // 单位未被控制
+            return true;
         }
         
         // 锁定单位，与ucontrol within指令效果相似
@@ -281,13 +290,17 @@ public class LUnitBindGroup {
             // 设置单位的控制器为当前处理器，与ucontrol指令效果一致
             // 使用LogicAI来控制单位，而不是直接使用Building
             try {
+                LogicAI logicAI;
                 if(unit.controller() instanceof LogicAI la){
-                    la.controller = controller;
+                    // 更新现有LogicAI的控制器
+                    logicAI = la;
+                    logicAI.controller = controller;
                 }else{
-                    var la = new LogicAI();
-                    la.controller = controller;
+                    // 创建新的LogicAI控制器
+                    logicAI = new LogicAI();
+                    logicAI.controller = controller;
                     
-                    unit.controller(la);
+                    unit.controller(logicAI);
                     //clear old state
                     unit.mineTile = null;
                     unit.clearBuilding();
