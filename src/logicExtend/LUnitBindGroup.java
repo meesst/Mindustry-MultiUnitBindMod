@@ -7,24 +7,56 @@ import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.UnitType;
 import mindustry.game.Team;
+import mindustry.annotations.Annotations.RegisterStatement;
 
 public class LUnitBindGroup {
     
+    @RegisterStatement("ubindgroup")
     public static class UnitBindGroupStatement extends LStatement {
         public String unitType = "@poly", count = "10", unitVar = "currentUnit", indexVar = "unitIndex";
         
         @Override
         public void build(Table table) {
-            table.add("type");
-            field(table, unitType, str -> unitType = str);
+            // 单位类型参数
+            Cell<Label> typeLabel = table.add("type");
+            tooltip(typeLabel, "单位类型: 指定要绑定的单位类型，@poly表示任意类型");
             
-            table.add("count");
+            TextField field = field(table, unitType, str -> unitType = str).get();
+            
+            table.button(b -> {
+                b.image(Icon.pencilSmall);
+                b.clicked(() -> showSelectTable(b, (t, hide) -> {
+                    t.row();
+                    t.table(i -> {
+                        i.left();
+                        int c = 0;
+                        for(UnitType item : Vars.content.units()){
+                            if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                unitType = "@" + item.name;
+                                field.setText(unitType);
+                                hide.run();
+                            }).size(40f);
+
+                            if(++c % 6 == 0) i.row();
+                        }
+                    }).colspan(3).width(240f).left();
+                }));
+            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
+            
+            // 数量参数
+            Cell<Label> countLabel = table.add("count");
+            tooltip(countLabel, "最大数量: 指定要绑定的最大单位数量");
             field(table, count, str -> count = str);
             
-            table.add("unitVar");
+            // 单位变量参数
+            Cell<Label> unitVarLabel = table.add("unitVar");
+            tooltip(unitVarLabel, "单位变量: 存储当前选中单位的变量名");
             field(table, unitVar, str -> unitVar = str);
             
-            table.add("indexVar");
+            // 索引变量参数
+            Cell<Label> indexVarLabel = table.add("indexVar");
+            tooltip(indexVarLabel, "索引变量: 存储当前单位索引的变量名（从1开始）");
             field(table, indexVar, str -> indexVar = str);
         }
         
@@ -43,18 +75,7 @@ public class LUnitBindGroup {
             return LCategory.unit;
         }
         
-        public static void create() {
-            LAssembler.customParsers.put("ubindgroup", params -> {
-                UnitBindGroupStatement stmt = new UnitBindGroupStatement();
-                if (params.length >= 2) stmt.unitType = params[1];
-                if (params.length >= 3) stmt.count = params[2];
-                if (params.length >= 4) stmt.unitVar = params[3];
-                if (params.length >= 5) stmt.indexVar = params[4];
-                stmt.afterRead();
-                return stmt;
-            });
-            LogicIO.allStatements.add(UnitBindGroupStatement::new);
-        }
+        // 不需要手动注册，@RegisterStatement注解会自动处理
     }
     
     public static class UnitBindGroupInstruction implements LExecutor.LInstruction {
