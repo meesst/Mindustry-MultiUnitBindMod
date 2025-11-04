@@ -16,6 +16,7 @@ import mindustry.Vars;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
 import mindustry.ai.types.LogicAI;
+import mindustry.ai.types.CommandAI;
 
 public class LUnitBindGroup {
     // 常量定义
