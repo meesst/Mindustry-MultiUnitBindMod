@@ -7,6 +7,7 @@ import arc.scene.ui.TextField;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.scene.style.TextureRegionDrawable;
+import arc.math.geom.Vec2;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.UnitType;
@@ -278,7 +279,7 @@ public class LUnitBindGroup {
             unit.takeControl(controller);
             
             // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
-            unit.command().commandPosition(controller.x, controller.y);
+            unit.command().commandPosition(new Vec2(controller.x, controller.y));
         }
     }
     
