@@ -291,7 +291,9 @@ public class LUnitBindGroup {
             }
             
             // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
-            unit.command().commandPosition(new Vec2(controller.x, controller.y));
+            if(unit.isCommandable()){
+                unit.command().commandPosition(new Vec2(controller.x, controller.y));
+            }
         }
     }
     
