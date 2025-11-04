@@ -4,8 +4,6 @@ import arc.scene.ui.layout.Table;
 import arc.scene.ui.layout.Cell;
 import arc.scene.ui.Label;
 import arc.scene.ui.TextField;
-import arc.scene.ui.ImageButton;
-import arc.graphics.g2d.TextureRegionDrawable;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import mindustry.gen.*;
@@ -14,14 +12,12 @@ import mindustry.type.UnitType;
 import mindustry.game.Team;
 import mindustry.Vars;
 import mindustry.ui.Styles;
-import mindustry.annotations.*;
 import mindustry.ui.dialogs.BaseDialog;
 
 public class LUnitBindGroup {
     // 常量定义
     private static final float iconSmall = 24f;
     
-    @RegisterStatement("ubindgroup")
     public static class UnitBindGroupStatement extends LStatement {
         public String unitType = "@poly", count = "10", unitVar = "currentUnit", indexVar = "unitIndex";
         
@@ -63,7 +59,7 @@ public class LUnitBindGroup {
                         int c = 0;
                         for(UnitType item : Vars.content.units()){
                             if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                            i.button(item.uiIcon, Styles.flati, iconSmall, () -> {
                                 unitType = "@" + item.name;
                                 field.setText(unitType);
                                 hide.run();
@@ -106,7 +102,25 @@ public class LUnitBindGroup {
             return LCategory.unit;
         }
         
-        // 不需要手动注册，@RegisterStatement注解会自动处理
+        /** Anuken, if you see this, you can replace it with your own @RegisterStatement, because this is my last resort... **/
+        public static void create() {
+            LAssembler.customParsers.put("ubindgroup", params -> {
+                UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+                if (params.length >= 2) stmt.unitType = params[1];
+                if (params.length >= 3) stmt.count = params[2];
+                if (params.length >= 4) stmt.unitVar = params[3];
+                if (params.length >= 5) stmt.indexVar = params[4];
+                stmt.afterRead();
+                return stmt;
+            });
+            LogicIO.allStatements.add(UnitBindGroupStatement::new);
+        }
+        
+        @Override
+        public void write(StringBuilder builder) {
+            builder.append("ubindgroup ").append(unitType).append(" ").append(count).append(" ")
+                   .append(unitVar).append(" ").append(indexVar);
+        }
     }
     
     public static class UnitBindGroupInstruction implements LExecutor.LInstruction {
