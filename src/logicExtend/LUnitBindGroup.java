@@ -101,7 +101,7 @@ public class LUnitBindGroup {
             // 组名称参数
             Cell<Label> groupNameLabel = secondRow.add("groupName");
             tooltip(groupNameLabel, "组名称: 设置相同名称可让多个处理器共享同一个单位池（默认null为独立单位池）");
-            field(secondRow, groupName != null ? groupName : "", str -> groupName = str.isEmpty() ? null : str);
+            field(secondRow, groupName != null ? groupName : "null", str -> groupName = str.isEmpty() ? null : str);
         }
         
         @Override
