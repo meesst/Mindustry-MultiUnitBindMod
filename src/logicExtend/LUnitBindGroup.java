@@ -77,7 +77,7 @@ public class LUnitBindGroup {
                         }
                     }).colspan(3).width(240f).left();
                 }));
-            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(firstRow.color);
+            }, Styles.logict, () -> {}).size(40f).padLeft(-2);
             
             // 数量参数
             Cell<Label> countLabel = firstRow.add("count");
