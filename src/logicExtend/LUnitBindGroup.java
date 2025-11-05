@@ -592,11 +592,6 @@ public class LUnitBindGroup {
                     //clear old state
                     unit.mineTile = null;
                     unit.clearBuilding();
-                    
-                    // 提高锁定成功率：清除单位的命令队列
-                    if(unit.command() != null){
-                        unit.command().clear();
-                    }
                 }
                 
                 // 设置单位的控制目标为处理器位置，模拟within区域锁定效果
@@ -608,8 +603,6 @@ public class LUnitBindGroup {
                             CommandAI ai = unit.command();
                             if(ai != null){
                                 ai.commandPosition(new Vec2(controller.x, controller.y));
-                                // 额外的锁定措施：设置单位的行为为防守模式
-                                ai.command(UnitCommand.defend);
                             }
                         }
                     } catch (IllegalArgumentException e) {
