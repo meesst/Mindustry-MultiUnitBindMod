@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Mindustry-MultiUnitBindMod
 
 一个为Mindustry游戏添加多单位绑定功能的逻辑扩展模组。
@@ -36,3 +37,7 @@ ubindgroup unitType maxCount varUnit varIndex
 
 ## 开发信息
 作者: meesst
+=======
+- LogicExtend - 一个扩展了逻辑语句的小mod
+正在开发......
+>>>>>>> 16f918d68a1f2a08fa108730421acd0db21b2aa2

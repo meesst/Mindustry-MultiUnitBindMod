@@ -1,10 +1,19 @@
 {
+<<<<<<< HEAD
   "displayName": "MultiUnitBind - 多单位绑定",
   "name": "multi-unit-bind",
   "author": "meesst",
   "main": "logicExtend.LEMain",
   "description": "A mod that adds multi-unit binding functionality\n一个添加了多单位绑定功能的模组，允许同时控制多个同类型单位",
   "version": "1.0.0",
+=======
+  "displayName": "LogicExtend - 逻辑扩展",
+  "name": "logic-extend",
+  "author": "[[]sky]114514[[]white]",
+  "main": "logicExtend.LEMain",
+  "description": "A mod that extends logical statements\n 一个扩展了逻辑语句的模组",
+  "version": "0.0.2",
+>>>>>>> 16f918d68a1f2a08fa108730421acd0db21b2aa2
   "minGameVersion": 151.1,
   "java": true
 }
