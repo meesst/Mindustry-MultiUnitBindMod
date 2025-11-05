@@ -23,7 +23,7 @@ public class LEExtend {
     }
 
     public static TextField field(Table table, String value, Cons<String> setter, float width) {
-        return table.field(value, Styles.nodeField, s -> setter.get(sanitize(s)))
+        return table.field(value, Styles.defaultField, s -> setter.get(sanitize(s)))
                 .size(width, 40f).pad(2f).get();
     }
 

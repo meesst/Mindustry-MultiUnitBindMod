@@ -258,17 +258,25 @@ public class LUnitBindGroup {
         
         // 更新单位组
         private void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName) {
-            // 对于共享组，确保使用最大的count值
+            // 对于共享组，更新最大count值
             if (groupName != null) {
                 Integer currentMax = sharedGroupMaxCounts.get(groupName);
-                if (currentMax == null || maxCount > currentMax) {
-                    sharedGroupMaxCounts.put(groupName, maxCount);
-                }
-                // 使用存储的最大count值
+                // 无论count增大还是减小，都更新为最新值
+                sharedGroupMaxCounts.put(groupName, maxCount);
+                // 使用存储的最新count值
                 maxCount = sharedGroupMaxCounts.get(groupName);
             }
             // 记录更新前的单位数量，用于检测变化
             int previousSize = info.units.size;
+            
+            // 如果单位数量超过新的maxCount，立即调整大小
+            if (info.units.size > maxCount) {
+                info.units.truncate(maxCount);
+                // 重置当前索引，避免索引越界
+                if (info.currentIndex >= info.units.size) {
+                    info.currentIndex = 0;
+                }
+            }
 
             // 彻底清理无效单位，确保只保留符合所有条件的单位
             Seq<Unit> validUnits = new Seq<>();
