@@ -48,13 +48,17 @@ public class LUnitBindGroup {
         
         @Override
         public void build(Table table) {
+            // 第一排：单位类型和数量参数
+            Table firstRow = new Table();
+            table.add(firstRow).left().row();
+            
             // 单位类型参数
-            Cell<Label> typeLabel = table.add("type");
+            Cell<Label> typeLabel = firstRow.add("type");
             // 移除错误的悬浮提示，与原始unit bind功能保持一致
             
-            TextField field = field(table, unitType, str -> unitType = str).get();
+            TextField field = field(firstRow, unitType, str -> unitType = str).get();
             
-            table.button(b -> {
+            firstRow.button(b -> {
                 b.image(Icon.pencilSmall);
                 b.clicked(() -> showSelectTable(b, (t, hide) -> {
                     t.row();
@@ -73,27 +77,31 @@ public class LUnitBindGroup {
                         }
                     }).colspan(3).width(240f).left();
                 }));
-            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
+            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(firstRow.color);
             
             // 数量参数
-            Cell<Label> countLabel = table.add("count");
+            Cell<Label> countLabel = firstRow.add("count");
             tooltip(countLabel, "最大数量: 指定要绑定的最大单位数量");
-            field(table, count, str -> count = str);
+            field(firstRow, count, str -> count = str);
+            
+            // 第二排：变量名和组名称参数
+            Table secondRow = new Table();
+            table.add(secondRow).left().row();
             
             // 单位变量参数
-            Cell<Label> unitVarLabel = table.add("unitVar");
+            Cell<Label> unitVarLabel = secondRow.add("unitVar");
             tooltip(unitVarLabel, "单位变量: 存储当前选中单位的变量名");
-            field(table, unitVar, str -> unitVar = str);
+            field(secondRow, unitVar, str -> unitVar = str);
             
             // 索引变量参数
-            Cell<Label> indexVarLabel = table.add("indexVar");
+            Cell<Label> indexVarLabel = secondRow.add("indexVar");
             tooltip(indexVarLabel, "索引变量: 存储当前单位索引的变量名（从1开始）");
-            field(table, indexVar, str -> indexVar = str);
+            field(secondRow, indexVar, str -> indexVar = str);
             
             // 组名称参数
-            Cell<Label> groupNameLabel = table.add("groupName");
+            Cell<Label> groupNameLabel = secondRow.add("groupName");
             tooltip(groupNameLabel, "组名称: 设置相同名称可让多个处理器共享同一个单位池（默认null为独立单位池）");
-            field(table, groupName != null ? groupName : "", str -> groupName = str.isEmpty() ? null : str);
+            field(secondRow, groupName != null ? groupName : "", str -> groupName = str.isEmpty() ? null : str);
         }
         
         @Override
@@ -221,8 +229,20 @@ public class LUnitBindGroup {
             }
         }
         
+        // 存储每个共享组的最大count值
+        private static final ObjectMap<String, Integer> sharedGroupMaxCounts = new ObjectMap<>();
+        
         // 更新单位组
         private void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName) {
+            // 对于共享组，确保使用最大的count值
+            if (groupName != null) {
+                Integer currentMax = sharedGroupMaxCounts.get(groupName);
+                if (currentMax == null || maxCount > currentMax) {
+                    sharedGroupMaxCounts.put(groupName, maxCount);
+                }
+                // 使用存储的最大count值
+                maxCount = sharedGroupMaxCounts.get(groupName);
+            }
             // 记录更新前的单位数量，用于检测变化
             int previousSize = info.units.size;
             
