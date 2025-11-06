@@ -259,18 +259,36 @@ public class LUnitBindGroup {
             public Object unitType;
             public int count;
             public String groupName;
+            public int mode; // 添加模式字段
             
-            public boolean hasChanged(Object newUnitType, int newCount, String newGroupName) {
+            public boolean hasChanged(Object newUnitType, int newCount, String newGroupName, int newMode) {
                 return !Objects.equals(unitType, newUnitType) || 
                        count != newCount || 
-                       !Objects.equals(groupName, newGroupName);
+                       !Objects.equals(groupName, newGroupName) ||
+                       mode != newMode;
             }
             
-            public void update(Object newUnitType, int newCount, String newGroupName) {
+            public void update(Object newUnitType, int newCount, String newGroupName, int newMode) {
                 this.unitType = newUnitType;
                 this.count = newCount;
                 this.groupName = newGroupName;
+                this.mode = newMode;
             }
+        }
+        
+        // 统一参数检查方法，检查所有参数变化
+        private boolean checkAllParamsChanged(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
+            // 获取参数缓存
+            ParamCache cache = paramCaches.get(controller, ParamCache::new);
+            
+            // 检查所有参数是否变化（包括单位类型、数量、组名和模式）
+            return cache.hasChanged(unitTypeObj, countVal, groupNameStr, this.mode);
+        }
+        
+        // 统一参数更新方法，更新所有参数
+        private void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
+            ParamCache cache = paramCaches.get(controller, ParamCache::new);
+            cache.update(unitTypeObj, countVal, groupNameStr, this.mode);
         }
         
         public UnitBindGroupInstruction(LVar unitType, LVar count, LVar unitVar, LVar indexVar, LVar groupName, int mode) {
@@ -284,148 +302,100 @@ public class LUnitBindGroup {
         
         @Override
         public void run(LExecutor exec) {
-            // 获取当前逻辑控制器
-            Building controller = exec.build;
+            // 开始执行
             
-            // 安全检查：确保控制器有效
+            // 控制器有效性检查
+            Building controller = exec.build;
             if (controller == null || !controller.isValid()) {
-                // 清理无效控制器的资源
+                // 无效 → 清理资源 → 结束
                 cleanupInvalidController(controller);
                 return;
             }
-
-            // 获取组名称参数
+            
+            // 获取并处理组名称
             String groupNameStr = groupName == null ? null : (String)groupName.obj();
-            // 单独判断"null"字符串情况
             if (groupNameStr != null && groupNameStr.equals("null")) {
                 groupNameStr = null;
             }
             
-            // 初始化结果变量
-            String errorMessage = null;
-            
-            try {
-                // 对于模式2，检查组配置是否存在
-                if (groupNameStr != null && mode == 2) {
-                    // 模式2的组存在性检查将在executeMode2方法中统一处理
-                }
-                
-                // 如果有错误，设置错误状态并返回
-                if (errorMessage != null) {
-                    unitVar.setobj(errorMessage);
-                    if (indexVar != null) {
-                        indexVar.setobj(errorMessage);
-                    }
-                    return;
-                }
-                
-                // 根据模式执行不同逻辑
-                if (mode == 1) {
-                    // 模式1：正常抓取逻辑
-                    executeMode1(exec, controller, groupNameStr);
-                } else if (mode == 2) {
-                    // 模式2：共享组访问逻辑
-                    executeMode2(exec, groupNameStr);
-                }
-            } catch (Exception e) {
-                // 处理异常情况，返回多语言异常错误信息
-                String exceptionError = Core.bundle.get("ubindgroup.error.exception", "执行异常");
-                unitVar.setobj(exceptionError);
-                if (indexVar != null) {
-                    indexVar.setobj(exceptionError);
-                }
+            // 模式判断
+            if (mode == 1) {
+                // 模式1：抓取模式（管理单位）
+                executeMode1(exec, controller, groupNameStr);
+            } else if (mode == 2) {
+                // 模式2：访问模式（使用单位）
+                executeMode2(exec, groupNameStr);
             }
-            return;
         }
         
         private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
-            // 检查参数是否一致
-            Object unitTypeObj = unitType.obj();
-            int countVal = Math.max(1, Math.min(100, (int)count.num()));
+            // 模式1：抓取模式（核心管理流程）
             
-            // 组名存在性检查和参数更新统一由checkAndUpdateParams方法处理
-            if (!checkAndUpdateParams(controller, unitTypeObj, countVal, groupNameStr)) {
-                // 如果参数未变化，则直接使用缓存的单位组
-                UnitGroupInfo groupInfo = individualGroups.get(controller);
-                if (groupInfo != null) {
-                    // 更新单位绑定
-                    if (!groupInfo.units.isEmpty()) {
-                        groupInfo.currentIndex = (groupInfo.currentIndex + 1) % groupInfo.units.size;
-                        Unit unit = groupInfo.units.get(groupInfo.currentIndex);
-                        unitVar.setobj(unit);
-                        if (indexVar != null) {
-                            indexVar.setnum(groupInfo.currentIndex + 1);
-                        }
-                    } else {
-                        unitVar.setobj(null);
-                        if (indexVar != null) {
-                            indexVar.setnum(0);
-                        }
+            // 组名指定判断
+            boolean hasGroupName = groupNameStr != null && !groupNameStr.isEmpty();
+            
+            if (hasGroupName) {
+                // 是 → 检查组名使用情况
+                if (buildingToGroupName.containsValue(groupNameStr)) {
+                    // 已被使用 → 设置错误 → 结束
+                    String groupConflictError = Core.bundle.get("ubindgroup.error.group_conflict", "组名已被使用");
+                    unitVar.setobj(groupConflictError);
+                    if (indexVar != null) {
+                        indexVar.setobj(groupConflictError);
                     }
-                } else {
-                    // 如果没有缓存，初始化单位组
-                    UnitGroupInfo newGroup = new UnitGroupInfo();
-                    individualGroups.put(controller, newGroup);
-                    updateUnitGroup(newGroup, unitTypeObj, countVal, exec.team, controller, groupNameStr);
-                    
-                    // 处理单位绑定
-                    if (!newGroup.units.isEmpty()) {
-                        newGroup.currentIndex = 0;
-                        Unit unit = newGroup.units.get(newGroup.currentIndex);
-                        unitVar.setobj(unit);
-                        if (indexVar != null) {
-                            indexVar.setnum(newGroup.currentIndex + 1);
-                        }
-                    } else {
-                        unitVar.setobj(null);
-                        if (indexVar != null) {
-                            indexVar.setnum(0);
-                        }
-                    }
+                    return;
                 }
-                return;
+                // 未被使用 → 使用共享组
+            } else {
+                // 否 → 使用独立组
             }
             
-            // 处理参数变化的情况
-            if (groupNameStr != null) {
-                // 如果指定了组名，则使用共享组
-                UnitGroupInfo sharedGroup = sharedGroups.get(groupNameStr, UnitGroupInfo::new);
-                sharedGroup.mode = mode;
-                
-                // 更新共享组的单位
-                updateUnitGroup(sharedGroup, unitTypeObj, countVal, exec.team, controller, groupNameStr);
-                
-                // 更新当前控制器与组名的映射
-                buildingToGroupName.put(controller, groupNameStr);
-                
-                // 使用共享组的单位
-                if (!sharedGroup.units.isEmpty()) {
-                    sharedGroup.currentIndex = 0;
-                    Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
-                    unitVar.setobj(unit);
-                    if (indexVar != null) {
-                        indexVar.setnum(sharedGroup.currentIndex + 1);
-                    }
-                } else {
-                    unitVar.setobj(null);
-                    if (indexVar != null) {
-                        indexVar.setnum(0);
-                    }
+            // 获取单位参数
+            Object unitTypeObj = unitType.obj();
+            int countVal = (int)count.num();
+            
+            // 参数变化检查（在更新组单位前）
+            boolean paramsChanged = false;
+            ParamCache cache = paramCaches.get(controller, ParamCache::new);
+            
+            // 检查单位类型变化
+            if (!Objects.equals(cache.unitType, unitTypeObj)) {
+                paramsChanged = true;
+            }
+            // 检查单位数量变化
+            if (cache.count != countVal) {
+                paramsChanged = true;
+            }
+            // 检查模式变化
+            if (cache.mode != this.mode) {
+                paramsChanged = true;
+            }
+            // 检查组名变化
+            if (!Objects.equals(cache.groupName, groupNameStr)) {
+                paramsChanged = true;
+                // 组名有变化 → 清理旧组名关联
+                if (cache.groupName != null && !cache.groupName.isEmpty()) {
+                    buildingToGroupName.remove(controller);
+                    cleanupUnusedGroup(cache.groupName);
                 }
-            } else {
-                // 如果没有指定组名，则使用控制器的独立组
-                UnitGroupInfo groupInfo = individualGroups.get(controller, UnitGroupInfo::new);
-                groupInfo.mode = mode;
+            }
+            
+            // 有变化 → 重新开始（清理单位池和缓存）
+            if (paramsChanged) {
+                // 清理单位池和缓存
+                unbindAllUnits(controller, groupNameStr);
+            }
+            
+            // 更新参数缓存
+            cache.update(unitTypeObj, countVal, groupNameStr, this.mode);
+            
+            // 参数未变化且已有单位组 → 使用缓存单位组
+            if (!paramsChanged) {
+                UnitGroupInfo groupInfo = hasGroupName ? sharedGroups.get(groupNameStr) : individualGroups.get(controller);
                 
-                // 更新独立组的单位
-                updateUnitGroup(groupInfo, unitTypeObj, countVal, exec.team, controller, null);
-                
-                // 从共享组映射中移除
-                buildingToGroupName.remove(controller);
-                
-                // 使用独立组的单位
-                if (!groupInfo.units.isEmpty()) {
-                    groupInfo.currentIndex = 0;
+                if (groupInfo != null && !groupInfo.units.isEmpty()) {
+                    // 更新单位绑定
+                    groupInfo.currentIndex = (groupInfo.currentIndex + 1) % groupInfo.units.size;
                     Unit unit = groupInfo.units.get(groupInfo.currentIndex);
                     unitVar.setobj(unit);
                     if (indexVar != null) {
@@ -437,7 +407,82 @@ public class LUnitBindGroup {
                         indexVar.setnum(0);
                     }
                 }
+                return;
             }
+            
+            // 单位数量检查
+            if (countVal < 0) {
+                // 否 → 设置错误 → 结束
+                String countError = Core.bundle.get("ubindgroup.error.invalid_count", "单位数量无效");
+                unitVar.setobj(countError);
+                if (indexVar != null) {
+                    indexVar.setobj(countError);
+                }
+                return;
+            }
+            // 是 → 更新组单位
+            
+            // 数量限制在合理范围内
+            countVal = Math.min(100, countVal);
+            
+            // 更新组单位
+            if (hasGroupName) {
+                // 共享组 → 更新共享组单位并记录映射
+                UnitGroupInfo sharedGroup = sharedGroups.get(groupNameStr, UnitGroupInfo::new);
+                sharedGroup.mode = mode;
+                sharedGroup.units.clear();
+                sharedGroup.currentIndex = -1;
+                
+                // 更新共享组单位并记录映射
+                updateUnitGroup(sharedGroup, unitTypeObj, countVal, exec.team, controller, groupNameStr);
+                buildingToGroupName.put(controller, groupNameStr);
+                
+                // 更新共享组配置
+                sharedGroupConfigs.put(groupNameStr, new GroupConfig(unitTypeObj, countVal, mode));
+                
+                // 更新单位绑定并返回
+                if (!sharedGroup.units.isEmpty()) {
+                    sharedGroup.currentIndex = 0;
+                    Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
+                    unitVar.setobj(unit);
+                    if (indexVar != null) {
+                        indexVar.setnum(sharedGroup.currentIndex + 1);
+                    }
+                } else {
+                    String noUnitError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
+                    unitVar.setobj(noUnitError);
+                    if (indexVar != null) {
+                        indexVar.setobj(noUnitError);
+                    }
+                }
+            } else {
+                // 独立组 → 更新独立组单位并移除映射
+                UnitGroupInfo groupInfo = individualGroups.get(controller, UnitGroupInfo::new);
+                groupInfo.mode = mode;
+                groupInfo.units.clear();
+                groupInfo.currentIndex = -1;
+                
+                // 更新独立组单位并移除映射
+                updateUnitGroup(groupInfo, unitTypeObj, countVal, exec.team, controller, groupNameStr);
+                buildingToGroupName.remove(controller);
+                
+                // 更新单位绑定并返回
+                if (!groupInfo.units.isEmpty()) {
+                    groupInfo.currentIndex = 0;
+                    Unit unit = groupInfo.units.get(groupInfo.currentIndex);
+                    unitVar.setobj(unit);
+                    if (indexVar != null) {
+                        indexVar.setnum(groupInfo.currentIndex + 1);
+                    }
+                } else {
+                    String noUnitError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
+                    unitVar.setobj(noUnitError);
+                    if (indexVar != null) {
+                        indexVar.setobj(noUnitError);
+                    }
+                }
+            }
+        }
         }
         
         // 存储每个共享组的最大count值（已在类顶部定义）
@@ -709,7 +754,7 @@ public class LUnitBindGroup {
                 }
             }
             
-            // 如果是共享组模式
+            // 如果共享组模式
             if (groupName != null) {
                 // 检查单位是否被其他共享组占用
                 for (String otherGroupName : sharedGroups.keys()) {
@@ -856,45 +901,59 @@ public class LUnitBindGroup {
         }
         
         // 检查并更新参数缓存，返回参数是否发生变化
+        // 注意：参数变化检查和基本验证逻辑已移至executeMode1方法中
         private boolean checkAndUpdateParams(Building controller, Object unitType, int count, String groupName) {
+            // 获取参数缓存
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             
-            // 获取旧的组名，用于清理旧的关联
-            String oldGroupName = cache.groupName;
+            // 检查是否需要重新执行
+            boolean needRestart = false;
             
-            // 检查参数是否有变化
-            if (!cache.hasChanged(unitType, count, groupName)) {
-                return false; // 参数未变化
+            // 检查单位类型、数量或模式是否变化
+            if (!Objects.equals(cache.unitType, unitType) || cache.count != count || cache.mode != this.mode) {
+                needRestart = true;
             }
             
-            // 如果组名改变了，清理旧的组名关联
-            if (oldGroupName != null && !oldGroupName.equals(groupName)) {
-                // 从buildingToGroupName中移除旧的关联
-                buildingToGroupName.remove(controller);
-                // 检查旧组名是否需要被清理
-                cleanupUnusedGroup(oldGroupName);
+            // 检查组名是否变化
+            if (!Objects.equals(cache.groupName, groupName)) {
+                // 组名变化，清理旧组名关联
+                if (cache.groupName != null && !cache.groupName.isEmpty()) {
+                    // 从映射中移除旧的关联
+                    buildingToGroupName.remove(controller);
+                }
+                needRestart = true;
             }
             
-            // 更新缓存参数
-            cache.update(unitType, count, groupName);
-            
-            // 如果组名存在，简化检查：在抓取模式下，只要组名存在就返回false并设置错误信息
-            if (groupName != null && mode == 1 && sharedGroups.containsKey(groupName)) {
-                // 抓取模式下组名已存在，设置错误信息
-                if (unitVar != null) {
-                    unitVar.setobj("错误：组名'" + groupName + "'已被使用");
-                }
-                if (indexVar != null) {
-                    indexVar.setnum(-1);
-                }
+            // 如果不需要重新执行，直接返回false
+            if (!needRestart) {
                 return false;
             }
             
-            // 记录组名配置
+            // 更新参数缓存
+            cache.update(unitType, count, groupName, this.mode);
+            
+            // 组名相关检查
+            if (mode == 1 && groupName != null) {
+                if (sharedGroups.containsKey(groupName)) {
+                    // 已被使用 → 设置错误 → 结束
+                    String conflictError = Core.bundle.get("ubindgroup.error.group_conflict", "组名已被使用");
+                    unitVar.setobj(conflictError);
+                    if (indexVar != null) {
+                        indexVar.setobj(conflictError);
+                    }
+                    return false;
+                }
+            }
+            
+            // 使用统一参数更新方法，更新所有参数
+            updateAllParams(controller, unitType, count, groupName);
+            
+            // 记录组配置
             if (groupName != null) {
                 sharedGroupConfigs.put(groupName, new GroupConfig(unitType, count, mode));
             }
             
+            // 通过检查 → 返回true
             return true;
         }
         
@@ -1009,42 +1068,61 @@ public class LUnitBindGroup {
         }
         
         private void executeMode2(LExecutor exec, String groupNameStr) {
-            // 模式2：直接访问共享组内的单位，无需抓取
+            // 模式2：访问模式（使用单位）
+            
+            // 共享组检查
             UnitGroupInfo info = sharedGroups.get(groupNameStr);
-            if (info != null) {
-                if (!info.units.isEmpty()) {
-                    // 获取当前单位
-                    Unit currentUnit = info.units.get(info.currentIndex);
-                    if (currentUnit != null && currentUnit.isValid()) {
-                        unitVar.setobj(currentUnit);
-                        if (indexVar != null) {
-                            indexVar.setnum(info.currentIndex + 1); // 从1开始计数
-                        }
-                        return;
-                    } else {
-                        // 单位无效或不存在
-                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "没有有效单位");
-                        unitVar.setobj(noValidUnitError);
-                        if (indexVar != null) {
-                            indexVar.setobj(noValidUnitError);
-                        }
-                    }
-                } else {
-                    // 组内无单位
-                    String emptyGroupError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
-                    unitVar.setobj(emptyGroupError);
-                    if (indexVar != null) {
-                        indexVar.setobj(emptyGroupError);
-                    }
-                }
-            } else {
-                // 共享组不存在
+            if (info == null) {
+                // 不存在 → 设置错误 → 结束
                 String groupNotExistError = Core.bundle.get("ubindgroup.error.group_not_exist", "共享组不存在");
                 unitVar.setobj(groupNotExistError);
                 if (indexVar != null) {
                     indexVar.setobj(groupNotExistError);
                 }
+                return;
             }
+            
+            // 存在 → 设置单位变量和索引 → 结束
+            // 获取当前单位
+            Unit currentUnit = null;
+            if (info.currentIndex >= 0 && info.currentIndex < info.units.size) {
+                currentUnit = info.units.get(info.currentIndex);
+            }
+            
+            if (currentUnit != null && currentUnit.isValid()) {
+                unitVar.setobj(currentUnit);
+                if (indexVar != null) {
+                    indexVar.setnum(info.currentIndex + 1); // 从1开始计数
+                }
+            } else {
+                // 尝试使用第一个有效单位
+                if (!info.units.isEmpty()) {
+                    for (Unit unit : info.units) {
+                        if (unit != null && unit.isValid()) {
+                            currentUnit = unit;
+                            info.currentIndex = info.units.indexOf(unit);
+                            break;
+                        }
+                    }
+                }
+                
+                if (currentUnit != null) {
+                    unitVar.setobj(currentUnit);
+                    if (indexVar != null) {
+                        indexVar.setnum(info.currentIndex + 1);
+                    }
+                } else {
+                    // 没有有效单位时设置错误
+                    String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "没有有效单位");
+                    unitVar.setobj(noValidUnitError);
+                    if (indexVar != null) {
+                        indexVar.setobj(noValidUnitError);
+                    }
+                }
+            }
+            
+            // 更新最后访问时间
+            info.lastAccessTime = Time.millis();
         }
     }
     
@@ -1053,5 +1131,6 @@ public class LUnitBindGroup {
         public Seq<Unit> units = new Seq<>();      // 单位列表
         public int currentIndex = -1;              // 当前单位索引
         public int mode = 1;                       // 模式
+        public long lastAccessTime = Time.millis(); // 最后访问时间，用于清理机制
     }
 }
