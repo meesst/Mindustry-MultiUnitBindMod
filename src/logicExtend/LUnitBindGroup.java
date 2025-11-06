@@ -366,22 +366,16 @@ public class LUnitBindGroup {
             Object unitTypeObj = unitType.obj();
             int countVal = Math.max(1, Math.min(100, (int)count.num()));
             
-            // 检查组名配置一致性
+            // 简化逻辑：在抓取模式下，如果组名已存在，直接返回错误信息
             if (groupNameStr != null && sharedGroups.containsKey(groupNameStr)) {
-                GroupConfig existingConfig = sharedGroupConfigs.get(groupNameStr);
-                if (existingConfig != null && (
-                    !Objects.equals(existingConfig.unitType, unitTypeObj) || 
-                    existingConfig.count != countVal
-                )) {
-                    // 配置不一致，通过变量返回错误信息
-                    if (unitVar != null) {
-                        unitVar.setobj("错误：组名'" + groupNameStr + "'配置不一致");
-                    }
-                    if (indexVar != null) {
-                        indexVar.setnum(-1);
-                    }
-                    return;
+                // 组名已存在，通过变量返回错误信息
+                if (unitVar != null) {
+                    unitVar.setobj("错误：组名'" + groupNameStr + "'已被使用");
                 }
+                if (indexVar != null) {
+                    indexVar.setnum(-1);
+                }
+                return;
             }
             
             if (!checkAndUpdateParams(controller, unitTypeObj, countVal, groupNameStr)) {
@@ -907,24 +901,15 @@ public class LUnitBindGroup {
             // 更新缓存参数
             cache.update(unitType, count, groupName);
             
-            // 如果组名存在，检查是否是共享组
+            // 如果组名存在，简化检查：在抓取模式下，只要组名存在就返回false
+            if (groupName != null && mode == 1 && sharedGroups.containsKey(groupName)) {
+                // 抓取模式下组名已存在，返回false
+                return false;
+            }
+            
+            // 记录组名配置
             if (groupName != null) {
-                // 检查是否有其他控制器已经使用了这个组名
-                if (sharedGroups.containsKey(groupName)) {
-                    // 如果是抓取模式（mode=1），检查配置是否一致
-                    if (mode == 1) {
-                        GroupConfig existingConfig = sharedGroupConfigs.get(groupName);
-                        if (existingConfig != null && (
-                            !Objects.equals(existingConfig.unitType, unitType) || 
-                            existingConfig.count != count
-                        )) {
-                            // 配置不一致，返回false
-                            return false;
-                        }
-                    }
-                    // 记录或更新这个组名的配置
-                    sharedGroupConfigs.put(groupName, new GroupConfig(unitType, count, mode));
-                }
+                sharedGroupConfigs.put(groupName, new GroupConfig(unitType, count, mode));
             }
             
             return true;
