@@ -236,7 +236,6 @@ public class LUnitBindGroup {
             public long lastAccessTime = mindustry.Vars.time.millis(); // 最后访问时间，用于清理机制
         }
         
-      ...
         private static final ObjectMap<Building, UnitGroupInfo> individualGroups = new ObjectMap<>();
         // 存储按组名共享的单位组和当前索引
         private static final ObjectMap<String, UnitGroupInfo> sharedGroups = new ObjectMap<>();
