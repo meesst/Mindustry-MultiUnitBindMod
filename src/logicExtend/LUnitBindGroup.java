@@ -228,7 +228,15 @@ public class LUnitBindGroup {
         private final LVar groupName;
         private final int mode;
         
-        // 存储每个逻辑控制器的独立单位组和当前索引
+        // 单位组信息类
+        private static class UnitGroupInfo {
+            public Seq<Unit> units = new Seq<>();      // 单位列表
+            public int currentIndex = -1;              // 当前单位索引
+            public int mode = 1;                       // 模式
+            public long lastAccessTime = mindustry.Vars.time.millis(); // 最后访问时间，用于清理机制
+        }
+        
+      ...
         private static final ObjectMap<Building, UnitGroupInfo> individualGroups = new ObjectMap<>();
         // 存储按组名共享的单位组和当前索引
         private static final ObjectMap<String, UnitGroupInfo> sharedGroups = new ObjectMap<>();
@@ -1122,14 +1130,7 @@ public class LUnitBindGroup {
             }
             
             // 更新最后访问时间
-            info.lastAccessTime = Time.millis();
+            info.lastAccessTime = mindustry.Vars.time.millis();
         }
     }
     
-    // 单位组信息类
-    private static class UnitGroupInfo {
-        public Seq<Unit> units = new Seq<>();      // 单位列表
-        public int currentIndex = -1;              // 当前单位索引
-        public int mode = 1;                       // 模式
-        public long lastAccessTime = Time.millis(); // 最后访问时间，用于清理机制
-    }
