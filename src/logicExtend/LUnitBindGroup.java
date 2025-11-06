@@ -473,7 +473,6 @@ public class LUnitBindGroup {
                     }
                 }
             }
-            }
 
             // 彻底清理无效单位，确保只保留符合所有条件的单位
             Seq<Unit> validUnits = new Seq<>();
