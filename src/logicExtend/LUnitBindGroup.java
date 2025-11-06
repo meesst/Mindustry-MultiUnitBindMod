@@ -1133,4 +1133,3 @@ public class LUnitBindGroup {
         public int mode = 1;                       // 模式
         public long lastAccessTime = Time.millis(); // 最后访问时间，用于清理机制
     }
-}
