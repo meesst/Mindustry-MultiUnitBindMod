@@ -472,13 +472,6 @@ public class LUnitBindGroup {
                         }
                     }
                 }
-            } catch (Exception e) {
-                // 捕获所有异常
-                String exceptionError = Core.bundle.get("ubindgroup.error.exception", "执行异常");
-                unitVar.setobj(exceptionError);
-                if (indexVar != null) {
-                    indexVar.setobj(exceptionError);
-                }
             }
             }
 
