@@ -128,7 +128,7 @@ public class LUnitBindGroup {
                 b.clicked(() -> {
                     BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
                     // 设置对话框宽度为300像素，解决文字竖向排列问题
-                    dialog.cont.width(300f);
+                    dialog.cont.setWidth(300f);
                     dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
                         mode = 1;
                         rebuild(parent);
