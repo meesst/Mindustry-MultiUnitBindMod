@@ -305,33 +305,12 @@ public class LUnitBindGroup {
             String errorMessage = null;
             
             try {
-                // 处理共享组模式下的参数冲突检测
-                if (groupNameStr != null) {
-                    // 模式1的参数冲突检测
-                    if (mode == 1) {
-                        // 获取单位类型和数量参数
-                        Object typeObj = unitType.obj();
-                        int maxCount = Math.max(1, (int)count.num());
-                        
-                        // 检查共享组配置冲突
-                        if (sharedGroupConfigs.containsKey(groupNameStr)) {
-                            GroupConfig config = sharedGroupConfigs.get(groupNameStr);
-                            if (config.mode == 1 && 
-                                (!Objects.equals(config.unitType, typeObj) || 
-                                 config.count != maxCount)) {
-                                // 参数冲突，设置错误信息
-                                errorMessage = Core.bundle.get("ubindgroup.error.param_conflict", "参数冲突");
-                            }
-                        } else {
-                            // 第一次设置此共享组，记录配置
-                            sharedGroupConfigs.put(groupNameStr, new GroupConfig(typeObj, maxCount, mode));
-                        }
-                    } else if (mode == 2) {
-                        // 模式2下，检查组是否存在
-                        if (!sharedGroupConfigs.containsKey(groupNameStr)) {
-                            // 模式2需要有对应的共享组存在
-                            errorMessage = Core.bundle.get("ubindgroup.error.group_not_exist", "共享组不存在");
-                        }
+                // 对于模式2，检查组配置是否存在
+                if (groupNameStr != null && mode == 2) {
+                    // 模式2下，检查组是否存在
+                    if (!sharedGroupConfigs.containsKey(groupNameStr)) {
+                        // 模式2需要有对应的共享组存在
+                        errorMessage = Core.bundle.get("ubindgroup.error.group_not_exist", "共享组不存在");
                     }
                 }
                 
