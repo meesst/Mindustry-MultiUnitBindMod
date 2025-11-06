@@ -1,24 +1,37 @@
 package logicExtend;
 
-import arc.scene.ui.layout.Table;
-import arc.scene.ui.layout.Cell;
-import arc.scene.ui.Label;
-import arc.scene.ui.TextField;
-import arc.struct.ObjectMap;
-import arc.struct.Seq;
-import arc.scene.style.TextureRegionDrawable;
-import arc.math.geom.Vec2;
-import arc.Core;
+import arc.*;
+import arc.audio.*;
+import arc.graphics.*;
+import arc.math.*;
+import arc.math.geom.*;
+import arc.struct.*;
+import arc.util.*;
+import mindustry.*;
+import mindustry.ai.types.*;
+import mindustry.annotations.Annotations.*;
+import mindustry.content.*;
+import mindustry.core.*;
+import mindustry.ctype.*;
+import mindustry.entities.*;
+import mindustry.game.EventType.*;
+import mindustry.game.*;
+import mindustry.game.MapObjectives.*;
+import mindustry.game.Teams.*;
 import mindustry.gen.*;
-import mindustry.logic.*;
-import mindustry.type.UnitType;
-import mindustry.game.Team;
-import mindustry.Vars;
-import mindustry.ui.Styles;
-import mindustry.ui.dialogs.BaseDialog;
-import mindustry.ai.types.LogicAI;
-import mindustry.ai.types.CommandAI;
-import java.util.Objects;
+import mindustry.logic.LogicFx.*;
+import mindustry.type.*;
+import mindustry.ui.*;
+import mindustry.world.*;
+import mindustry.world.blocks.environment.*;
+import mindustry.world.blocks.logic.*;
+import mindustry.world.blocks.logic.LogicBlock.*;
+import mindustry.world.blocks.logic.LogicDisplay.*;
+import mindustry.world.blocks.logic.MessageBlock.*;
+import mindustry.world.blocks.payloads.*;
+import mindustry.world.meta.*;
+
+import static mindustry.Vars.*;
 
 public class LUnitBindGroup {
     // 常量定义
