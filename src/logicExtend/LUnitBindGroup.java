@@ -35,6 +35,13 @@ public class LUnitBindGroup {
             }
         }
         
+        // 重写field方法，确保使用正确的样式
+        @Override
+        protected Cell<TextField> field(Table table, String value, arc.func.Cons<String> setter) {
+            // 直接使用父类的sanitize方法和正确的样式
+            return table.field(value, Styles.nodeField, s -> setter.get(sanitize(s)));
+        }
+        
         // 实现showSelectTable方法，用于显示单位类型选择对话框
         private void showSelectTable(Cell<?> button, UnitTypeSelectListener listener) {
             BaseDialog dialog = new BaseDialog("选择单位类型");
@@ -121,7 +128,7 @@ public class LUnitBindGroup {
                 b.clicked(() -> {
                     BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
                     // 设置对话框宽度为300像素，解决文字竖向排列问题
-                    dialog.cont.prefWidth(300f);
+                    dialog.cont.width(300f);
                     dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
                         mode = 1;
                         rebuild(parent);
@@ -164,7 +171,7 @@ public class LUnitBindGroup {
         
         @Override
         public LCategory category() {
-            return LCategory.unit_control;
+            return LCategory.unit;
         }
         
         @Override
