@@ -354,39 +354,38 @@ public class LUnitBindGroup {
         }
         
         private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
-            try {
-                // 获取单位类型和数量参数
-                Object typeObj = unitType.obj();
-                int maxCount = Math.max(1, (int)count.num());
-                
-                // 检查参数是否发生变化，如果变化则需要重置
-                boolean paramsChanged = checkAndUpdateParams(controller, typeObj, maxCount, groupNameStr);
-                
-                // 获取或创建单位组信息
-                UnitGroupInfo info = null;
-                
-                if (groupNameStr != null) {
-                    // 使用共享单位池
-                    info = sharedGroups.get(groupNameStr);
-                    if (info == null) {
-                        info = new UnitGroupInfo();
-                        info.mode = this.mode; // 设置模式
-                        sharedGroups.put(groupNameStr, info);
-                    }
-                    // 记录处理器与共享组的关联
-                    buildingToGroupName.put(controller, groupNameStr);
-                } else {
-                    // 使用独立单位池（兼容原有功能）
-                    info = individualGroups.get(controller);
-                    if (info == null) {
-                        info = new UnitGroupInfo();
-                        info.mode = this.mode; // 设置模式
-                        individualGroups.put(controller, info);
-                    }
-                    // 移除可能存在的共享组关联
-                    buildingToGroupName.remove(controller);
-                }
+            // 获取单位类型和数量参数
+            Object typeObj = unitType.obj();
+            int maxCount = Math.max(1, (int)count.num());
             
+            // 检查参数是否发生变化，如果变化则需要重置
+            boolean paramsChanged = checkAndUpdateParams(controller, typeObj, maxCount, groupNameStr);
+            
+            // 获取或创建单位组信息
+            UnitGroupInfo info = null;
+            
+            if (groupNameStr != null) {
+                // 使用共享单位池
+                info = sharedGroups.get(groupNameStr);
+                if (info == null) {
+                    info = new UnitGroupInfo();
+                    info.mode = this.mode; // 设置模式
+                    sharedGroups.put(groupNameStr, info);
+                }
+                // 记录处理器与共享组的关联
+                buildingToGroupName.put(controller, groupNameStr);
+            } else {
+                // 使用独立单位池（兼容原有功能）
+                info = individualGroups.get(controller);
+                if (info == null) {
+                    info = new UnitGroupInfo();
+                    info.mode = this.mode; // 设置模式
+                    individualGroups.put(controller, info);
+                }
+                // 移除可能存在的共享组关联
+                buildingToGroupName.remove(controller);
+            }
+        
             // 如果参数发生变化，重置索引
             if (paramsChanged) {
                 info.currentIndex = -1;
