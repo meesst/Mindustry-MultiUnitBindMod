@@ -307,11 +307,7 @@ public class LUnitBindGroup {
             try {
                 // 对于模式2，检查组配置是否存在
                 if (groupNameStr != null && mode == 2) {
-                    // 模式2下，检查组是否存在
-                    if (!sharedGroupConfigs.containsKey(groupNameStr)) {
-                        // 模式2需要有对应的共享组存在
-                        errorMessage = Core.bundle.get("ubindgroup.error.group_not_exist", "共享组不存在");
-                    }
+                    // 模式2的组存在性检查将在executeMode2方法中统一处理
                 }
                 
                 // 如果有错误，设置错误状态并返回
@@ -347,18 +343,7 @@ public class LUnitBindGroup {
             Object unitTypeObj = unitType.obj();
             int countVal = Math.max(1, Math.min(100, (int)count.num()));
             
-            // 简化逻辑：在抓取模式下，如果组名已存在，直接返回错误信息
-            if (groupNameStr != null && sharedGroups.containsKey(groupNameStr)) {
-                // 组名已存在，通过变量返回错误信息
-                if (unitVar != null) {
-                    unitVar.setobj("错误：组名'" + groupNameStr + "'已被使用");
-                }
-                if (indexVar != null) {
-                    indexVar.setnum(-1);
-                }
-                return;
-            }
-            
+            // 组名存在性检查和参数更新统一由checkAndUpdateParams方法处理
             if (!checkAndUpdateParams(controller, unitTypeObj, countVal, groupNameStr)) {
                 // 如果参数未变化，则直接使用缓存的单位组
                 UnitGroupInfo groupInfo = individualGroups.get(controller);
@@ -893,9 +878,15 @@ public class LUnitBindGroup {
             // 更新缓存参数
             cache.update(unitType, count, groupName);
             
-            // 如果组名存在，简化检查：在抓取模式下，只要组名存在就返回false
+            // 如果组名存在，简化检查：在抓取模式下，只要组名存在就返回false并设置错误信息
             if (groupName != null && mode == 1 && sharedGroups.containsKey(groupName)) {
-                // 抓取模式下组名已存在，返回false
+                // 抓取模式下组名已存在，设置错误信息
+                if (unitVar != null) {
+                    unitVar.setobj("错误：组名'" + groupName + "'已被使用");
+                }
+                if (indexVar != null) {
+                    indexVar.setnum(-1);
+                }
                 return false;
             }
             
@@ -1018,49 +1009,40 @@ public class LUnitBindGroup {
         }
         
         private void executeMode2(LExecutor exec, String groupNameStr) {
-            try {
-                // 模式2：直接访问共享组内的单位，无需抓取
-                UnitGroupInfo info = sharedGroups.get(groupNameStr);
-                if (info != null) {
-                    if (!info.units.isEmpty()) {
-                        // 获取当前单位
-                        Unit currentUnit = info.units.get(info.currentIndex);
-                        if (currentUnit != null && currentUnit.isValid()) {
-                            unitVar.setobj(currentUnit);
-                            if (indexVar != null) {
-                                indexVar.setnum(info.currentIndex + 1); // 从1开始计数
-                            }
-                            return;
-                        } else {
-                            // 单位无效或不存在
-                            String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "没有有效单位");
-                            unitVar.setobj(noValidUnitError);
-                            if (indexVar != null) {
-                                indexVar.setobj(noValidUnitError);
-                            }
-                        }
-                    } else {
-                        // 组内无单位
-                        String emptyGroupError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
-                        unitVar.setobj(emptyGroupError);
+            // 模式2：直接访问共享组内的单位，无需抓取
+            UnitGroupInfo info = sharedGroups.get(groupNameStr);
+            if (info != null) {
+                if (!info.units.isEmpty()) {
+                    // 获取当前单位
+                    Unit currentUnit = info.units.get(info.currentIndex);
+                    if (currentUnit != null && currentUnit.isValid()) {
+                        unitVar.setobj(currentUnit);
                         if (indexVar != null) {
-                            indexVar.setobj(emptyGroupError);
+                            indexVar.setnum(info.currentIndex + 1); // 从1开始计数
+                        }
+                        return;
+                    } else {
+                        // 单位无效或不存在
+                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "没有有效单位");
+                        unitVar.setobj(noValidUnitError);
+                        if (indexVar != null) {
+                            indexVar.setobj(noValidUnitError);
                         }
                     }
                 } else {
-                    // 共享组不存在
-                    String groupNotExistError = Core.bundle.get("ubindgroup.error.group_not_exist", "共享组不存在");
-                    unitVar.setobj(groupNotExistError);
+                    // 组内无单位
+                    String emptyGroupError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
+                    unitVar.setobj(emptyGroupError);
                     if (indexVar != null) {
-                        indexVar.setobj(groupNotExistError);
+                        indexVar.setobj(emptyGroupError);
                     }
                 }
-            } catch (Exception e) {
-                // 捕获所有异常
-                String exceptionError = Core.bundle.get("ubindgroup.error.exception", "执行异常");
-                unitVar.setobj(exceptionError);
+            } else {
+                // 共享组不存在
+                String groupNotExistError = Core.bundle.get("ubindgroup.error.group_not_exist", "共享组不存在");
+                unitVar.setobj(groupNotExistError);
                 if (indexVar != null) {
-                    indexVar.setobj(exceptionError);
+                    indexVar.setobj(groupNotExistError);
                 }
             }
         }
