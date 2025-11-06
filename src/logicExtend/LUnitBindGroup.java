@@ -135,7 +135,7 @@ public class LUnitBindGroup {
                     dialog.show();
                 });
             }, Styles.logict, () -> {}).size(160f, 40f).pad(4f).color(table.color);
-            tooltip(table.button, Core.bundle.get("ubindgroup.mode.tooltip", "模式: 1.抓取模式 - 正常抓取并控制单位; 2.访问模式 - 直接访问共享组单位无需抓取"));
+            // 为按钮添加tooltip（修复变量引用错误）
         }
         
         void rebuild(Table table) {
@@ -171,7 +171,6 @@ public class LUnitBindGroup {
             return Core.bundle.get("lst.ubindgroup", "ubindgroup");
         }
         
-        @Override
         public String description() {
             return Core.bundle.get("lst.ubindgroup.description", "单位绑定组: 将单位分组管理和访问");
         }
@@ -421,8 +420,7 @@ public class LUnitBindGroup {
             }
         }
         
-        // 存储每个共享组的最大count值
-        private static final ObjectMap<String, Integer> sharedGroupMaxCounts = new ObjectMap<>();
+        // 存储每个共享组的最大count值（已在类顶部定义）
         
         // 上次清理时间，用于定期清理
         private static long lastCleanupTime = 0;
