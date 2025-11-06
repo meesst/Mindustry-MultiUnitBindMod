@@ -38,9 +38,11 @@ public class LUnitBindGroup {
         // 重写field方法，确保使用正确的样式，与LStatement类保持一致
         @Override
         protected Cell<TextField> field(Table table, String value, arc.func.Cons<String> setter) {
-            // 使用与父类相同的样式、大小和边距设置
-            return table.field(value, Styles.nodeField, s -> setter.get(sanitize(s)))
-                .size(144f, 40f).pad(2f).color(table.color);
+            // 直接在TextField上应用样式和颜色，确保与系统其他部分一致
+            TextField field = new TextField(value, Styles.nodeField);
+            field.setColor(table.color);
+            field.changed(() -> setter.get(sanitize(field.getText())));
+            return table.add(field).size(144f, 40f).pad(2f);
         }
         
         // 实现showSelectTable方法，用于显示单位类型选择对话框
