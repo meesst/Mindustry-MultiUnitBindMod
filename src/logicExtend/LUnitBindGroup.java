@@ -874,9 +874,20 @@ public class LUnitBindGroup {
         private boolean checkAndUpdateParams(Building controller, Object unitType, int count, String groupName) {
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             
+            // 获取旧的组名，用于清理旧的关联
+            String oldGroupName = cache.groupName;
+            
             // 检查参数是否有变化
             if (!cache.hasChanged(unitType, count, groupName)) {
                 return false; // 参数未变化
+            }
+            
+            // 如果组名改变了，清理旧的组名关联
+            if (oldGroupName != null && !oldGroupName.equals(groupName)) {
+                // 从buildingToGroupName中移除旧的关联
+                buildingToGroupName.remove(controller);
+                // 检查旧组名是否需要被清理
+                cleanupUnusedGroup(oldGroupName);
             }
             
             // 更新缓存参数
