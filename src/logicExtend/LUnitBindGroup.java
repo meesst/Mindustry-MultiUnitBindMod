@@ -310,7 +310,7 @@ public class LUnitBindGroup {
         }
         
         // 统一参数更新方法，更新所有参数
-        private static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
+        static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             // 使用传入的模式值，默认为1
             int actualMode = mode;
