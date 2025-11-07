@@ -45,6 +45,15 @@ public class LUnitBindGroup {
     // 用于存储共享组的初始配置
     private static final ObjectMap<String, GroupConfig> sharedGroupConfigs = new ObjectMap<>();
     
+    // 统一参数更新方法，更新所有参数 - 移到类顶层以解决作用域问题
+    static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
+        ParamCache cache = paramCaches.get(controller, ParamCache::new);
+        // 使用传入的模式值，默认为1
+        int actualMode = mode;
+        if (actualMode == 0) actualMode = 1; // 默认模式1
+        cache.update(unitTypeObj, countVal, groupNameStr, actualMode);
+    }
+    
     // 共享组配置类，用于存储共享组的初始参数
     public static class GroupConfig {
         public final Object unitType;
@@ -310,13 +319,7 @@ public class LUnitBindGroup {
         }
         
         // 统一参数更新方法，更新所有参数
-        static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
-            ParamCache cache = paramCaches.get(controller, ParamCache::new);
-            // 使用传入的模式值，默认为1
-            int actualMode = mode;
-            if (actualMode == 0) actualMode = 1; // 默认模式1
-            cache.update(unitTypeObj, countVal, groupNameStr, actualMode);
-        }
+        // 注意：这个方法已经移到LUnitBindGroup类顶层
         
         public UnitBindGroupInstruction(LVar unitType, LVar count, LVar unitVar, LVar indexVar, LVar groupName, int mode) {
             this.unitType = unitType;
