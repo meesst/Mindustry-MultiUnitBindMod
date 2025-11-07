@@ -401,7 +401,7 @@ public class LUnitBindGroup {
                 paramsChanged = true;
             }
             // 检查模式变化
-            if (cache.mode != this.mode) {
+            if (cache.mode != mode) {
                 paramsChanged = true;
             }
             // 检查组名变化
@@ -421,7 +421,7 @@ public class LUnitBindGroup {
             }
             
             // 更新参数缓存
-            cache.update(unitTypeObj, countVal, groupNameStr, this.mode);
+            cache.update(unitTypeObj, countVal, groupNameStr, mode);
             
             // 参数未变化且已有单位组 → 使用缓存单位组
             if (!paramsChanged) {
@@ -468,7 +468,7 @@ public class LUnitBindGroup {
                 sharedGroup.currentIndex = -1;
                 
                 // 更新共享组单位并记录映射
-                updateUnitGroup(sharedGroup, unitTypeObj, countVal, exec.team, controller, groupNameStr);
+                updateUnitGroup(sharedGroup, unitTypeObj, countVal, exec.team, controller, groupNameStr, unitVar, indexVar);
                 buildingToGroupName.put(controller, groupNameStr);
                 
                 // 更新共享组配置
@@ -497,7 +497,7 @@ public class LUnitBindGroup {
                 groupInfo.currentIndex = -1;
                 
                 // 更新独立组单位并移除映射
-                updateUnitGroup(groupInfo, unitTypeObj, countVal, exec.team, controller, groupNameStr);
+                updateUnitGroup(groupInfo, unitTypeObj, countVal, exec.team, controller, groupNameStr, unitVar, indexVar);
                 buildingToGroupName.remove(controller);
                 
                 // 更新单位绑定并返回
@@ -525,7 +525,7 @@ public class LUnitBindGroup {
 
         
         // 更新单位组
-        private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName) {
+        private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName, LVar unitVar, LVar indexVar) {
             // 对于共享组，更新最大count值
             if (groupName != null) {
                 Integer currentMax = sharedGroupMaxCounts.get(groupName);
@@ -548,24 +548,18 @@ public class LUnitBindGroup {
                 // 处理没有可用单位的情况
                 if (info.currentIndex == -1 || info.currentIndex >= info.units.size) {
                     String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "无可用单位");
-                    unitVar.setobj(noUnitError);
-                    if (indexVar != null) {
-                        indexVar.setobj(noUnitError);
-                    }
+                    if (unitVar != null) unitVar.setobj(noUnitError);
+                    if (indexVar != null) indexVar.setobj(noUnitError);
                 } else {
                     Unit unit = info.units.get(info.currentIndex);
                     if (unit != null && unit.isValid()) {
-                        unitVar.setobj(unit);
-                        if (indexVar != null) {
-                            indexVar.setnum(info.currentIndex + 1);
-                        }
+                        if (unitVar != null) unitVar.setobj(unit);
+                        if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
                     } else {
                         // 单位无效
                         String invalidUnitError = Core.bundle.get("ubindgroup.error.invalid_unit", "单位无效");
-                        unitVar.setobj(invalidUnitError);
-                        if (indexVar != null) {
-                            indexVar.setobj(invalidUnitError);
-                        }
+                        if (unitVar != null) unitVar.setobj(invalidUnitError);
+                        if (indexVar != null) indexVar.setobj(invalidUnitError);
                     }
                 }
             }
@@ -721,7 +715,7 @@ public class LUnitBindGroup {
                     }
                 }
             } else if (typeObj instanceof String && ((String)typeObj).equals("@poly")) {
-                // 处理@poly类型，表示任意可控制单位
+
                 // 提高抓取概率：先遍历所有单位，包括从unitCache获取的特定类型单位
                 // 1. 先获取所有可控制的单位类型
                 for (UnitType ut : Vars.content.units()) {
@@ -935,7 +929,7 @@ public class LUnitBindGroup {
         
         // 检查并更新参数缓存，返回参数是否发生变化
         // 注意：参数变化检查和基本验证逻辑已移至executeMode1方法中
-        private static boolean checkAndUpdateParams(Building controller, Object unitType, int count, String groupName) {
+        private static boolean checkAndUpdateParams(Building controller, Object unitType, int count, String groupName, int mode, LVar unitVar, LVar indexVar) {
             // 获取参数缓存
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             
@@ -943,7 +937,7 @@ public class LUnitBindGroup {
             boolean needRestart = false;
             
             // 检查单位类型、数量或模式是否变化
-            if (!Objects.equals(cache.unitType, unitType) || cache.count != count || cache.mode != this.mode) {
+            if (!Objects.equals(cache.unitType, unitType) || cache.count != count || cache.mode != mode) {
                 needRestart = true;
             }
             
@@ -963,7 +957,7 @@ public class LUnitBindGroup {
             }
             
             // 更新参数缓存
-            cache.update(unitType, count, groupName, this.mode);
+            cache.update(unitType, count, groupName, mode);
             
             // 组名相关检查
             if (mode == 1 && groupName != null) {
