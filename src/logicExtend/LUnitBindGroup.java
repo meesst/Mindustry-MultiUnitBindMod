@@ -24,6 +24,76 @@ public class LUnitBindGroup {
     // 常量定义
     private static final float iconSmall = 24f;
     
+    // 单位组信息类
+    public static class UnitGroupInfo {
+        public Seq<Unit> units = new Seq<>();      // 单位列表
+        public int currentIndex = -1;              // 当前单位索引
+        public int mode = 1;                       // 模式
+        public long lastAccessTime = System.currentTimeMillis(); // 最后访问时间，用于清理机制
+    }
+    
+    // 存储按控制器独立的单位组和当前索引
+    private static final ObjectMap<Building, UnitGroupInfo> individualGroups = new ObjectMap<>();
+    // 存储按组名共享的单位组和当前索引
+    private static final ObjectMap<String, UnitGroupInfo> sharedGroups = new ObjectMap<>();
+    // 记录处理器与共享组的关联
+    private static final ObjectMap<Building, String> buildingToGroupName = new ObjectMap<>();
+    // 存储处理器的参数缓存，用于检测参数变化
+    private static final ObjectMap<Building, ParamCache> paramCaches = new ObjectMap<>();
+    // 用于存储共享组的最大count值
+    private static final ObjectMap<String, Integer> sharedGroupMaxCounts = new ObjectMap<>();
+    // 用于存储共享组的初始配置
+    private static final ObjectMap<String, GroupConfig> sharedGroupConfigs = new ObjectMap<>();
+    
+    // 共享组配置类，用于存储共享组的初始参数
+    public static class GroupConfig {
+        public final Object unitType;
+        public final int count;
+        public final int mode;
+        
+        public GroupConfig(Object unitType, int count, int mode) {
+            this.unitType = unitType;
+            this.count = count;
+            this.mode = mode;
+        }
+    }
+    
+    // 参数缓存类，用于存储上次执行时的参数值
+    public static class ParamCache {
+        public Object unitType;
+        public int count;
+        public String groupName;
+        public int mode; // 添加模式字段
+        public String unitVar;
+        public String indexVar;
+        public long lastAccessTime;
+
+        public boolean hasChanged(Object newUnitType, int newCount, String newGroupName, int newMode) {
+            return !Objects.equals(unitType, newUnitType) || 
+                   count != newCount || 
+                   !Objects.equals(groupName, newGroupName) ||
+                   mode != newMode;
+        }
+        
+        public void update(Object newUnitType, int newCount, String newGroupName, int newMode) {
+            this.unitType = newUnitType;
+            this.count = newCount;
+            this.groupName = newGroupName;
+            this.mode = newMode;
+            this.lastAccessTime = System.currentTimeMillis();
+        }
+        
+        // 更新所有参数，包括unitVar和indexVar
+        public void update(Object newUnitType, int newCount, String newGroupName, int newMode, String newUnitVar, String newIndexVar) {
+            update(newUnitType, newCount, newGroupName, newMode);
+            this.unitVar = newUnitVar;
+            this.indexVar = newIndexVar;
+        }
+    }
+    
+    private static long lastCleanupTime = 0;
+    private static final long CLEANUP_INTERVAL = 60 * 1000; // 每分钟清理一次
+    
     public static class UnitBindGroupStatement extends LStatement {
         public String unitType = "@poly", count = "10", unitVar = "currentUnit", indexVar = "unitIndex", groupName = null;
         public int mode = 1; // 1: 正常抓取逻辑，2: 共享组内单位无需抓取
@@ -228,63 +298,10 @@ public class LUnitBindGroup {
         private final LVar groupName;
         private final int mode;
         
-        // 单位组信息类
-        private static class UnitGroupInfo {
-            public Seq<Unit> units = new Seq<>();      // 单位列表
-            public int currentIndex = -1;              // 当前单位索引
-            public int mode = 1;                       // 模式
-            public long lastAccessTime = mindustry.Vars.time.millis(); // 最后访问时间，用于清理机制
-        }
-        
-        private static final ObjectMap<Building, UnitGroupInfo> individualGroups = new ObjectMap<>();
-        // 存储按组名共享的单位组和当前索引
-        private static final ObjectMap<String, UnitGroupInfo> sharedGroups = new ObjectMap<>();
-        // 记录处理器与共享组的关联
-        private static final ObjectMap<Building, String> buildingToGroupName = new ObjectMap<>();
-        // 存储处理器的参数缓存，用于检测参数变化
-        private static final ObjectMap<Building, ParamCache> paramCaches = new ObjectMap<>();
-        // 用于存储共享组的最大count值
-        private static final ObjectMap<String, Integer> sharedGroupMaxCounts = new ObjectMap<>();
-        // 用于存储共享组的初始配置
-        private static final ObjectMap<String, GroupConfig> sharedGroupConfigs = new ObjectMap<>();
-        
-        // 共享组配置类，用于存储共享组的初始参数
-        private static class GroupConfig {
-            public final Object unitType;
-            public final int count;
-            public final int mode;
-            
-            public GroupConfig(Object unitType, int count, int mode) {
-                this.unitType = unitType;
-                this.count = count;
-                this.mode = mode;
-            }
-        }
-        
-        // 参数缓存类，用于存储上次执行时的参数值
-        private static class ParamCache {
-            public Object unitType;
-            public int count;
-            public String groupName;
-            public int mode; // 添加模式字段
-            
-            public boolean hasChanged(Object newUnitType, int newCount, String newGroupName, int newMode) {
-                return !Objects.equals(unitType, newUnitType) || 
-                       count != newCount || 
-                       !Objects.equals(groupName, newGroupName) ||
-                       mode != newMode;
-            }
-            
-            public void update(Object newUnitType, int newCount, String newGroupName, int newMode) {
-                this.unitType = newUnitType;
-                this.count = newCount;
-                this.groupName = newGroupName;
-                this.mode = newMode;
-            }
-        }
+
         
         // 统一参数检查方法，检查所有参数变化
-        private boolean checkAllParamsChanged(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
+        private static boolean checkAllParamsChanged(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
             // 获取参数缓存
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             
@@ -293,10 +310,13 @@ public class LUnitBindGroup {
         }
         
         // 统一参数更新方法，更新所有参数
-        private void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
-            ParamCache cache = paramCaches.get(controller, ParamCache::new);
-            cache.update(unitTypeObj, countVal, groupNameStr, this.mode);
-        }
+          private static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
+              ParamCache cache = paramCaches.get(controller, ParamCache::new);
+              // 获取缓存中的模式值，默认为1
+              int mode = cache.mode;
+              if (mode == 0) mode = 1; // 默认模式1
+              cache.update(unitTypeObj, countVal, groupNameStr, mode);
+          }
         
         public UnitBindGroupInstruction(LVar unitType, LVar count, LVar unitVar, LVar indexVar, LVar groupName, int mode) {
             this.unitType = unitType;
@@ -331,7 +351,7 @@ public class LUnitBindGroup {
                 executeMode1(exec, controller, groupNameStr);
             } else if (mode == 2) {
                 // 模式2：访问模式（使用单位）
-                executeMode2(exec, groupNameStr);
+                executeMode2(exec, unitVar, indexVar, groupNameStr);
             }
         }
         
@@ -343,7 +363,14 @@ public class LUnitBindGroup {
             
             if (hasGroupName) {
                 // 是 → 检查组名使用情况
-                if (buildingToGroupName.containsValue(groupNameStr)) {
+                boolean contains = false;
+                for (String value : buildingToGroupName.values()) {
+                    if (value != null && value.equals(groupNameStr)) {
+                        contains = true;
+                        break;
+                    }
+                }
+                if (contains) {
                     // 已被使用 → 设置错误 → 结束
                     String groupConflictError = Core.bundle.get("ubindgroup.error.group_conflict", "组名已被使用");
                     unitVar.setobj(groupConflictError);
@@ -495,11 +522,10 @@ public class LUnitBindGroup {
         // 存储每个共享组的最大count值（已在类顶部定义）
         
         // 上次清理时间，用于定期清理
-        private static long lastCleanupTime = 0;
-        private static final long CLEANUP_INTERVAL = 60 * 1000; // 每分钟清理一次
+
         
         // 更新单位组
-        private void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName) {
+        private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName) {
             // 对于共享组，更新最大count值
             if (groupName != null) {
                 Integer currentMax = sharedGroupMaxCounts.get(groupName);
@@ -661,7 +687,7 @@ public class LUnitBindGroup {
         }
         
         // 检查单位是否被指定处理器控制
-        private boolean isUnitControlledBy(Building controller, Unit unit) {
+        private static boolean isUnitControlledBy(Building controller, Unit unit) {
             if (unit == null || controller == null || !controller.isValid()) return false;
 
             if (unit.controller() instanceof LogicAI) {
@@ -675,7 +701,7 @@ public class LUnitBindGroup {
         }
         
         // 收集所有符合条件的可用单位
-        private Seq<Unit> collectAvailableUnits(Object typeObj, Team team, Building controller, String groupName) {
+        private static Seq<Unit> collectAvailableUnits(Object typeObj, Team team, Building controller, String groupName) {
             Seq<Unit> result = new Seq<>();
 
             if (typeObj instanceof UnitType type && type.logicControllable) {
@@ -745,7 +771,7 @@ public class LUnitBindGroup {
         }
         
         // 检查单位是否可被当前控制器（或其所属组）使用
-        private boolean isUnitAvailableForController(Unit unit, Building controller, String groupName) {
+        private static boolean isUnitAvailableForController(Unit unit, Building controller, String groupName) {
             // 空单位或空控制器检查
             if (unit == null || controller == null) return false;
             
@@ -817,7 +843,7 @@ public class LUnitBindGroup {
         }
         
         // 检查单位是否有效且未被其他处理器控制
-        private boolean isValidAndNotControlled(Unit unit, Building controller) {
+        private static boolean isValidAndNotControlled(Unit unit, Building controller) {
             if (!unit.isValid() || unit.team != controller.team) return false;
 
             // 检查单位是否死亡
@@ -845,7 +871,7 @@ public class LUnitBindGroup {
         }
         
         // 锁定单位，与ucontrol within指令效果相似
-        private void lockUnit(Unit unit, Building controller) {
+        private static void lockUnit(Unit unit, Building controller) {
             // 添加多层安全检查，防止任何可能的空指针或无效状态
             if (unit == null || !unit.isValid() || controller == null || !controller.isValid()) return;
             
@@ -889,7 +915,7 @@ public class LUnitBindGroup {
         }
         
         // 清理无效控制器的资源
-        private void cleanupInvalidController(Building controller) {
+        private static void cleanupInvalidController(Building controller) {
             if (controller == null) return;
             
             // 清理独立组
@@ -909,7 +935,7 @@ public class LUnitBindGroup {
         
         // 检查并更新参数缓存，返回参数是否发生变化
         // 注意：参数变化检查和基本验证逻辑已移至executeMode1方法中
-        private boolean checkAndUpdateParams(Building controller, Object unitType, int count, String groupName) {
+        private static boolean checkAndUpdateParams(Building controller, Object unitType, int count, String groupName) {
             // 获取参数缓存
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             
@@ -965,7 +991,7 @@ public class LUnitBindGroup {
         }
         
         // 解绑控制器关联的所有单位
-        private void unbindAllUnits(Building controller, String groupName) {
+        private static void unbindAllUnits(Building controller, String groupName) {
             // 解绑单个组的单位
             UnitGroupInfo info = individualGroups.get(controller);
             if (info != null && info.units != null) {
@@ -999,13 +1025,13 @@ public class LUnitBindGroup {
         }
         
         // 解锁单位，取消控制器的控制
-        private void unlockUnit(Unit unit, Building controller) {
+        private static void unlockUnit(Unit unit, Building controller) {
             // 这里可以添加释放单位控制的逻辑
             // 例如移除单位上的控制标记或引用
         }
         
         // 定期清理内存和未使用的组
-        private void cleanupMemoryAndUnusedGroups() {
+        private static void cleanupMemoryAndUnusedGroups() {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastCleanupTime < CLEANUP_INTERVAL) {
                 return; // 未到清理时间
@@ -1054,7 +1080,7 @@ public class LUnitBindGroup {
             }
         }
         
-        private void cleanupUnusedGroup(String groupName) {
+        private static void cleanupUnusedGroup(String groupName) {
             if (groupName == null) return;
             
             // 检查是否还有任何处理器使用该组
@@ -1074,7 +1100,7 @@ public class LUnitBindGroup {
             }
         }
         
-        private void executeMode2(LExecutor exec, String groupNameStr) {
+        private static void executeMode2(LExecutor exec, LVar unitVar, LVar indexVar, String groupNameStr) {
             // 模式2：访问模式（使用单位）
             
             // 共享组检查
@@ -1129,7 +1155,7 @@ public class LUnitBindGroup {
             }
             
             // 更新最后访问时间
-            info.lastAccessTime = mindustry.Vars.time.millis();
+            info.lastAccessTime = System.currentTimeMillis();
         }
     }
     
