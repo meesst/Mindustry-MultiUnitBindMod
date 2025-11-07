@@ -1,106 +1,132 @@
-# 单位控制器执行流程（更新版）
+# LUnitBindGroup 功能流程树形图
 
-## 整体执行流程
+## LUnitBindGroup 主类
+- **类结构**
+  - 静态字段存储
+    - `individualGroups`: 存储按控制器独立的单位组
+    - `sharedGroups`: 存储按组名共享的单位组
+    - `buildingToGroupName`: 记录处理器与共享组的关联
+    - `paramCaches`: 存储处理器的参数缓存
+    - `sharedGroupMaxCounts`: 存储共享组的最大count值
+    - `sharedGroupConfigs`: 存储共享组的初始配置
+  - **核心类**
+    - `UnitGroupInfo`: 单位组信息类
+    - `ParamCache`: 参数缓存类
+    - `GroupConfig`: 共享组配置类
+    - `UnitBindGroupStatement`: 逻辑语句类
+    - `UnitBindGroupInstruction`: 指令执行类
 
-```mermaid
-graph TD
-    A[开始执行] --> B{控制器有效性检查}
-    B -->|无效| C[清理资源]
-    C --> Z[结束]
-    B -->|有效| D[获取并处理组名称]
-    D --> E{模式判断}
-    E -->|模式1| Mode1[执行模式1逻辑]
-    E -->|模式2| Mode2[执行模式2逻辑]
-    Mode1 --> Z
-    Mode2 --> Z
-```
+## 工作流程
 
-## 模式1：抓取模式（核心管理流程）
+### 1. 初始化流程
+- **创建UnitBindGroupStatement对象**
+  - 设置默认参数：单位类型、数量、变量名等
+  - 模式默认为1
+- **构建指令**
+  - 调用`build(LAssembler builder)`方法
+  - 创建`UnitBindGroupInstruction`实例
 
-```mermaid
-graph TD
-    M1_Start[模式1开始] --> M1_GroupCheck{组名指定判断}
-    M1_GroupCheck -->|是| M1_GroupNameUsed{检查组名使用情况}
-    M1_GroupNameUsed -->|已被使用| M1_ErrorGroupUsed[设置错误]
-    M1_ErrorGroupUsed --> M1_End[模式1结束]
-    M1_GroupNameUsed -->|未被使用| M1_UseShared[使用共享组]
-    M1_GroupCheck -->|否| M1_UseIndividual[使用独立组]
-    M1_UseShared --> M1_GetParams[获取单位参数]
-    M1_UseIndividual --> M1_GetParams
-    M1_GetParams --> M1_ParamsChanged{参数变化检查}
-    M1_ParamsChanged -->|有变化| M1_ResetStart[重新开始]
-    M1_ResetStart --> M1_TypeChanged{单位类型有变化}
-    M1_TypeChanged --> M1_CountChanged{单位数量有变化}
-    M1_CountChanged --> M1_ModeChanged{模式有变化}
-    M1_ModeChanged --> M1_GroupNameChanged{组名有变化}
-    M1_GroupNameChanged --> M1_CleanupOld[清理旧组名关联]
-    M1_CleanupOld --> M1_ParamsChanged
-    M1_ParamsChanged -->|无变化| M1_CountCheck{单位数量检查}
-    M1_CountCheck -->|数量<0| M1_ErrorCount[设置错误]
-    M1_ErrorCount --> M1_End
-    M1_CountCheck -->|数量>=0| M1_UpdateUnits[更新组单位]
-    M1_UpdateUnits --> M1_GroupType{组类型}
-    M1_GroupType -->|共享组| M1_UpdateShared[更新共享组单位并记录映射]
-    M1_GroupType -->|独立组| M1_UpdateIndividual[更新独立组单位并移除映射]
-    M1_UpdateShared --> M1_UpdateBind[更新单位绑定并返回]
-    M1_UpdateIndividual --> M1_UpdateBind
-    M1_UpdateBind --> M1_End
-```
+### 2. 指令执行流程 (run 方法)
+- **参数获取**
+  - 获取单位类型、数量、变量名、组名等参数
+- **模式判断**
+  - 模式1：调用`executeMode1`
+  - 模式2：调用`executeMode2`
 
-## 参数变化检查
+### 3. 模式1执行流程 (executeMode1)
+- **组名使用判断**
+  - 有组名
+    - 检查组名是否被其他处理器使用
+      - 是：设置错误信息，返回
+      - 否：使用共享组
+  - 无组名：使用独立组
+- **参数变化检查**
+  - 检查单位类型、数量、模式、组名变化
+  - 组名变化：清理旧组名关联
+  - 参数变化：解绑所有单位，重新开始
+- **更新参数缓存**
+- **参数未变化且有单位组**
+  - 更新单位索引，设置变量值
+  - 返回
+- **参数变化或无单位组**
+  - 调用`updateUnitGroup`更新单位组
 
-```mermaid
-graph TD
-    PC_Start[参数变化检查开始] --> PC_GetCache[获取参数缓存]
-    PC_GetCache --> PC_CheckChanged{检查变化}
-    PC_CheckChanged -->|单位类型变化| PC_NeedRestart[需要重新执行]
-    PC_CheckChanged -->|单位数量变化| PC_NeedRestart
-    PC_CheckChanged -->|模式变化| PC_NeedRestart
-    PC_CheckChanged -->|组名变化| PC_Cleanup[清理旧关联]
-    PC_Cleanup --> PC_NeedRestart
-    PC_NeedRestart --> PC_UpdateCache[更新参数缓存]
-    PC_CheckChanged -->|无变化| PC_NoRestart[不需要重新执行]
-    PC_UpdateCache --> PC_End[参数变化检查结束]
-    PC_NoRestart --> PC_End
-```
+### 4. 模式2执行流程 (executeMode2)
+- **共享组检查**
+  - 检查共享组是否存在
+    - 否：设置错误信息，返回
+  - 获取当前单位
+  - 当前单位有效：设置变量值
+  - 当前单位无效：尝试查找第一个有效单位
+    - 找到：设置变量值
+    - 未找到：设置错误信息
 
-## 模式2：访问模式（简化衍生流程）
+### 5. 单位组更新流程 (updateUnitGroup)
+- **共享组最大数量更新**
+  - 更新共享组的最大count值
+- **单位数量调整**
+  - 单位数超过最大值：截断，重置索引
+- **清理无效单位**
+  - 创建有效单位列表
+  - 检查单位有效性、所有权等
+- **收集新单位**
+  - 调用`collectAvailableUnits`获取可用单位
+- **添加新单位到组**
+  - 锁定单位，更新单位索引
+- **设置变量值**
 
-```mermaid
-graph TD
-    M2_Start[模式2开始] --> M2_GroupExists{共享组检查}
-    M2_GroupExists -->|不存在| M2_ErrorNotExist[设置错误]
-    M2_ErrorNotExist --> M2_End[模式2结束]
-    M2_GroupExists -->|存在| M2_SetVars[设置单位变量和索引]
-    M2_SetVars --> M2_End
-```
+### 6. 辅助功能流程
 
-## 设计说明
+#### 6.1 单位收集流程 (collectAvailableUnits)
+- **单位类型解析**
+- **收集所有单位**
+  - 过滤单位类型
+  - 过滤单位有效性
+  - 调用`isUnitAvailableForController`检查可用性
 
-1. **模式1参数检查逻辑修改**
-   - 移除了单位类型检查，只保留数量≥0的检查
-   - 参数变化检查移至模式1内部，在获取单位参数后执行
-   - 参数变化时清理单位池和缓存，重新开始流程
+#### 6.2 单位可用性检查 (isUnitAvailableForController)
+- **基本检查**
+  - 单位有效性
+  - 团队一致性
+  - 非玩家单位
+- **控制器检查**
+  - 独立模式：检查单位是否被其他控制器控制
+  - 共享模式：检查单位是否被同组控制器控制
 
-2. **参数变化检查位置调整**
-   - 从checkAndUpdateParams方法移至executeMode1方法内
-   - 简化了checkAndUpdateParams方法，只保留必要的逻辑
+#### 6.3 单位锁定流程 (lockUnit)
+- 设置单位控制器为当前建筑
+- 更新单位AI为LogicAI
+- 取消原有的命令AI
 
-3. **参数变化检测逻辑**
-   - 单位类型变化：当单位类型参数改变时触发重新执行
-   - 单位数量变化：当数量参数改变时触发重新执行
-   - 模式变化：当模式参数改变时触发重新执行
-   - 组名变化：当组名参数改变时，清理旧的组名关联后触发重新执行
+#### 6.4 内存清理流程 (cleanupMemoryAndUnusedGroups)
+- 定期执行（每分钟）
+- 清理无效控制器
+- 清理未使用的组
 
-4. **流程特点**
-   - 共享组支持：允许多个控制器共享同一单位组
-   - 独立组支持：为不指定组名的控制器创建独立单位组
-   - 错误处理：对各种异常情况设置明确的错误信息
-   - 资源管理：包含清理机制，避免资源泄漏
+#### 6.5 未使用组清理 (cleanupUnusedGroup)
+- 检查组的最后访问时间
+- 超过清理时间：移除组，解锁单位
 
-## 代码结构概览
+## 错误处理流程
+- **组名冲突错误**
+- **组不存在错误**
+- **无可用单位错误**
+- **单位无效错误**
 
-- `run()`: 主执行入口，处理控制器有效性和模式分支
-- `executeMode1()`: 实现模式1逻辑，包括组名判断、参数变化检查、单位数量检查和组单位更新
-- `executeMode2()`: 实现模式2逻辑，包括共享组检查和单位变量设置
-- 辅助方法: 提供单位收集、更新、锁定等功能支持
+## 模式功能对比
+
+### 模式1：单位控制模式
+- **功能**：创建、管理、控制单位组
+- **操作**：抓取单位、锁定单位、管理单位组
+- **适用场景**：需要控制单位的主处理器
+
+### 模式2：共享组访问模式
+- **功能**：只读访问已存在的共享单位组
+- **操作**：获取单位、读取索引
+- **适用场景**：需要访问其他处理器控制的单位的辅助处理器
+
+## 数据结构关系
+- **Building ↔ String** (buildingToGroupName): 处理器与组名的映射
+- **Building ↔ UnitGroupInfo** (individualGroups): 处理器与独立组的映射
+- **String ↔ UnitGroupInfo** (sharedGroups): 组名与共享组的映射
+- **Building ↔ ParamCache** (paramCaches): 处理器与参数缓存的映射

@@ -45,10 +45,11 @@ public class LUnitBindGroup {
     // 用于存储共享组的初始配置
     private static final ObjectMap<String, GroupConfig> sharedGroupConfigs = new ObjectMap<>();
     
-    // 统一参数更新方法，更新所有参数 - 移到类顶层以解决作用域问题
+    // 统一参数更新方法 - 将所有参数更新到指定控制器的参数缓存中
+    // 此方法已移至类顶层以解决作用域问题
     static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
         ParamCache cache = paramCaches.get(controller, ParamCache::new);
-        // 使用传入的模式值，默认为1
+        // 确保模式值有效，默认使用模式1
         int actualMode = mode;
         if (actualMode == 0) actualMode = 1; // 默认模式1
         cache.update(unitTypeObj, countVal, groupNameStr, actualMode);
@@ -359,7 +360,7 @@ public class LUnitBindGroup {
         }
         
         private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
-            // 模式1：抓取模式（核心管理流程）
+            // 模式1：单位控制模式 - 核心功能模式，负责单位的抓取、绑定和管理
             
             // 组名指定判断
             boolean hasGroupName = groupNameStr != null && !groupNameStr.isEmpty();
@@ -367,14 +368,15 @@ public class LUnitBindGroup {
             if (hasGroupName) {
                 // 是 → 检查组名使用情况
                 boolean contains = false;
-                for (String value : buildingToGroupName.values()) {
-                    if (value != null && value.equals(groupNameStr)) {
+                for (ObjectMap.Entry<Building, String> entry : buildingToGroupName.entries()) {
+                    // 检查：1. 值不为空 2. 值等于当前组名 3. 键不是当前控制器（忽略自己使用的组名）
+                    if (entry.value != null && entry.value.equals(groupNameStr) && entry.key != controller) {
                         contains = true;
                         break;
                     }
                 }
                 if (contains) {
-                    // 已被使用 → 设置错误 → 结束
+                    // 已被其他处理器使用 → 设置错误 → 结束
                     String groupConflictError = Core.bundle.get("ubindgroup.error.group_conflict", "组名已被使用");
                     unitVar.setobj(groupConflictError);
                     if (indexVar != null) {
@@ -382,7 +384,7 @@ public class LUnitBindGroup {
                     }
                     return;
                 }
-                // 未被使用 → 使用共享组
+                // 未被其他处理器使用或自己已在使用 → 使用共享组
             } else {
                 // 否 → 使用独立组
             }
@@ -527,7 +529,7 @@ public class LUnitBindGroup {
         // 上次清理时间，用于定期清理
 
         
-        // 更新单位组
+        // 更新单位组 - 清理无效单位，添加新单位，维护单位组的有效状态
         private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName, LVar unitVar, LVar indexVar) {
             // 对于共享组，更新最大count值
             if (groupName != null) {
@@ -1098,7 +1100,7 @@ public class LUnitBindGroup {
         }
         
         private static void executeMode2(LExecutor exec, LVar unitVar, LVar indexVar, String groupNameStr) {
-            // 模式2：访问模式（使用单位）
+            // 模式2：共享组访问模式 - 只读模式，用于访问已由模式1创建的共享组中的单位
             
             // 共享组检查
             UnitGroupInfo info = sharedGroups.get(groupNameStr);
