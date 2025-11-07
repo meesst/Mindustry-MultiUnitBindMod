@@ -301,22 +301,22 @@ public class LUnitBindGroup {
 
         
         // 统一参数检查方法，检查所有参数变化
-        private static boolean checkAllParamsChanged(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
+        private static boolean checkAllParamsChanged(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
             // 获取参数缓存
             ParamCache cache = paramCaches.get(controller, ParamCache::new);
             
             // 检查所有参数是否变化（包括单位类型、数量、组名和模式）
-            return cache.hasChanged(unitTypeObj, countVal, groupNameStr, this.mode);
+            return cache.hasChanged(unitTypeObj, countVal, groupNameStr, mode);
         }
         
         // 统一参数更新方法，更新所有参数
-          private static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr) {
-              ParamCache cache = paramCaches.get(controller, ParamCache::new);
-              // 获取缓存中的模式值，默认为1
-              int mode = cache.mode;
-              if (mode == 0) mode = 1; // 默认模式1
-              cache.update(unitTypeObj, countVal, groupNameStr, mode);
-          }
+        private static void updateAllParams(Building controller, Object unitTypeObj, int countVal, String groupNameStr, int mode) {
+            ParamCache cache = paramCaches.get(controller, ParamCache::new);
+            // 使用传入的模式值，默认为1
+            int actualMode = mode;
+            if (actualMode == 0) actualMode = 1; // 默认模式1
+            cache.update(unitTypeObj, countVal, groupNameStr, actualMode);
+        }
         
         public UnitBindGroupInstruction(LVar unitType, LVar count, LVar unitVar, LVar indexVar, LVar groupName, int mode) {
             this.unitType = unitType;
@@ -973,7 +973,7 @@ public class LUnitBindGroup {
             }
             
             // 使用统一参数更新方法，更新所有参数
-            updateAllParams(controller, unitType, count, groupName);
+            updateAllParams(controller, unitType, count, groupName, mode);
             
             // 记录组配置
             if (groupName != null) {
