@@ -122,7 +122,7 @@ public class LUnitBindGroup {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                label(t, "mode:").left();
+                t.add("mode:").left();
                 modeButton(t, table);
                 
                 // 单位类型参数（模式1显示）
@@ -131,7 +131,7 @@ public class LUnitBindGroup {
                     table.field(unitType, Styles.nodeField, s -> unitType = sanitize(s))
                         .size(144f, 40f).pad(2f).color(table.color)
                         .width(85f).padRight(10).left();
-                    table.button(Icon.pencilSmall, Styles.logict, () -> showUnitTypeSelect(table))
+                    table.button(Icon.pencilSmall, Styles.nodei, () -> showUnitTypeSelect(table))
                         .size(40f).color(table.color);
                 }
             }).left();
@@ -171,7 +171,7 @@ public class LUnitBindGroup {
         }
         
         void modeButton(Table table, Table parent) {
-            showSelect(table, () -> mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
+            table.button(()->mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式"), Styles.nodei, () -> {
                 BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
                 dialog.cont.setWidth(300f);
                 dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
@@ -190,7 +190,7 @@ public class LUnitBindGroup {
         }
         
         void showUnitTypeSelect(Table table) {
-            showSelect(table, unitType, () -> {
+            table.button(()->unitType, Styles.nodei, () -> {
                 BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.unittype.select", "选择单位类型"));
                 dialog.cont.pane(selectTable -> {
                     selectTable.left();
