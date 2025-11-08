@@ -130,11 +130,29 @@ public class LUnitBindGroup {
                 // 单位类型参数（模式1显示）
                 if (mode == 1) {
                     table.add(Core.bundle.get("ubindgroup.param.unitType", "type")).padLeft(10).left().self(this::param);
-                    table.field(unitType, Styles.nodeField, s -> unitType = sanitize(s))
-                        .size(144f, 40f).pad(2f).color(table.color)
-                        .width(85f).padRight(10).left();
-                    table.button(Icon.pencilSmall, Styles.nodei, () -> showUnitTypeSelect(table))
-                        .size(40f).color(table.color);
+                    TextField field = field(table, unitType, str -> unitType = sanitize(str)).get();
+                    
+                    // 完全按照游戏源代码中的UnitBindStatement实现方式
+                    table.button(b -> {
+                        b.image(Icon.pencilSmall);
+                        b.clicked(() -> showSelectTable(b, (t, hide) -> {
+                            t.row();
+                            t.table(i -> {
+                                i.left();
+                                int c = 0;
+                                for(UnitType item : Vars.content.units()){
+                                    if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                                    i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                        unitType = "@" + item.name;
+                                        field.setText(unitType);
+                                        hide.run();
+                                    }).size(40f);
+
+                                    if(++c % 6 == 0) i.row();
+                                }
+                            }).colspan(3).width(240f).left();
+                        }));
+                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
                     
                     // 数量参数
                     table.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
@@ -193,30 +211,9 @@ public class LUnitBindGroup {
             }).width(100f);
         }
         
+        // 不再需要单独的showUnitTypeSelect方法，按钮逻辑已集成到rebuild方法中
         void showUnitTypeSelect(Table table) {
-            TextField field = (TextField)table.getChildren().get(table.getChildren().size - 2); // 获取单位类型输入框
-            
-            // 完全按照游戏源代码中的UnitBindStatement实现方式
-            table.button(b -> {
-                b.image(Icon.pencilSmall);
-                b.clicked(() -> showSelectTable(b, (t, hide) -> {
-                    t.row();
-                    t.table(i -> {
-                        i.left();
-                        int c = 0;
-                        for(UnitType item : Vars.content.units()){
-                            if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
-                                unitType = "@" + item.name;
-                                field.setText(unitType);
-                                hide.run();
-                            }).size(40f);
-
-                            if(++c % 6 == 0) i.row();
-                        }
-                    }).colspan(3).width(240f).left();
-                }));
-            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
+            // 保留此方法以避免编译错误，但实际功能已移至rebuild方法
         }
         
         @Override
