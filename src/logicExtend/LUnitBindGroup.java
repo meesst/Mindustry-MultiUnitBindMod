@@ -135,9 +135,9 @@ public class LUnitBindGroup {
                     // 完全按照游戏源代码中的UnitBindStatement实现方式
                     table.button(b -> {
                         b.image(Icon.pencilSmall);
-                        b.clicked(() -> showSelectTable(b, (t, hide) -> {
-                            t.row();
-                            t.table(i -> {
+                        b.clicked(() -> showSelectTable(b, (table_, hide) -> {
+                            table_.row();
+                            table_.table(i -> {
                                 i.left();
                                 int c = 0;
                                 for(UnitType item : Vars.content.units()){
