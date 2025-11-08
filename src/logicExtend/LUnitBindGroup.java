@@ -196,27 +196,26 @@ public class LUnitBindGroup {
         void showUnitTypeSelect(Table table) {
             TextField field = (TextField)table.getChildren().get(table.getChildren().size - 2); // 获取单位类型输入框
             
-            // 使用self方法获取button实例，然后传递给showSelectTable
-            table.button(Icon.pencilSmall, Styles.flati, () -> {}).self(button -> {
-                button.clicked(() -> {
-                    showSelectTable(button, (t, hide) -> {
-                        t.row();
-                        t.table(i -> {
-                            i.left();
-                            int c = 0;
-                            for(UnitType item : Vars.content.units()){
-                                if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                                i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
-                                    unitType = "@" + item.name;
-                                    field.setText(unitType);
-                                    hide.run();
-                                    rebuild(table);
-                                }).size(40f).self(cell -> tooltip(cell, item.localizedName));
+            // 使用self方法获取Cell，然后从Cell中获取实际的Button组件
+            table.button(Icon.pencilSmall, Styles.flati, () -> {
+                // 直接在button方法中设置点击事件，不再需要通过self获取button
+                showSelectTable(table.getChildren().get(table.getChildren().size - 1), (t, hide) -> {
+                    t.row();
+                    t.table(i -> {
+                        i.left();
+                        int c = 0;
+                        for(UnitType item : Vars.content.units()){
+                            if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                unitType = "@" + item.name;
+                                field.setText(unitType);
+                                hide.run();
+                                rebuild(table);
+                            }).size(40f).self(cell -> tooltip(cell, item.localizedName));
 
-                                if(++c % 6 == 0) i.row();
-                            }
-                        }).colspan(3).width(240f).left();
-                    });
+                            if(++c % 6 == 0) i.row();
+                        }
+                    }).colspan(3).width(240f).left();
                 });
             }).size(40f).color(table.color);
         }
