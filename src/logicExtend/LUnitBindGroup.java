@@ -9,6 +9,7 @@ import arc.struct.Seq;
 import arc.scene.style.TextureRegionDrawable;
 import arc.math.geom.Vec2;
 import arc.Core;
+import mindustry.gen.Icon;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.UnitType;
@@ -108,130 +109,108 @@ public class LUnitBindGroup {
         public String unitType = "@poly", count = "10", unitVar = "currentUnit", indexVar = "unitIndex", groupName = null;
         public int mode = 1; // 1: 正常抓取逻辑，2: 共享组内单位无需抓取
         
-        // 实现tooltip方法，用于为标签添加悬浮提示
-        private void tooltip(Cell<Label> labelCell, String text) {
-            if (labelCell != null && labelCell.get() != null) {
-                labelCell.tooltip(text);
-            }
-        }
-        
-        // 重写field方法，确保使用正确的样式，与LStatement类保持一致
-        @Override
-        protected Cell<TextField> field(Table table, String value, arc.func.Cons<String> setter) {
-            // 直接在TextField上应用样式和颜色，确保与系统其他部分一致
-            TextField field = new TextField(value, Styles.nodeField);
-            field.setColor(table.color);
-            field.changed(() -> setter.get(sanitize(field.getText())));
-            return table.add(field).size(144f, 40f).pad(2f);
-        }
-        
-        // 实现showSelectTable方法，用于显示单位类型选择对话框
-        private void showSelectTable(Cell<?> button, UnitTypeSelectListener listener) {
-            BaseDialog dialog = new BaseDialog("选择单位类型");
-            dialog.addCloseButton();
-            
-            listener.build(dialog.cont, () -> dialog.hide());
-            dialog.show();
-        }
-        
-        // 接口定义，用于构建选择表格内容
-        private interface UnitTypeSelectListener {
-            void build(Table table, Runnable hide);
-        }
-        
         @Override
         public void build(Table table) {
+            rebuild(table);
+        }
+        
+        private void rebuild(Table table) {
+            table.clearChildren();
+            table.left();
+            
             // 第一排：模式选择和单位类型参数
-            Table firstRow = new Table();
-            table.add(firstRow).left().row();
-            
-            // 模式选择参数
-            firstRow.add("mode:");
-            modeButton(firstRow, table);
-            
-            // 单位类型参数（模式1显示）
-            if (mode == 1) {
-                Cell<Label> typeLabel = firstRow.add(Core.bundle.get("ubindgroup.param.unitType", "type"));
-                tooltip(typeLabel, Core.bundle.get("ubindgroup.param.unitType.tooltip", "单位类型: 指定要抓取的单位类型"));
+            table.table(t -> {
+                t.setColor(table.color);
                 
-                TextField field = field(firstRow, unitType, str -> unitType = str).get();
+                label(t, "mode:").left();
+                modeButton(t, table);
                 
-                firstRow.button(b -> {
-                    b.image(Icon.pencilSmall);
-                    b.clicked(() -> showSelectTable(b, (t, hide) -> {
-                        t.row();
-                        t.table(i -> {
-                            i.left();
-                            int c = 0;
-                            for(UnitType item : Vars.content.units()){
-                                if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                                i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
-                                    unitType = "@" + item.name;
-                                    field.setText(unitType);
-                                    hide.run();
-                                }).size(40f);
-
-                                if(++c % 6 == 0) i.row();
-                            }
-                        }).colspan(3).width(240f).left();
-                    }));
-                }, Styles.logict, () -> {}).size(40f).padLeft(-2);
-            }
+                // 单位类型参数（模式1显示）
+                if (mode == 1) {
+                    table.add(Core.bundle.get("ubindgroup.param.unitType", "type")).padLeft(10).left().self(this::param);
+                    table.field(unitType, Styles.nodeField, s -> unitType = sanitize(s))
+                        .size(144f, 40f).pad(2f).color(table.color)
+                        .width(85f).padRight(10).left();
+                    table.button(Icon.pencilSmall, Styles.logict, () -> showUnitTypeSelect(table))
+                        .size(40f).color(table.color);
+                }
+            }).left();
+            
+            table.row();
             
             // 第二排：数量、变量名和组名称参数
-            Table secondRow = new Table();
-            table.add(secondRow).left().row();
-            
-            // 数量参数（模式1显示）
-            if (mode == 1) {
-                Cell<Label> countLabel = secondRow.add(Core.bundle.get("ubindgroup.param.count", "count"));
-                tooltip(countLabel, Core.bundle.get("ubindgroup.param.count.tooltip", "单位数量: 指定要抓取的最大单位数量"));
-                field(secondRow, count, str -> count = str);
-            }
-            
-            // 单位变量参数
-            Cell<Label> unitVarLabel = secondRow.add(Core.bundle.get("ubindgroup.param.var", "unitVar"));
-            tooltip(unitVarLabel, Core.bundle.get("ubindgroup.param.var", "输出变量名:") + " - 存储单位引用的变量名");
-            field(secondRow, unitVar, str -> unitVar = str);
-            
-            // 索引变量参数
-            Cell<Label> indexVarLabel = secondRow.add(Core.bundle.get("ubindgroup.param.index", "indexVar"));
-            tooltip(indexVarLabel, Core.bundle.get("ubindgroup.param.index.tooltip", "索引变量: 存储当前单位索引的变量名（从1开始）"));
-            field(secondRow, indexVar, str -> indexVar = str);
-            
-            // 组名称参数 - 调整宽度以避免超出UI
-            Cell<Label> groupNameLabel = secondRow.add(Core.bundle.get("ubindgroup.param.group", "groupName"));
-            tooltip(groupNameLabel, Core.bundle.get("ubindgroup.param.group.tooltip", "组名称: 标识共享单位组的唯一名称"));
-            field(secondRow, groupName != null ? groupName : "null", str -> groupName = str.isEmpty() ? null : str).width(100f);
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                // 数量参数（模式1显示）
+                if (mode == 1) {
+                    table.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
+                    table.field(count, Styles.nodeField, s -> count = sanitize(s))
+                        .size(144f, 40f).pad(2f).color(table.color)
+                        .width(85f).padRight(10).left();
+                }
+                
+                // 单位变量参数
+                table.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(this::param);
+                table.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
+                    .size(144f, 40f).pad(2f).color(table.color)
+                    .width(85f).padRight(10).left();
+                
+                // 索引变量参数
+                table.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(this::param);
+                table.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
+                    .size(144f, 40f).pad(2f).color(table.color)
+                    .width(85f).padRight(10).left();
+                
+                // 组名称参数
+                table.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(this::param);
+                table.field(groupName != null ? groupName : "null", Styles.nodeField, s -> groupName = sanitize(s).isEmpty() ? null : sanitize(s))
+                    .size(144f, 40f).pad(2f).color(table.color)
+                    .width(85f).padRight(10).left();
+            }).left();
         }
         
         void modeButton(Table table, Table parent) {
-            table.button(b -> {
-                b.label(() -> mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式"));
-                b.clicked(() -> {
-                    BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
-                    // 设置对话框宽度为300像素，解决文字竖向排列问题
-                    dialog.cont.setWidth(300f);
-                    dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
-                        mode = 1;
-                        rebuild(parent);
-                        dialog.hide();
-                    }).width(280f).row();
-                    dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
-                        mode = 2;
-                        rebuild(parent);
-                        dialog.hide();
-                    }).width(280f).row();
-                    dialog.addCloseButton();
-                    dialog.show();
-                });
-            }, Styles.logict, () -> {}).size(160f, 40f).pad(4f).color(table.color);
-            // 为按钮添加tooltip（修复变量引用错误）
+            showSelect(table, () -> mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
+                BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
+                dialog.cont.setWidth(300f);
+                dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
+                    mode = 1;
+                    rebuild(parent);
+                    dialog.hide();
+                }).width(280f).row();
+                dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
+                    mode = 2;
+                    rebuild(parent);
+                    dialog.hide();
+                }).width(280f).row();
+                dialog.addCloseButton();
+                dialog.show();
+            });
         }
         
-        void rebuild(Table table) {
-            table.clearChildren();
-            build(table);
+        void showUnitTypeSelect(Table table) {
+            showSelect(table, unitType, () -> {
+                BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.unittype.select", "选择单位类型"));
+                dialog.cont.pane(selectTable -> {
+                    selectTable.left();
+                    selectTable.defaults().size(40f).pad(2f);
+                    int c = 0;
+                    for(UnitType item : Vars.content.units()){
+                        if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                        selectTable.button(new TextureRegionDrawable(item.uiIcon), Styles.clearNoneTogglei, () -> {
+                            unitType = "@" + item.name;
+                            rebuild(table);
+                            dialog.hide();
+                        }).tooltip(item.localizedName);
+
+                        if(++c % 6 == 0) selectTable.row();
+                    }
+                }).maxHeight(300f).width(240f);
+                dialog.addCloseButton();
+                dialog.show();
+            });
+        }
         }
         
         @Override
@@ -1025,8 +1004,10 @@ public class LUnitBindGroup {
         
         // 解锁单位，取消控制器的控制
         private static void unlockUnit(Unit unit, Building controller) {
-            // 这里可以添加释放单位控制的逻辑
-            // 例如移除单位上的控制标记或引用
+            if (unit != null) {
+                // 释放单位控制，重置控制器，参考Mindustry游戏源码的unbind实现
+                unit.resetController();
+            }
         }
         
         // 定期清理内存和未使用的组
@@ -1101,6 +1082,17 @@ public class LUnitBindGroup {
         
         private static void executeMode2(LExecutor exec, LVar unitVar, LVar indexVar, String groupNameStr) {
             // 模式2：共享组访问模式 - 只读模式，用于访问已由模式1创建的共享组中的单位
+            
+            // 检查组名是否为null
+            if (groupNameStr == null) {
+                // 组名为空 → 设置错误 → 结束
+                String groupNameNullError = Core.bundle.get("ubindgroup.error.group_name_null", "共享组名称不能为空");
+                unitVar.setobj(groupNameNullError);
+                if (indexVar != null) {
+                    indexVar.setobj(groupNameNullError);
+                }
+                return;
+            }
             
             // 共享组检查
             UnitGroupInfo info = sharedGroups.get(groupNameStr);
