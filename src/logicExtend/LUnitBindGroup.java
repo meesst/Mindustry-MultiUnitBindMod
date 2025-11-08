@@ -4,14 +4,17 @@ import arc.scene.ui.layout.Table;
 import arc.scene.ui.layout.Cell;
 import arc.scene.ui.Label;
 import arc.scene.ui.TextField;
+import arc.scene.ui.Tooltip;
 import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.scene.style.TextureRegionDrawable;
 import arc.math.geom.Vec2;
 import arc.Core;
+import arc.func.*;
 import mindustry.gen.Icon;
 import mindustry.gen.*;
 import mindustry.logic.*;
+import mindustry.logic.LCanvas.*;
 import mindustry.type.UnitType;
 import mindustry.game.Team;
 import mindustry.Vars;
@@ -20,6 +23,8 @@ import mindustry.ui.dialogs.BaseDialog;
 import mindustry.ai.types.LogicAI;
 import mindustry.ai.types.CommandAI;
 import java.util.Objects;
+
+import static mindustry.logic.LCanvas.*;
 
 public class LUnitBindGroup {
     // 常量定义
@@ -106,7 +111,7 @@ public class LUnitBindGroup {
     private static final long CLEANUP_INTERVAL = 60 * 1000; // 每分钟清理一次
     
     public static class UnitBindGroupStatement extends LStatement {
-        public String unitType = "@poly", count = "10", unitVar = "currentUnit", indexVar = "unitIndex", groupName = null;
+        public String unitType = null, count = "1", unitVar = "currentUnit", indexVar = "unitIndex", groupName = "null";
         public int mode = 1; // 1: 正常抓取逻辑，2: 共享组内单位无需抓取
         
         @Override
@@ -118,12 +123,9 @@ public class LUnitBindGroup {
             table.clearChildren();
             table.left();
             
-            // 第一排：模式选择和单位类型参数
+            // 第一排：单位类型、单位数量和模式选择
             table.table(t -> {
                 t.setColor(table.color);
-                
-                t.add("mode:").left();
-                modeButton(t, table);
                 
                 // 单位类型参数（模式1显示）
                 if (mode == 1) {
@@ -133,22 +135,24 @@ public class LUnitBindGroup {
                         .width(85f).padRight(10).left();
                     table.button(Icon.pencilSmall, Styles.nodei, () -> showUnitTypeSelect(table))
                         .size(40f).color(table.color);
+                    
+                    // 数量参数
+                    table.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
+                    table.field(count, Styles.nodeField, s -> count = sanitize(s))
+                        .size(144f, 40f).pad(2f).color(table.color)
+                        .width(100f).padRight(10).left();
                 }
+                
+                // 模式选择
+                t.add("mode:").left();
+                modeButton(t, table);
             }).left();
             
             table.row();
             
-            // 第二排：数量、变量名和组名称参数
+            // 第二排：变量名和组名称参数
             table.table(t -> {
                 t.setColor(table.color);
-                
-                // 数量参数（模式1显示）
-                if (mode == 1) {
-                    table.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
-                    table.field(count, Styles.nodeField, s -> count = sanitize(s))
-                        .size(144f, 40f).pad(2f).color(table.color)
-                        .width(85f).padRight(10).left();
-                }
                 
                 // 单位变量参数
                 table.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(this::param);
@@ -186,30 +190,33 @@ public class LUnitBindGroup {
                 }).width(280f).row();
                 dialog.addCloseButton();
                 dialog.show();
-            });
+            }).width(100f);
         }
         
         void showUnitTypeSelect(Table table) {
-            table.button(unitType.toString(), Styles.defaultt, () -> {
-                BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.unittype.select", "选择单位类型"));
-                dialog.cont.pane(selectTable -> {
-                    selectTable.left();
-                    selectTable.defaults().size(40f).pad(2f);
-                    int c = 0;
-                    for(UnitType item : Vars.content.units()){
-                        if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                        selectTable.button(new TextureRegionDrawable(item.uiIcon), Styles.clearNoneTogglei, () -> {
-                            unitType = "@" + item.name;
-                            rebuild(table);
-                            dialog.hide();
-                        }).tooltip(item.localizedName);
+            TextField field = (TextField)table.getChildren().get(table.getChildren().size - 2); // 获取单位类型输入框
+            
+            table.button(b -> {
+                b.image(Icon.pencilSmall);
+                b.clicked(() -> showSelectTable(b, (t, hide) -> {
+                    t.row();
+                    t.table(i -> {
+                        i.left();
+                        int c = 0;
+                        for(UnitType item : Vars.content.units()){
+                            if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                unitType = "@" + item.name;
+                                field.setText(unitType);
+                                hide.run();
+                                rebuild(table);
+                            }).size(40f).self(c -> tooltip(c, item.localizedName));
 
-                        if(++c % 6 == 0) selectTable.row();
-                    }
-                }).maxHeight(300f).width(240f);
-                dialog.addCloseButton();
-                dialog.show();
-            });
+                            if(++c % 6 == 0) i.row();
+                        }
+                    }).colspan(3).width(240f).left();
+                }));
+            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
         }
         
         @Override
