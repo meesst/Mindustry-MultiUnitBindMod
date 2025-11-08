@@ -176,19 +176,19 @@ public class LUnitBindGroup {
                 t.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(this::param);
                 t.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
-                    .width(240f).padRight().left();
+                    .width(240f).padRight(0).left();
                 
                 // 索引变量参数
                 t.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(this::param);
                 t.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
-                    .width(240f).padRight().left();
+                    .width(240f).padRight(0).left();
                 
                 // 组名称参数
                 t.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(this::param);
                 t.field(groupName != null ? groupName : "null", Styles.nodeField, s -> groupName = sanitize(s).isEmpty() ? null : sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
-                    .width(200f).padRight().left();
+                    .width(200f).padRight(0).left();
             }).left();
         }
         
