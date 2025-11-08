@@ -158,7 +158,7 @@ public class LUnitBindGroup {
                     t.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
                     t.field(count, Styles.nodeField, s -> count = sanitize(s))
                         .size(144f, 40f).pad(2f).color(t.color)
-                        .width(100f).padRight(10).left();
+                        .width(40f).padRight(10).left();
                 }
                 
                 // 模式选择
@@ -176,39 +176,42 @@ public class LUnitBindGroup {
                 t.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(this::param);
                 t.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
-                    .width(85f).padRight(10).left();
+                    .width(240f).padRight().left();
                 
                 // 索引变量参数
                 t.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(this::param);
                 t.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
-                    .width(85f).padRight(10).left();
+                    .width(240f).padRight().left();
                 
                 // 组名称参数
                 t.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(this::param);
                 t.field(groupName != null ? groupName : "null", Styles.nodeField, s -> groupName = sanitize(s).isEmpty() ? null : sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
-                    .width(85f).padRight(10).left();
+                    .width(200f).padRight().left();
             }).left();
         }
         
         void modeButton(Table table, Table parent) {
-            table.button(mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式"), Styles.defaultt, () -> {
-                BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
-                dialog.cont.setWidth(300f);
-                dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
-                    mode = 1;
-                    rebuild(parent);
-                    dialog.hide();
-                }).width(280f).row();
-                dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
-                    mode = 2;
-                    rebuild(parent);
-                    dialog.hide();
-                }).width(280f).row();
-                dialog.addCloseButton();
-                dialog.show();
-            }).width(100f);
+            table.button(b -> {
+                b.add(mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式")).left();
+                b.clicked(() -> {
+                    BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
+                    dialog.cont.setWidth(300f);
+                    dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
+                        mode = 1;
+                        rebuild(parent);
+                        dialog.hide();
+                    }).width(280f).row();
+                    dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
+                        mode = 2;
+                        rebuild(parent);
+                        dialog.hide();
+                    }).width(280f).row();
+                    dialog.addCloseButton();
+                    dialog.show();
+                });
+            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color);
         }
         
         // 不再需要单独的showUnitTypeSelect方法，按钮逻辑已集成到rebuild方法中
