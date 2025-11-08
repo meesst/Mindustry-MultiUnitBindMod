@@ -196,30 +196,28 @@ public class LUnitBindGroup {
         void showUnitTypeSelect(Table table) {
             TextField field = (TextField)table.getChildren().get(table.getChildren().size - 2); // 获取单位类型输入框
             
-            // 直接创建一个按钮，移除嵌套结构
-            Button button = new Button(Styles.logict);
-            button.image(Icon.pencilSmall);
-            button.clicked(() -> showSelectTable(button, (t, hide) -> {
-                t.row();
-                t.table(i -> {
-                    i.left();
-                    int c = 0;
-                    for(UnitType item : Vars.content.units()){
-                        if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                        i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
-                            unitType = "@" + item.name;
-                            field.setText(unitType);
-                            hide.run();
-                            rebuild(table);
-                        }).size(40f).self(cell -> tooltip(cell, item.localizedName));
+            // 完全按照游戏源代码中的UnitBindStatement实现方式
+            table.button(b -> {
+                b.image(Icon.pencilSmall);
+                b.clicked(() -> showSelectTable(b, (t, hide) -> {
+                    t.row();
+                    t.table(i -> {
+                        i.left();
+                        int c = 0;
+                        for(UnitType item : Vars.content.units()){
+                            if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                unitType = "@" + item.name;
+                                field.setText(unitType);
+                                hide.run();
+                                rebuild(table);
+                            }).size(40f).self(cell -> tooltip(cell, item.localizedName));
 
-                        if(++c % 6 == 0) i.row();
-                    }
-                }).colspan(3).width(240f).left();
-            }));
-            
-            // 将按钮添加到表格中并设置属性
-            table.add(button).size(40f).padLeft(-2).color(table.color);
+                            if(++c % 6 == 0) i.row();
+                        }
+                    }).colspan(3).width(240f).left();
+                }));
+            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
         }
         
         @Override
