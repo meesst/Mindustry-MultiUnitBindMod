@@ -134,6 +134,7 @@ public class LUnitBindGroup {
                     table.button(Icon.pencilSmall, Styles.logict, () -> showUnitTypeSelect(table))
                         .size(40f).color(table.color);
                 }
+}
             }).left();
             
             table.row();
