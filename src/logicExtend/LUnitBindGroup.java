@@ -67,6 +67,7 @@ public class LUnitBindGroup {
             this.count = count;
             this.mode = mode;
         }
+}
     }
     
     // 参数缓存类，用于存储上次执行时的参数值
@@ -101,6 +102,7 @@ public class LUnitBindGroup {
             this.indexVar = newIndexVar;
         }
     }
+}
     
     private static long lastCleanupTime = 0;
     private static final long CLEANUP_INTERVAL = 60 * 1000; // 每分钟清理一次
@@ -210,7 +212,6 @@ public class LUnitBindGroup {
                 dialog.addCloseButton();
                 dialog.show();
             });
-        }
         }
         
         @Override
@@ -1149,4 +1150,5 @@ public class LUnitBindGroup {
             info.lastAccessTime = System.currentTimeMillis();
         }
     }
+}
     
