@@ -129,11 +129,11 @@ public class LUnitBindGroup {
                 
                 // 单位类型参数（模式1显示）
                 if (mode == 1) {
-                    table.add(Core.bundle.get("ubindgroup.param.unitType", "type")).padLeft(10).left().self(this::param);
-                    TextField field = field(table, unitType, str -> unitType = sanitize(str)).get();
+                    t.add(Core.bundle.get("ubindgroup.param.unitType", "type")).padLeft(10).left().self(this::param);
+                    TextField field = field(t, unitType, str -> unitType = sanitize(str)).get();
                     
                     // 完全按照游戏源代码中的UnitBindStatement实现方式
-                    table.button(b -> {
+                    t.button(b -> {
                         b.image(Icon.pencilSmall);
                         b.clicked(() -> showSelectTable(b, (table_, hide) -> {
                             table_.row();
@@ -152,12 +152,12 @@ public class LUnitBindGroup {
                                 }
                             }).colspan(3).width(240f).left();
                         }));
-                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
+                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color);
                     
                     // 数量参数
-                    table.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
-                    table.field(count, Styles.nodeField, s -> count = sanitize(s))
-                        .size(144f, 40f).pad(2f).color(table.color)
+                    t.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(this::param);
+                    t.field(count, Styles.nodeField, s -> count = sanitize(s))
+                        .size(144f, 40f).pad(2f).color(t.color)
                         .width(100f).padRight(10).left();
                 }
                 
@@ -173,21 +173,21 @@ public class LUnitBindGroup {
                 t.setColor(table.color);
                 
                 // 单位变量参数
-                table.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(this::param);
-                table.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
-                    .size(144f, 40f).pad(2f).color(table.color)
+                t.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(this::param);
+                t.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
+                    .size(144f, 40f).pad(2f).color(t.color)
                     .width(85f).padRight(10).left();
                 
                 // 索引变量参数
-                table.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(this::param);
-                table.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
-                    .size(144f, 40f).pad(2f).color(table.color)
+                t.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(this::param);
+                t.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
+                    .size(144f, 40f).pad(2f).color(t.color)
                     .width(85f).padRight(10).left();
                 
                 // 组名称参数
-                table.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(this::param);
-                table.field(groupName != null ? groupName : "null", Styles.nodeField, s -> groupName = sanitize(s).isEmpty() ? null : sanitize(s))
-                    .size(144f, 40f).pad(2f).color(table.color)
+                t.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(this::param);
+                t.field(groupName != null ? groupName : "null", Styles.nodeField, s -> groupName = sanitize(s).isEmpty() ? null : sanitize(s))
+                    .size(144f, 40f).pad(2f).color(t.color)
                     .width(85f).padRight(10).left();
             }).left();
         }
