@@ -196,9 +196,8 @@ public class LUnitBindGroup {
         void showUnitTypeSelect(Table table) {
             TextField field = (TextField)table.getChildren().get(table.getChildren().size - 2); // 获取单位类型输入框
             
-            table.button(b -> {
-                b.image(Icon.pencilSmall);
-                b.clicked(() -> showSelectTable(b, (t, hide) -> {
+            table.button(Icon.pencilSmall, Styles.logict, 40f, () -> {
+                showSelectTable(table.children.get(table.children.size - 1), (t, hide) -> {
                     t.row();
                     t.table(i -> {
                         i.left();
@@ -215,8 +214,8 @@ public class LUnitBindGroup {
                             if(++c % 6 == 0) i.row();
                         }
                     }).colspan(3).width(240f).left();
-                }));
-            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color);
+                });
+            }).size(40f).padLeft(-2).color(table.color);
         }
         
         @Override
