@@ -210,7 +210,7 @@ public class LUnitBindGroup {
                                 field.setText(unitType);
                                 hide.run();
                                 rebuild(table);
-                            }).size(40f).self(c -> tooltip(c, item.localizedName));
+                            }).size(40f).self(cell -> tooltip(cell, item.localizedName));
 
                             if(++c % 6 == 0) i.row();
                         }
