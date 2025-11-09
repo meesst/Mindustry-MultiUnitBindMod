@@ -35,7 +35,7 @@ public class LUnitBindGroup {
         public Seq<Unit> units = new Seq<>();      // 单位列表
         public int currentIndex = -1;              // 当前单位索引
         public int mode = 1;                       // 模式
-        public long lastAccessTime = System.currentTimeMillis(); // 最后访问时间，用于清理机制
+        // 移除lastAccessTime字段，不再需要自动回收机制
     }
     
     // 存储按控制器独立的单位组和当前索引
@@ -61,6 +61,97 @@ public class LUnitBindGroup {
         cache.update(unitTypeObj, countVal, groupNameStr, actualMode);
     }
     
+    // 打开组管理可视化窗口的方法
+    public static void showGroupManagerDialog(String currentGroupName, Cons<String> onSelectGroup, int mode) {
+        BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.title", "组管理"));
+        dialog.cont.setWidth(400f);
+        
+        // 标题和说明
+        dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.description", "选择或管理单位组")).width(380f).wrap().row();
+        dialog.cont.row();
+        
+        // 组列表
+        dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.list", "可用组：")).left().row();
+        
+        // 创建滚动区域来显示组列表
+        Table groupListTable = new Table();
+        groupListTable.left();
+        
+        // 添加默认的"无单位组"选项（在抓取模式下可见，访问模式下隐藏）
+        if (mode == 1) { // 抓取模式
+            groupListTable.button("✘ " + Core.bundle.get("ubindgroup.groupmanager.nogroup", "无单位组"), () -> {
+                onSelectGroup.get(null); // 传递null表示选择"无单位组"
+                dialog.hide();
+            }).width(380f).pad(4f).row();
+        }
+        
+        // 添加所有已存在的组
+        for (String groupName : sharedGroups.keys()) {
+            boolean isSelected = currentGroupName != null && currentGroupName.equals(groupName);
+            
+            groupListTable.button(t -> {
+                t.left();
+                t.label(isSelected ? "[cyan]◆[/] " + groupName : "[green]●[/] " + groupName).left().expandX();
+                t.button(Icon.trash, Styles.clearNonei, () -> {
+                    // 确认删除对话框
+                    BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.delete.confirm", "确认删除"));
+                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", groupName)).width(300f).wrap().row();
+                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.delete.confirm.yes", "确认删除"), () -> {
+                        // 删除组及其所有关联数据
+                        sharedGroups.remove(groupName);
+                        sharedGroupMaxCounts.remove(groupName);
+                        sharedGroupConfigs.remove(groupName);
+                        // 解绑该组中的所有单位
+                        UnitGroupInfo info = sharedGroups.get(groupName);
+                        if (info != null && info.units != null) {
+                            for (Unit unit : info.units) {
+                                if (unit != null && unit.isValid()) {
+                                    unit.resetController();
+                                }
+                            }
+                        }
+                        // 关闭确认对话框
+                        confirmDialog.hide();
+                        // 关闭当前对话框并设置新的选中项
+                        dialog.hide();
+                        if (currentGroupName != null && currentGroupName.equals(groupName)) {
+                            onSelectGroup.get(null); // 如果删除的是当前选中的组，设置为"无单位组"
+                        }
+                    }).width(120f);
+                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.delete.confirm.no", "取消"), confirmDialog::hide).width(120f);
+                    confirmDialog.show();
+                }).size(24f).pad(4f);
+            }, isSelected ? Styles.logicb : Styles.logict, () -> {
+                // 点击组名选择该组
+                onSelectGroup.get(groupName);
+                dialog.hide();
+            }).width(380f).pad(4f).row();
+        }
+        
+        // 添加滚动区域
+        dialog.cont.scrollPane(groupListTable).width(380f).height(200f).row();
+        
+        // 添加新组的输入框
+        dialog.cont.row();
+        dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.add", "添加新组：")).left().row();
+        TextField newGroupField = dialog.cont.field("", Styles.nodeField, s -> {}).width(380f).row().get();
+        
+        dialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.addbutton", "添加组"), () -> {
+            String newGroupName = newGroupField.getText().trim();
+            if (!newGroupName.isEmpty() && !sharedGroups.containsKey(newGroupName)) {
+                // 创建新组
+                sharedGroups.put(newGroupName, new UnitGroupInfo());
+                // 选择新创建的组并关闭对话框
+                onSelectGroup.get(newGroupName);
+                dialog.hide();
+            }
+        }).width(120f).row();
+        
+        // 关闭按钮
+        dialog.addCloseButton();
+        dialog.show();
+    }
+    
     // 共享组配置类，用于存储共享组的初始参数
     public static class GroupConfig {
         public final Object unitType;
@@ -82,7 +173,7 @@ public class LUnitBindGroup {
         public int mode; // 添加模式字段
         public String unitVar;
         public String indexVar;
-        public long lastAccessTime;
+        // 移除lastAccessTime字段，不再需要自动回收机制
 
         public boolean hasChanged(Object newUnitType, int newCount, String newGroupName, int newMode) {
             return !Objects.equals(unitType, newUnitType) || 
@@ -96,7 +187,6 @@ public class LUnitBindGroup {
             this.count = newCount;
             this.groupName = newGroupName;
             this.mode = newMode;
-            this.lastAccessTime = System.currentTimeMillis();
         }
         
         // 更新所有参数，包括unitVar和indexVar
@@ -195,14 +285,32 @@ public class LUnitBindGroup {
                     .size(144f, 40f).pad(2f).color(t.color)
                     .width(150f).padRight(0).left();
                 
-                // 组名称参数
+                // 组名称参数 - 替换为按钮，点击打开组管理窗口
                 t.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(c -> {
                     this.param(c);
                     tooltip(c, "ubindgroup.groupname");
                 });
-                t.field(groupName != null ? groupName : "null", Styles.nodeField, s -> groupName = sanitize(s).isEmpty() ? null : sanitize(s))
-                    .size(144f, 40f).pad(2f).color(t.color)
-                    .width(150f).padRight(0).left();
+                t.button(b -> {
+                    // 显示当前选择的组名，参考mode元素按钮的实现方式
+                    String displayText = (groupName == null || groupName.equals("null")) ? 
+                                        Core.bundle.get("ubindgroup.groupmanager.nogroup", "无单位组") : 
+                                        groupName;
+                    b.add(displayText).left();
+                }, Styles.logict, () -> {
+                    // 打开组管理窗口，传递当前模式
+                    String currentGroup = groupName;
+                    showGroupManagerDialog(currentGroup, (selected) -> {
+                        // 更新组名
+                        if (selected == null) {
+                            groupName = "null"; // 表示选择了"无单位组"
+                        } else {
+                            groupName = selected;
+                        }
+                        // 选择组后刷新UI
+                        rebuild(table);
+                    }, this.mode);
+                }).size(150f, 40f).pad(2f).color(t.color)
+                    .padRight(0).left().self(c -> tooltip(c, "ubindgroup.selectgroup"));
             }).left();
         }
         
@@ -1111,36 +1219,7 @@ public class LUnitBindGroup {
                 cleanupInvalidController(controller);
             }
             
-            // 清理长时间未访问的组（超过30秒）
-            long currentTime = System.currentTimeMillis();
-            Seq<String> expiredGroups = new Seq<>();
-            
-            for (ObjectMap.Entry<String, UnitGroupInfo> entry : sharedGroups.entries()) {
-                if (currentTime - entry.value.lastAccessTime > 30000) { // 30秒过期
-                    // 检查是否真的没有控制器在使用该组
-                    boolean stillInUse = false;
-                    for (String name : buildingToGroupName.values()) {
-                        if (entry.key.equals(name)) {
-                            stillInUse = true;
-                            break;
-                        }
-                    }
-                    
-                    if (!stillInUse) {
-                        expiredGroups.add(entry.key);
-                    } else {
-                        // 如果仍在使用，更新访问时间
-                        entry.value.lastAccessTime = currentTime;
-                    }
-                }
-            }
-            
-            // 清理过期组
-            for (String groupName : expiredGroups) {
-                sharedGroups.remove(groupName);
-                sharedGroupMaxCounts.remove(groupName);
-                sharedGroupConfigs.remove(groupName);
-            }
+            // 移除自动回收机制，组的管理由玩家手动控制
         }
         
         // 检查并更新参数缓存，返回参数是否发生变化
@@ -1246,23 +1325,8 @@ public class LUnitBindGroup {
 
         
         private static void cleanupUnusedGroup(String groupName) {
-            if (groupName == null) return;
-            
-            // 检查是否还有任何处理器使用该组
-            boolean isUsed = false;
-            for (String name : buildingToGroupName.values()) {
-                if (groupName.equals(name)) {
-                    isUsed = true;
-                    break;
-                }
-            }
-            
-            // 如果没有处理器使用该组，则清理
-            if (!isUsed) {
-                sharedGroups.remove(groupName);
-                sharedGroupMaxCounts.remove(groupName);
-                sharedGroupConfigs.remove(groupName);
-            }
+            // 移除自动清理逻辑，组管理完全由玩家手动控制
+            // 仅保留方法签名以避免编译错误
         }
         
         private static void executeMode2(LExecutor exec, LVar unitVar, LVar indexVar, String groupNameStr) {
