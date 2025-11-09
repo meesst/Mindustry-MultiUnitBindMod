@@ -64,10 +64,10 @@ public class LUnitBindGroup {
     // 打开组管理可视化窗口的方法
     public static void showGroupManagerDialog(String currentGroupName, Cons<String> onSelectGroup, int mode) {
         BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.title", "组管理"));
-        dialog.cont.setWidth(400f);
+        dialog.cont.setWidth(480f);
         
         // 标题和说明
-        dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.description", "选择或管理单位组")).width(380f).wrap().row();
+        dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.description", "选择或管理单位组")).width(456f).wrap().row();
         dialog.cont.row();
         
         // 组列表
@@ -82,7 +82,7 @@ public class LUnitBindGroup {
             groupListTable.button("✘ " + Core.bundle.get("ubindgroup.groupmanager.nogroup", "无单位组"), () -> {
                 onSelectGroup.get(null); // 传递null表示选择"无单位组"
                 dialog.hide();
-            }).width(380f).pad(4f).row();
+            }).width(456f).pad(4f).row();
         }
         
         // 添加所有已存在的组
@@ -125,21 +125,29 @@ public class LUnitBindGroup {
                 // 点击组名选择该组
                 onSelectGroup.get(groupName);
                 dialog.hide();
-            }).width(380f).pad(4f).row();
+            }).width(456f).pad(4f).row();
         }
         
         // 添加滚动区域
-        dialog.cont.pane(groupListTable).width(380f).height(200f).row();
+        dialog.cont.pane(groupListTable).width(456f).height(200f).row();
         
         // 添加新组的输入框
         dialog.cont.row();
         dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.add", "添加新组：")).left().row();
-        TextField newGroupField = dialog.cont.field("", Styles.nodeField, s -> {}).width(380f).get();
+        TextField newGroupField = dialog.cont.field("", Styles.nodeField, s -> {}).width(456f).get();
         dialog.cont.row();
         
         dialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.addbutton", "添加组"), () -> {
-            String newGroupName = newGroupField.getText().trim();
-            if (!newGroupName.isEmpty() && !sharedGroups.containsKey(newGroupName)) {
+            String inputName = newGroupField.getText().trim();
+            // 自动添加引号，但避免重复添加
+            String newGroupName;
+            if (inputName.startsWith("\"") && inputName.endsWith("\"")) {
+                newGroupName = inputName;
+            } else {
+                newGroupName = "\"" + inputName + "\"";
+            }
+            
+            if (!inputName.isEmpty() && !sharedGroups.containsKey(newGroupName)) {
                 // 创建新组
                 sharedGroups.put(newGroupName, new UnitGroupInfo());
                 // 选择新创建的组并关闭对话框
