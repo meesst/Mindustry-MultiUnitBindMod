@@ -413,15 +413,11 @@ public class LUnitBindGroup {
                     }
                 }
             }
-        } else {
-            // 单位列表为空
-            String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "组内无单位");
-            if (unitVar != null) unitVar.setobj(noUnitError);
-            if (indexVar != null) indexVar.setobj(noUnitError);
         }
-        
-        private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
-            // 定期清理已在run方法开始时执行
+    }
+    
+    private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
+        // 定期清理已在run方法开始时执行
             
             // 模式1：单位控制模式 - 核心功能模式，负责单位的抓取、绑定和管理
             
