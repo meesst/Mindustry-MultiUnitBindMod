@@ -371,28 +371,37 @@ public class LUnitBindGroup {
             }
             
             // 确保在方法结束时正确设置unitVar和indexVar，避免返回null
-            if (info.units.size > 0) {
-                // 确保currentIndex有效
-                if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
-                    info.currentIndex = 0;
-                }
+            Building controller = exec.pc();
+            if (controller != null) {
+                Team team = controller.team;
+                String groupNameStr = groupName.isString() ? groupName.stringVal() : controller.toString();
+                // 获取或创建单位组信息
+                UnitGroupInfo info = mode == 2 ? sharedGroups.get(groupNameStr, new UnitGroupInfo()) : 
+                                    individualGroups.get(controller, new UnitGroupInfo());
                 
-                Unit currentUnit = info.units.get(info.currentIndex);
-                if (currentUnit != null && currentUnit.isValid() && !currentUnit.dead && !currentUnit.isPlayer() && currentUnit.team == team) {
-                    // 设置为有效的当前单位
-                    if (unitVar != null) unitVar.setobj(currentUnit);
-                    if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
-                } else {
-                    // 单位无效但列表不为空，遍历寻找有效单位
-                    boolean foundValid = false;
-                    for (int i = 0; i < info.units.size; i++) {
-                        Unit unit = info.units.get(i);
-                        if (unit != null && unit.isValid() && !unit.dead && !unit.isPlayer() && unit.team == team) {
-                            info.currentIndex = i;
-                            if (unitVar != null) unitVar.setobj(unit);
-                            if (indexVar != null) indexVar.setnum(i + 1);
-                            foundValid = true;
-                            break;
+                if (info != null && info.units.size > 0) {
+                    // 确保currentIndex有效
+                    if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
+                        info.currentIndex = 0;
+                    }
+                    
+                    Unit currentUnit = info.units.get(info.currentIndex);
+                    if (currentUnit != null && currentUnit.isValid() && !currentUnit.dead && !currentUnit.isPlayer() && currentUnit.team == team) {
+                        // 设置为有效的当前单位
+                        if (unitVar != null) unitVar.setobj(currentUnit);
+                        if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
+                    } else {
+                        // 单位无效但列表不为空，遍历寻找有效单位
+                        boolean foundValid = false;
+                        for (int i = 0; i < info.units.size; i++) {
+                            Unit unit = info.units.get(i);
+                            if (unit != null && unit.isValid() && !unit.dead && !unit.isPlayer() && unit.team == team) {
+                                info.currentIndex = i;
+                                if (unitVar != null) unitVar.setobj(unit);
+                                if (indexVar != null) indexVar.setnum(i + 1);
+                                foundValid = true;
+                                break;
+                            }
                         }
                     }
                     
@@ -403,12 +412,12 @@ public class LUnitBindGroup {
                         if (indexVar != null) indexVar.setobj(noValidUnitError);
                     }
                 }
-            } else {
-                // 单位列表为空
-                String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "组内无单位");
-                if (unitVar != null) unitVar.setobj(noUnitError);
-                if (indexVar != null) indexVar.setobj(noUnitError);
             }
+        } else {
+            // 单位列表为空
+            String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "组内无单位");
+            if (unitVar != null) unitVar.setobj(noUnitError);
+            if (indexVar != null) indexVar.setobj(noUnitError);
         }
         
         private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
