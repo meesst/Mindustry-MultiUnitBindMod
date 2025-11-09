@@ -82,7 +82,7 @@ public class LUnitBindGroup {
             groupListTable.button("✘ " + Core.bundle.get("ubindgroup.groupmanager.nogroup", "无单位组"), () -> {
                 onSelectGroup.get(null); // 传递null表示选择"无单位组"
                 dialog.hide();
-            }).width(380f).pad(4f).row();
+            }).width(300f).pad(4f).row();
         }
         
         // 添加所有已存在的组
@@ -95,7 +95,7 @@ public class LUnitBindGroup {
                 t.button(Icon.trash, Styles.clearNonei, () -> {
                     // 确认删除对话框
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.delete.confirm", "确认删除"));
-                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", groupName)).width(300f).wrap().row();
+                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", "确定要删除吗")).width(300f).wrap().row();
                     confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.delete.confirm.yes", "确认删除"), () -> {
                         // 删除组及其所有关联数据
                         sharedGroups.remove(groupName);
@@ -125,7 +125,7 @@ public class LUnitBindGroup {
                 // 点击组名选择该组
                 onSelectGroup.get(groupName);
                 dialog.hide();
-            }).width(380f).pad(4f).row();
+            }).width(300f).pad(4f).row();
         }
         
         // 添加滚动区域
@@ -659,13 +659,14 @@ public class LUnitBindGroup {
                         }
                     }
                 } else {
-                    String noUnitGroupError = Core.bundle.get("ubindgroup.error.no_unit_group", "无单位组");
-                    unitVar.setobj(noUnitGroupError);
-                    if (indexVar != null) {
-                        indexVar.setobj(noUnitGroupError);
-                    }
+                    // 如果单位组不存在或为空，标记参数已变化，尝试重新绑定单位
+                    paramsChanged = true;
                 }
-                return;
+                
+                // 如果参数未变化且已有有效单位组，则直接返回
+                if (!paramsChanged) {
+                    return;
+                }
             }
             
             // 单位数量检查
