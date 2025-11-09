@@ -91,7 +91,7 @@ public class LUnitBindGroup {
             
             groupListTable.button(t -> {
                 t.left();
-                t.label("" + (isSelected ? "[cyan]◆[/] " + groupName : "[green]●[/] " + groupName)).left().expandX();
+                t.label(() -> isSelected ? "[cyan]◆[/] " + groupName : "[green]●[/] " + groupName).left().expandX();
                 t.button(Icon.trash, Styles.clearNonei, () -> {
                     // 确认删除对话框
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.delete.confirm", "确认删除"));
