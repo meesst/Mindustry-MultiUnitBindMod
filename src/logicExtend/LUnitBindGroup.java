@@ -359,7 +359,7 @@ public class LUnitBindGroup {
             // 模式判断
             if (mode == 1) {
                 // 模式1：抓取模式（管理单位）
-                executeMode1(exec, controller, groupNameStr);
+                executeMode1(exec, controller, groupNameStr, this.unitVar, this.indexVar, this.unitType, this.count, this.mode);
             } else if (mode == 2) {
                 // 模式2：访问模式（使用单位）
                 executeMode2(exec, unitVar, indexVar, groupNameStr);
@@ -371,10 +371,8 @@ public class LUnitBindGroup {
             }
             
             // 确保在方法结束时正确设置unitVar和indexVar，避免返回null
-            Building controller = exec.pc();
             if (controller != null) {
                 Team team = controller.team;
-                String groupNameStr = groupName.isString() ? groupName.stringVal() : controller.toString();
                 // 获取或创建单位组信息
                 UnitGroupInfo info = mode == 2 ? sharedGroups.get(groupNameStr, new UnitGroupInfo()) : 
                                     individualGroups.get(controller, new UnitGroupInfo());
@@ -386,13 +384,17 @@ public class LUnitBindGroup {
                     }
                     
                     Unit currentUnit = info.units.get(info.currentIndex);
+                    // 初始化foundValid变量
+                    boolean foundValid = false;
+                    
                     if (currentUnit != null && currentUnit.isValid() && !currentUnit.dead && !currentUnit.isPlayer() && currentUnit.team == team) {
                         // 设置为有效的当前单位
                         if (unitVar != null) unitVar.setobj(currentUnit);
                         if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
+                        foundValid = true;
                     } else {
                         // 单位无效但列表不为空，遍历寻找有效单位
-                        boolean foundValid = false;
+                        
                         for (int i = 0; i < info.units.size; i++) {
                             Unit unit = info.units.get(i);
                             if (unit != null && unit.isValid() && !unit.dead && !unit.isPlayer() && unit.team == team) {
@@ -416,7 +418,7 @@ public class LUnitBindGroup {
         }
     }
     
-    private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
+    private static void executeMode1(LExecutor exec, Building controller, String groupNameStr, LVar unitVar, LVar indexVar, LVar unitType, LVar count, int mode) {
         // 定期清理已在run方法开始时执行
             
             // 模式1：单位控制模式 - 核心功能模式，负责单位的抓取、绑定和管理
