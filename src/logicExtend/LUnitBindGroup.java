@@ -374,7 +374,8 @@ public class LUnitBindGroup {
             if (controller != null) {
                 Team team = controller.team;
                 // 获取或创建单位组信息
-                UnitGroupInfo info = mode == 2 ? sharedGroups.get(groupNameStr, new UnitGroupInfo()) : 
+                UnitGroupInfo info = mode == 2 ? 
+                                    (groupNameStr != null ? sharedGroups.get(groupNameStr, new UnitGroupInfo()) : new UnitGroupInfo()) : 
                                     individualGroups.get(controller, new UnitGroupInfo());
                 
                 if (info != null && info.units.size > 0) {
