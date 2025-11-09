@@ -1329,5 +1329,4 @@ public class LUnitBindGroup {
             info.lastAccessTime = System.currentTimeMillis();
         }
     }
-    }
 }
