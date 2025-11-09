@@ -91,7 +91,7 @@ public class LUnitBindGroup {
             
             groupListTable.button(t -> {
                 t.left();
-                t.label(isSelected ? "[cyan]◆[/] " + groupName : "[green]●[/] " + groupName).left().expandX();
+                t.label("" + (isSelected ? "[cyan]◆[/] " + groupName : "[green]●[/] " + groupName)).left().expandX();
                 t.button(Icon.trash, Styles.clearNonei, () -> {
                     // 确认删除对话框
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.delete.confirm", "确认删除"));
@@ -121,7 +121,7 @@ public class LUnitBindGroup {
                     confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.delete.confirm.no", "取消"), confirmDialog::hide).width(120f);
                     confirmDialog.show();
                 }).size(24f).pad(4f);
-            }, isSelected ? Styles.logicb : Styles.logict, () -> {
+            }, isSelected ? Styles.defaultb : Styles.defaultt, () -> {
                 // 点击组名选择该组
                 onSelectGroup.get(groupName);
                 dialog.hide();
@@ -129,12 +129,13 @@ public class LUnitBindGroup {
         }
         
         // 添加滚动区域
-        dialog.cont.scrollPane(groupListTable).width(380f).height(200f).row();
+        dialog.cont.pane(groupListTable).width(380f).height(200f).row();
         
         // 添加新组的输入框
         dialog.cont.row();
         dialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.add", "添加新组：")).left().row();
-        TextField newGroupField = dialog.cont.field("", Styles.nodeField, s -> {}).width(380f).row().get();
+        TextField newGroupField = dialog.cont.field("", Styles.nodeField, s -> {}).width(380f).get();
+        dialog.cont.row();
         
         dialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.addbutton", "添加组"), () -> {
             String newGroupName = newGroupField.getText().trim();
@@ -474,7 +475,7 @@ public class LUnitBindGroup {
                 
                 // 更新共享组的访问时间
                 if (groupNameStr != null && sharedGroups.containsKey(groupNameStr)) {
-                    sharedGroups.get(groupNameStr).lastAccessTime = System.currentTimeMillis();
+                    // 移除lastAccessTime更新，不再需要自动回收机制
                 }
             }
             
@@ -1397,7 +1398,6 @@ public class LUnitBindGroup {
                 }
             }
             
-            // 更新最后访问时间
-            info.lastAccessTime = System.currentTimeMillis();
+            // 移除lastAccessTime更新，不再需要自动回收机制
         }
     }
