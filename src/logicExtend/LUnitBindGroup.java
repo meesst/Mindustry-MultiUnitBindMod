@@ -662,7 +662,6 @@ public class LUnitBindGroup {
                 }
             }
         }
-        }
         
         // 存储每个共享组的最大count值（已在类顶部定义）
         
@@ -835,55 +834,8 @@ public class LUnitBindGroup {
                         }
                     }
                 }
-            }
-        }
-        
-            // 在方法末尾添加最终的错误处理逻辑，确保所有情况下都不会返回null
-            // 确保currentIndex有效
-            if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
-                info.currentIndex = info.units.size > 0 ? 0 : -1;
-            }
-            
-            // 处理单位列表的情况
-            if (info.units.size > 0) {
-                // 列表不为空但索引无效，设置为第一个
-                if (info.currentIndex < 0) {
-                    info.currentIndex = 0;
-                }
-                
-                Unit currentUnit = info.units.get(info.currentIndex);
-                if (currentUnit != null && currentUnit.isValid()) {
-                    // 单位有效，正常设置变量
-                    if (unitVar != null) unitVar.setobj(currentUnit);
-                    if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
-                } else {
-                    // 当前索引的单位无效，尝试寻找第一个有效单位
-                    boolean foundValid = false;
-                    for (int i = 0; i < info.units.size; i++) {
-                        Unit unit = info.units.get(i);
-                        if (unit != null && unit.isValid()) {
-                            info.currentIndex = i;
-                            if (unitVar != null) unitVar.setobj(unit);
-                            if (indexVar != null) indexVar.setnum(i + 1);
-                            foundValid = true;
-                            break;
-                        }
-                    }
-                    
-                    // 如果找不到有效单位，设置错误信息
-                    if (!foundValid) {
-                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
-                        if (unitVar != null) unitVar.setobj(noValidUnitError);
-                        if (indexVar != null) indexVar.setobj(noValidUnitError);
-                    }
-                }
-            } else {
-                // 单位列表为空，设置错误信息
-                String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "组内无单位");
-                if (unitVar != null) unitVar.setobj(noUnitError);
-                if (indexVar != null) indexVar.setobj(noUnitError);
-            }
-        }
+            }        
+        }        
         
         // 检查单位是否被指定处理器控制
         private static boolean isUnitControlledBy(Building controller, Unit unit) {
