@@ -334,10 +334,18 @@ public class LUnitBindGroup {
         public void run(LExecutor exec) {
             // 开始执行
             
+            // 首先执行定期清理，确保无效资源被及时回收
+            periodicCleanup();
+            
             // 控制器有效性检查
             Building controller = exec.build;
             if (controller == null || !controller.isValid()) {
-                // 无效 → 清理资源 → 结束
+                // 无效 → 清理资源 → 设置错误 → 结束
+                String invalidControllerError = Core.bundle.get("ubindgroup.error.invalid_controller", "控制器无效");
+                unitVar.setobj(invalidControllerError);
+                if (indexVar != null) {
+                    indexVar.setobj(invalidControllerError);
+                }
                 cleanupInvalidController(controller);
                 return;
             }
@@ -355,10 +363,57 @@ public class LUnitBindGroup {
             } else if (mode == 2) {
                 // 模式2：访问模式（使用单位）
                 executeMode2(exec, unitVar, indexVar, groupNameStr);
+                
+                // 更新共享组的访问时间
+                if (groupNameStr != null && sharedGroups.containsKey(groupNameStr)) {
+                    sharedGroups.get(groupNameStr).lastAccessTime = System.currentTimeMillis();
+                }
+            }
+            
+            // 确保在方法结束时正确设置unitVar和indexVar，避免返回null
+            if (info.units.size > 0) {
+                // 确保currentIndex有效
+                if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
+                    info.currentIndex = 0;
+                }
+                
+                Unit currentUnit = info.units.get(info.currentIndex);
+                if (currentUnit != null && currentUnit.isValid() && !currentUnit.dead && !currentUnit.isPlayer() && currentUnit.team == team) {
+                    // 设置为有效的当前单位
+                    if (unitVar != null) unitVar.setobj(currentUnit);
+                    if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
+                } else {
+                    // 单位无效但列表不为空，遍历寻找有效单位
+                    boolean foundValid = false;
+                    for (int i = 0; i < info.units.size; i++) {
+                        Unit unit = info.units.get(i);
+                        if (unit != null && unit.isValid() && !unit.dead && !unit.isPlayer() && unit.team == team) {
+                            info.currentIndex = i;
+                            if (unitVar != null) unitVar.setobj(unit);
+                            if (indexVar != null) indexVar.setnum(i + 1);
+                            foundValid = true;
+                            break;
+                        }
+                    }
+                    
+                    // 如果仍然没有找到有效单位
+                    if (!foundValid) {
+                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
+                        if (unitVar != null) unitVar.setobj(noValidUnitError);
+                        if (indexVar != null) indexVar.setobj(noValidUnitError);
+                    }
+                }
+            } else {
+                // 单位列表为空
+                String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "组内无单位");
+                if (unitVar != null) unitVar.setobj(noUnitError);
+                if (indexVar != null) indexVar.setobj(noUnitError);
             }
         }
         
         private void executeMode1(LExecutor exec, Building controller, String groupNameStr) {
+            // 定期清理已在run方法开始时执行
+            
             // 模式1：单位控制模式 - 核心功能模式，负责单位的抓取、绑定和管理
             
             // 组名指定判断
@@ -369,13 +424,27 @@ public class LUnitBindGroup {
                 boolean contains = false;
                 for (ObjectMap.Entry<Building, String> entry : buildingToGroupName.entries()) {
                     // 检查：1. 值不为空 2. 值等于当前组名 3. 键不是当前控制器（忽略自己使用的组名）
+                    // 4. 控制器必须有效
                     if (entry.value != null && entry.value.equals(groupNameStr) && entry.key != controller) {
-                        contains = true;
-                        break;
+                        // 额外检查控制器是否仍然有效
+                        if (entry.key != null && entry.key.isValid()) {
+                            contains = true;
+                            break;
+                        }
                     }
                 }
+                
+                // 另外检查sharedGroups中是否有该组名，但没有对应的控制器
+                if (sharedGroups.containsKey(groupNameStr) && !contains) {
+                    // 如果该组名存在于sharedGroups但没有有效的控制器使用，则可以复用
+                    // 先清理旧的组数据
+                    sharedGroups.remove(groupNameStr);
+                    sharedGroupMaxCounts.remove(groupNameStr);
+                    sharedGroupConfigs.remove(groupNameStr);
+                }
+                
                 if (contains) {
-                    // 已被其他处理器使用 → 设置错误 → 结束
+                    // 已被其他有效处理器使用 → 设置错误 → 结束
                     String groupConflictError = Core.bundle.get("ubindgroup.error.group_conflict", "组名已被使用");
                     unitVar.setobj(groupConflictError);
                     if (indexVar != null) {
@@ -432,17 +501,43 @@ public class LUnitBindGroup {
                 UnitGroupInfo groupInfo = hasGroupName ? sharedGroups.get(groupNameStr) : individualGroups.get(controller);
                 
                 if (groupInfo != null && !groupInfo.units.isEmpty()) {
-                    // 更新单位绑定
-                    groupInfo.currentIndex = (groupInfo.currentIndex + 1) % groupInfo.units.size;
-                    Unit unit = groupInfo.units.get(groupInfo.currentIndex);
-                    unitVar.setobj(unit);
-                    if (indexVar != null) {
-                        indexVar.setnum(groupInfo.currentIndex + 1);
+                    // 尝试找到一个有效的单位
+                    boolean foundValidUnit = false;
+                    int originalIndex = groupInfo.currentIndex;
+                    
+                    // 最多尝试遍历整个单位列表一次
+                    for (int i = 0; i < groupInfo.units.size; i++) {
+                        // 更新当前索引
+                        groupInfo.currentIndex = (originalIndex + 1 + i) % groupInfo.units.size;
+                        Unit unit = groupInfo.units.get(groupInfo.currentIndex);
+                        
+                        // 检查单位是否有效
+                        if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                            unitVar.setobj(unit);
+                            if (indexVar != null) {
+                                indexVar.setnum(groupInfo.currentIndex + 1);
+                            }
+                            foundValidUnit = true;
+                            break;
+                        }
+                    }
+                    
+                    // 如果没有找到有效单位，清理无效单位并设置错误
+                    if (!foundValidUnit) {
+                        // 清理无效单位
+                        groupInfo.units.removeAll(unit -> unit == null || !unit.isValid() || unit.team != exec.team || unit.dead || unit.isPlayer());
+                        
+                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
+                        unitVar.setobj(noValidUnitError);
+                        if (indexVar != null) {
+                            indexVar.setobj(noValidUnitError);
+                        }
                     }
                 } else {
-                    unitVar.setobj(null);
+                    String noUnitGroupError = Core.bundle.get("ubindgroup.error.no_unit_group", "无单位组");
+                    unitVar.setobj(noUnitGroupError);
                     if (indexVar != null) {
-                        indexVar.setnum(0);
+                        indexVar.setobj(noUnitGroupError);
                     }
                 }
                 return;
@@ -480,11 +575,34 @@ public class LUnitBindGroup {
                 
                 // 更新单位绑定并返回
                 if (!sharedGroup.units.isEmpty()) {
-                    sharedGroup.currentIndex = 0;
-                    Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
-                    unitVar.setobj(unit);
-                    if (indexVar != null) {
-                        indexVar.setnum(sharedGroup.currentIndex + 1);
+                    // 尝试找到第一个有效的单位
+                    boolean foundValidUnit = false;
+                    
+                    for (int i = 0; i < sharedGroup.units.size; i++) {
+                        Unit unit = sharedGroup.units.get(i);
+                        
+                        // 检查单位是否有效
+                        if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                            sharedGroup.currentIndex = i;
+                            unitVar.setobj(unit);
+                            if (indexVar != null) {
+                                indexVar.setnum(sharedGroup.currentIndex + 1);
+                            }
+                            foundValidUnit = true;
+                            break;
+                        }
+                    }
+                    
+                    // 如果没有找到有效单位，清理无效单位并设置错误
+                    if (!foundValidUnit) {
+                        // 清理无效单位
+                        sharedGroup.units.removeAll(unit -> unit == null || !unit.isValid() || unit.team != exec.team || unit.dead || unit.isPlayer());
+                        
+                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
+                        unitVar.setobj(noValidUnitError);
+                        if (indexVar != null) {
+                            indexVar.setobj(noValidUnitError);
+                        }
                     }
                 } else {
                     String noUnitError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
@@ -506,11 +624,34 @@ public class LUnitBindGroup {
                 
                 // 更新单位绑定并返回
                 if (!groupInfo.units.isEmpty()) {
-                    groupInfo.currentIndex = 0;
-                    Unit unit = groupInfo.units.get(groupInfo.currentIndex);
-                    unitVar.setobj(unit);
-                    if (indexVar != null) {
-                        indexVar.setnum(groupInfo.currentIndex + 1);
+                    // 尝试找到第一个有效的单位
+                    boolean foundValidUnit = false;
+                    
+                    for (int i = 0; i < groupInfo.units.size; i++) {
+                        Unit unit = groupInfo.units.get(i);
+                        
+                        // 检查单位是否有效
+                        if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                            groupInfo.currentIndex = i;
+                            unitVar.setobj(unit);
+                            if (indexVar != null) {
+                                indexVar.setnum(groupInfo.currentIndex + 1);
+                            }
+                            foundValidUnit = true;
+                            break;
+                        }
+                    }
+                    
+                    // 如果没有找到有效单位，清理无效单位并设置错误
+                    if (!foundValidUnit) {
+                        // 清理无效单位
+                        groupInfo.units.removeAll(unit -> unit == null || !unit.isValid() || unit.team != exec.team || unit.dead || unit.isPlayer());
+                        
+                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
+                        unitVar.setobj(noValidUnitError);
+                        if (indexVar != null) {
+                            indexVar.setobj(noValidUnitError);
+                        }
                     }
                 } else {
                     String noUnitError = Core.bundle.get("ubindgroup.error.empty_group", "组内无单位");
@@ -694,6 +835,53 @@ public class LUnitBindGroup {
                         }
                     }
                 }
+            }
+        }
+        
+            // 在方法末尾添加最终的错误处理逻辑，确保所有情况下都不会返回null
+            // 确保currentIndex有效
+            if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
+                info.currentIndex = info.units.size > 0 ? 0 : -1;
+            }
+            
+            // 处理单位列表的情况
+            if (info.units.size > 0) {
+                // 列表不为空但索引无效，设置为第一个
+                if (info.currentIndex < 0) {
+                    info.currentIndex = 0;
+                }
+                
+                Unit currentUnit = info.units.get(info.currentIndex);
+                if (currentUnit != null && currentUnit.isValid()) {
+                    // 单位有效，正常设置变量
+                    if (unitVar != null) unitVar.setobj(currentUnit);
+                    if (indexVar != null) indexVar.setnum(info.currentIndex + 1);
+                } else {
+                    // 当前索引的单位无效，尝试寻找第一个有效单位
+                    boolean foundValid = false;
+                    for (int i = 0; i < info.units.size; i++) {
+                        Unit unit = info.units.get(i);
+                        if (unit != null && unit.isValid()) {
+                            info.currentIndex = i;
+                            if (unitVar != null) unitVar.setobj(unit);
+                            if (indexVar != null) indexVar.setnum(i + 1);
+                            foundValid = true;
+                            break;
+                        }
+                    }
+                    
+                    // 如果找不到有效单位，设置错误信息
+                    if (!foundValid) {
+                        String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
+                        if (unitVar != null) unitVar.setobj(noValidUnitError);
+                        if (indexVar != null) indexVar.setobj(noValidUnitError);
+                    }
+                }
+            } else {
+                // 单位列表为空，设置错误信息
+                String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "组内无单位");
+                if (unitVar != null) unitVar.setobj(noUnitError);
+                if (indexVar != null) indexVar.setobj(noUnitError);
             }
         }
         
@@ -936,12 +1124,63 @@ public class LUnitBindGroup {
             String groupName = buildingToGroupName.get(controller);
             if (groupName != null) {
                 buildingToGroupName.remove(controller);
+                // 解绑与该控制器关联的所有单位
+                unbindAllUnits(controller, groupName);
                 // 检查该组是否还有其他处理器使用
                 cleanupUnusedGroup(groupName);
             }
             
             // 移除参数缓存
             paramCaches.remove(controller);
+        }
+        
+        // 定期清理无效控制器和过期资源的方法
+        public static void periodicCleanup() {
+            // 清理无效的控制器关联
+            Seq<Building> invalidBuildings = new Seq<>();
+            
+            // 检查所有控制器是否有效
+            for (Building controller : buildingToGroupName.keys()) {
+                if (controller == null || !controller.isValid()) {
+                    invalidBuildings.add(controller);
+                }
+            }
+            
+            // 清理无效控制器
+            for (Building controller : invalidBuildings) {
+                cleanupInvalidController(controller);
+            }
+            
+            // 清理长时间未访问的组（超过30秒）
+            long currentTime = System.currentTimeMillis();
+            Seq<String> expiredGroups = new Seq<>();
+            
+            for (ObjectMap.Entry<String, UnitGroupInfo> entry : sharedGroups.entries()) {
+                if (currentTime - entry.value.lastAccessTime > 30000) { // 30秒过期
+                    // 检查是否真的没有控制器在使用该组
+                    boolean stillInUse = false;
+                    for (String name : buildingToGroupName.values()) {
+                        if (entry.key.equals(name)) {
+                            stillInUse = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!stillInUse) {
+                        expiredGroups.add(entry.key);
+                    } else {
+                        // 如果仍在使用，更新访问时间
+                        entry.value.lastAccessTime = currentTime;
+                    }
+                }
+            }
+            
+            // 清理过期组
+            for (String groupName : expiredGroups) {
+                sharedGroups.remove(groupName);
+                sharedGroupMaxCounts.remove(groupName);
+                sharedGroupConfigs.remove(groupName);
+            }
         }
         
         // 检查并更新参数缓存，返回参数是否发生变化
@@ -1067,6 +1306,9 @@ public class LUnitBindGroup {
         }
         
         private static void executeMode2(LExecutor exec, LVar unitVar, LVar indexVar, String groupNameStr) {
+            // 首先执行定期清理
+            periodicCleanup();
+            
             // 模式2：共享组访问模式 - 只读模式，用于访问已由模式1创建的共享组中的单位
             
             // 检查组名是否为null
