@@ -1451,13 +1451,29 @@ public class LUnitBindGroup {
                 return;
             }
             
+            // 确保单位列表不为空
+            if (info.units.isEmpty()) {
+                String noUnitError = Core.bundle.get("ubindgroup.error.no_unit", "无可用单位");
+                unitVar.setobj(noUnitError);
+                if (indexVar != null) {
+                    indexVar.setobj(noUnitError);
+                }
+                return;
+            }
+            
             // 尝试找到一个有效的单位，实现与独立组模式一致的索引递增逻辑
             boolean foundValidUnit = false;
             int originalIndex = info.currentIndex;
             
+            // 确保索引在有效范围内，如果初始为-1（首次访问），则从0开始
+            if (originalIndex < 0) {
+                originalIndex = -1;
+            }
+            
             // 最多尝试遍历整个单位列表一次
             for (int i = 0; i < info.units.size; i++) {
                 // 更新当前索引，实现轮询访问
+                // 关键修改：确保索引从原始索引的下一个位置开始
                 info.currentIndex = (originalIndex + 1 + i) % info.units.size;
                 Unit unit = info.units.get(info.currentIndex);
                 
@@ -1465,7 +1481,8 @@ public class LUnitBindGroup {
                 if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
                     unitVar.setobj(unit);
                     if (indexVar != null) {
-                        indexVar.setnum(info.currentIndex + 1); // 从1开始计数
+                        // 确保索引从1开始计数
+                        indexVar.setnum(info.currentIndex + 1);
                     }
                     foundValidUnit = true;
                     break;
