@@ -147,7 +147,7 @@ public class LUnitBindGroup {
                     }
                     
                     if (isSelected) {
-                        return "[sky]" + "✅" + displayName;
+                        return "[sky]" + "[当前选中]" + displayName;
                     } else {
                         // 在lambda内部重新计算组是否被使用，避免引用非final变量
                         boolean isGroupInUseFinal = false;
@@ -160,9 +160,9 @@ public class LUnitBindGroup {
                             }
                         }
                         if (isGroupInUseFinal) {
-                            return "[orange]" + "[🔒]" + displayName;
+                            return "[orange]" + "[已被占用]" + displayName;
                         } else {
-                            return "[green]" + "🟢" + displayName;
+                            return "[green]" + "[未被使用]" + displayName;
                         }
                     }
                 }).left().expandX();
@@ -579,9 +579,12 @@ public class LUnitBindGroup {
                                     individualGroups.get(controller, new UnitGroupInfo());
                 
                 if (info != null && info.units.size > 0) {
-                    // 确保currentIndex有效
+                    // 实现索引循环递增，而不是总是重置为0
                     if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
                         info.currentIndex = 0;
+                    } else {
+                        // 索引递增，实现循环访问所有单位
+                        info.currentIndex = (info.currentIndex + 1) % info.units.size;
                     }
                     
                     Unit currentUnit = info.units.get(info.currentIndex);
