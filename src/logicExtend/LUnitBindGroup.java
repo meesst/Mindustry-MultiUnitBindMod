@@ -784,34 +784,53 @@ public class LUnitBindGroup {
                 
                 // 更新单位绑定并返回
                 if (!sharedGroup.units.isEmpty()) {
-                    // 实现索引递增逻辑，与非组模式保持一致
-                    // 如果当前索引无效或不存在，设置为0；否则递增索引
-                    if (sharedGroup.currentIndex < 0 || sharedGroup.currentIndex >= sharedGroup.units.size) {
-                        sharedGroup.currentIndex = 0;
-                    } else {
-                        sharedGroup.currentIndex = (sharedGroup.currentIndex + 1) % sharedGroup.units.size;
-                    }
-                    
-                    // 尝试从当前索引开始找到一个有效的单位
-                    boolean foundValidUnit = false;
-                    int originalIndex = sharedGroup.currentIndex;
-                    
-                    // 最多尝试遍历整个单位列表一次
-                    for (int i = 0; i < sharedGroup.units.size; i++) {
-                        // 更新当前索引
-                        sharedGroup.currentIndex = (originalIndex + i) % sharedGroup.units.size;
-                        Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
+                    // 实现索引递增逻辑，确保索引变量能够正确递增
+                    // 首先检查单位列表是否有效
+                    if (!sharedGroup.units.isEmpty()) {
+                        // 保存原始索引值
+                        int originalIndex = sharedGroup.currentIndex;
                         
-                        // 检查单位是否有效
-                        if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
-                            unitVar.setobj(unit);
-                            if (indexVar != null) {
-                                indexVar.setnum(sharedGroup.currentIndex + 1);
-                            }
-                            foundValidUnit = true;
-                            break;
+                        // 如果当前索引无效或不存在，设置为-1，这样第一次会从0开始
+                        if (sharedGroup.currentIndex < 0 || sharedGroup.currentIndex >= sharedGroup.units.size) {
+                            sharedGroup.currentIndex = -1;
                         }
-                    }
+                        
+                        // 尝试从当前索引的下一个位置开始找到有效的单位
+                        boolean foundValidUnit = false;
+                        
+                        // 最多尝试遍历整个单位列表一次
+                        for (int i = 1; i <= sharedGroup.units.size; i++) {
+                            // 更新当前索引，确保从原始索引的下一个位置开始
+                            sharedGroup.currentIndex = (originalIndex + i) % sharedGroup.units.size;
+                            Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
+                            
+                            // 检查单位是否有效
+                            if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                                unitVar.setobj(unit);
+                                if (indexVar != null) {
+                                    indexVar.setnum(sharedGroup.currentIndex + 1);
+                                }
+                                foundValidUnit = true;
+                                break;
+                            }
+                        }
+                        
+                        // 如果没有找到有效单位，重置索引并尝试从开始位置查找
+                        if (!foundValidUnit) {
+                            sharedGroup.currentIndex = -1;
+                            for (int i = 0; i < sharedGroup.units.size; i++) {
+                                Unit unit = sharedGroup.units.get(i);
+                                if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                                    sharedGroup.currentIndex = i;
+                                    unitVar.setobj(unit);
+                                    if (indexVar != null) {
+                                        indexVar.setnum(sharedGroup.currentIndex + 1);
+                                    }
+                                    foundValidUnit = true;
+                                    break;
+                                }
+                            }
+                        }
                     
                     // 如果没有找到有效单位，清理无效单位并设置错误
                     if (!foundValidUnit) {
