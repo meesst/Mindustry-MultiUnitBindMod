@@ -902,13 +902,16 @@ public class LUnitBindGroup {
             }
         }
         
-        // 存储每个共享组的最大count值（已在类顶部定义）
-        
-        // 上次清理时间，用于定期清理
+        // executeMode1方法结束
+    }
+    
+    // 存储每个共享组的最大count值（已在类顶部定义）
+    
+    // 上次清理时间，用于定期清理
 
-        
-        // 更新单位组 - 清理无效单位，添加新单位，维护单位组的有效状态
-        private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName, LVar unitVar, LVar indexVar) {
+    
+    // 更新单位组 - 清理无效单位，添加新单位，维护单位组的有效状态
+    private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName, LVar unitVar, LVar indexVar) {
             // 对于共享组，更新最大count值
             if (groupName != null) {
                 Integer currentMax = sharedGroupMaxCounts.get(groupName);
