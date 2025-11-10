@@ -799,9 +799,9 @@ public class LUnitBindGroup {
                         boolean foundValidUnit = false;
                         
                         // 最多尝试遍历整个单位列表一次
-                        for (int i = 1; i <= sharedGroup.units.size; i++) {
-                            // 更新当前索引，确保从原始索引的下一个位置开始
-                            sharedGroup.currentIndex = (originalIndex + i) % sharedGroup.units.size;
+                        for (int i = 0; i < sharedGroup.units.size; i++) {
+                            // 更新当前索引，确保从原始索引的下一个位置开始（与不使用组的逻辑保持一致）
+                            sharedGroup.currentIndex = (originalIndex + 1 + i) % sharedGroup.units.size;
                             Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
                             
                             // 检查单位是否有效
