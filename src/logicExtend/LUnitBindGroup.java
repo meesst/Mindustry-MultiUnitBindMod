@@ -579,12 +579,9 @@ public class LUnitBindGroup {
                                     individualGroups.get(controller, new UnitGroupInfo());
                 
                 if (info != null && info.units.size > 0) {
-                    // 实现索引循环递增，而不是总是重置为0
+                    // 确保currentIndex有效
                     if (info.currentIndex < 0 || info.currentIndex >= info.units.size) {
                         info.currentIndex = 0;
-                    } else {
-                        // 索引递增，实现循环访问所有单位
-                        info.currentIndex = (info.currentIndex + 1) % info.units.size;
                     }
                     
                     Unit currentUnit = info.units.get(info.currentIndex);
@@ -787,15 +784,26 @@ public class LUnitBindGroup {
                 
                 // 更新单位绑定并返回
                 if (!sharedGroup.units.isEmpty()) {
-                    // 尝试找到第一个有效的单位
-                    boolean foundValidUnit = false;
+                    // 实现索引递增逻辑，与非组模式保持一致
+                    // 如果当前索引无效或不存在，设置为0；否则递增索引
+                    if (sharedGroup.currentIndex < 0 || sharedGroup.currentIndex >= sharedGroup.units.size) {
+                        sharedGroup.currentIndex = 0;
+                    } else {
+                        sharedGroup.currentIndex = (sharedGroup.currentIndex + 1) % sharedGroup.units.size;
+                    }
                     
+                    // 尝试从当前索引开始找到一个有效的单位
+                    boolean foundValidUnit = false;
+                    int originalIndex = sharedGroup.currentIndex;
+                    
+                    // 最多尝试遍历整个单位列表一次
                     for (int i = 0; i < sharedGroup.units.size; i++) {
-                        Unit unit = sharedGroup.units.get(i);
+                        // 更新当前索引
+                        sharedGroup.currentIndex = (originalIndex + i) % sharedGroup.units.size;
+                        Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
                         
                         // 检查单位是否有效
                         if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
-                            sharedGroup.currentIndex = i;
                             unitVar.setobj(unit);
                             if (indexVar != null) {
                                 indexVar.setnum(sharedGroup.currentIndex + 1);
