@@ -784,53 +784,23 @@ public class LUnitBindGroup {
                 
                 // 更新单位绑定并返回
                 if (!sharedGroup.units.isEmpty()) {
-                    // 实现索引递增逻辑，确保索引变量能够正确递增
-                    // 首先检查单位列表是否有效
-                    if (!sharedGroup.units.isEmpty()) {
-                        // 保存原始索引值
-                        int originalIndex = sharedGroup.currentIndex;
+                    // 尝试找到第一个有效的单位
+                    boolean foundValidUnit = false;
+                    
+                    for (int i = 0; i < sharedGroup.units.size; i++) {
+                        Unit unit = sharedGroup.units.get(i);
                         
-                        // 如果当前索引无效或不存在，设置为-1，这样第一次会从0开始
-                        if (sharedGroup.currentIndex < 0 || sharedGroup.currentIndex >= sharedGroup.units.size) {
-                            sharedGroup.currentIndex = -1;
-                        }
-                        
-                        // 尝试从当前索引的下一个位置开始找到有效的单位
-                        boolean foundValidUnit = false;
-                        
-                        // 最多尝试遍历整个单位列表一次
-                        for (int i = 0; i < sharedGroup.units.size; i++) {
-                            // 更新当前索引，确保从原始索引的下一个位置开始（与不使用组的逻辑保持一致）
-                            sharedGroup.currentIndex = (originalIndex + 1 + i) % sharedGroup.units.size;
-                            Unit unit = sharedGroup.units.get(sharedGroup.currentIndex);
-                            
-                            // 检查单位是否有效
-                            if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
-                                unitVar.setobj(unit);
-                                if (indexVar != null) {
-                                    indexVar.setnum(sharedGroup.currentIndex + 1);
-                                }
-                                foundValidUnit = true;
-                                break;
+                        // 检查单位是否有效
+                        if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                            sharedGroup.currentIndex = i;
+                            unitVar.setobj(unit);
+                            if (indexVar != null) {
+                                indexVar.setnum(sharedGroup.currentIndex + 1);
                             }
+                            foundValidUnit = true;
+                            break;
                         }
-                        
-                        // 如果没有找到有效单位，重置索引并尝试从开始位置查找
-                        if (!foundValidUnit) {
-                            sharedGroup.currentIndex = -1;
-                            for (int i = 0; i < sharedGroup.units.size; i++) {
-                                Unit unit = sharedGroup.units.get(i);
-                                if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
-                                    sharedGroup.currentIndex = i;
-                                    unitVar.setobj(unit);
-                                    if (indexVar != null) {
-                                        indexVar.setnum(sharedGroup.currentIndex + 1);
-                                    }
-                                    foundValidUnit = true;
-                                    break;
-                                }
-                            }
-                        }
+                    }
                     
                     // 如果没有找到有效单位，清理无效单位并设置错误
                     if (!foundValidUnit) {
@@ -902,16 +872,13 @@ public class LUnitBindGroup {
             }
         }
         
-        // executeMode1方法结束
-    }
-    
-    // 存储每个共享组的最大count值（已在类顶部定义）
-    
-    // 上次清理时间，用于定期清理
+        // 存储每个共享组的最大count值（已在类顶部定义）
+        
+        // 上次清理时间，用于定期清理
 
-    
-    // 更新单位组 - 清理无效单位，添加新单位，维护单位组的有效状态
-    private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName, LVar unitVar, LVar indexVar) {
+        
+        // 更新单位组 - 清理无效单位，添加新单位，维护单位组的有效状态
+        private static void updateUnitGroup(UnitGroupInfo info, Object typeObj, int maxCount, Team team, Building controller, String groupName, LVar unitVar, LVar indexVar) {
             // 对于共享组，更新最大count值
             if (groupName != null) {
                 Integer currentMax = sharedGroupMaxCounts.get(groupName);
@@ -1484,45 +1451,40 @@ public class LUnitBindGroup {
                 return;
             }
             
-            // 存在 → 设置单位变量和索引 → 结束
-            // 获取当前单位
-            Unit currentUnit = null;
-            if (info.currentIndex >= 0 && info.currentIndex < info.units.size) {
-                currentUnit = info.units.get(info.currentIndex);
-            }
+            // 尝试找到一个有效的单位，实现与独立组模式一致的索引递增逻辑
+            boolean foundValidUnit = false;
+            int originalIndex = info.currentIndex;
             
-            if (currentUnit != null && currentUnit.isValid()) {
-                unitVar.setobj(currentUnit);
-                if (indexVar != null) {
-                    indexVar.setnum(info.currentIndex + 1); // 从1开始计数
-                }
-            } else {
-                // 尝试使用第一个有效单位
-                if (!info.units.isEmpty()) {
-                    for (Unit unit : info.units) {
-                        if (unit != null && unit.isValid()) {
-                            currentUnit = unit;
-                            info.currentIndex = info.units.indexOf(unit);
-                            break;
-                        }
-                    }
-                }
+            // 最多尝试遍历整个单位列表一次
+            for (int i = 0; i < info.units.size; i++) {
+                // 更新当前索引，实现轮询访问
+                info.currentIndex = (originalIndex + 1 + i) % info.units.size;
+                Unit unit = info.units.get(info.currentIndex);
                 
-                if (currentUnit != null) {
-                    unitVar.setobj(currentUnit);
+                // 检查单位是否有效
+                if (unit != null && unit.isValid() && unit.team == exec.team && !unit.dead && !unit.isPlayer()) {
+                    unitVar.setobj(unit);
                     if (indexVar != null) {
-                        indexVar.setnum(info.currentIndex + 1);
+                        indexVar.setnum(info.currentIndex + 1); // 从1开始计数
                     }
-                } else {
-                    // 没有有效单位时设置错误
-                    String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "没有有效单位");
-                    unitVar.setobj(noValidUnitError);
-                    if (indexVar != null) {
-                        indexVar.setobj(noValidUnitError);
-                    }
+                    foundValidUnit = true;
+                    break;
                 }
             }
             
-            // 移除lastAccessTime更新，不再需要自动回收机制
+            // 如果没有找到有效单位，清理无效单位并设置错误
+            if (!foundValidUnit) {
+                // 清理无效单位
+                info.units.removeAll(unit -> unit == null || !unit.isValid() || unit.team != exec.team || unit.dead || unit.isPlayer());
+                
+                // 重置索引
+                info.currentIndex = -1;
+                
+                String noValidUnitError = Core.bundle.get("ubindgroup.error.no_valid_unit", "无有效单位");
+                unitVar.setobj(noValidUnitError);
+                if (indexVar != null) {
+                    indexVar.setobj(noValidUnitError);
+                }
+            }
         }
     }
