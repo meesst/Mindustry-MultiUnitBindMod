@@ -141,7 +141,7 @@ public class LUnitBindGroup {
                 // 根据状态显示不同的emoji和颜色：🔒表示被占用，🟢表示可用，✅表示当前选中
                 t.label(() -> {
                     if (isSelected) {
-                        return "[sky]✅ " + groupName + "[/]";
+                        return "[sky]" + "✅" + groupName;
                     } else {
                         // 在lambda内部重新计算组是否被使用，避免引用非final变量
                         boolean isGroupInUseFinal = false;
@@ -154,9 +154,9 @@ public class LUnitBindGroup {
                             }
                         }
                         if (isGroupInUseFinal) {
-                            return "[orange]🔒 " + groupName + "[/]";
+                            return "[orange]" + "[🔒]" + groupName;
                         } else {
-                            return "[green]🟢 " + groupName + "[/]";
+                            return "[green]" + "🟢" + groupName;
                         }
                     }
                 }).left().expandX();
@@ -207,13 +207,14 @@ public class LUnitBindGroup {
         
         dialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.addbutton", "添加组"), () -> {
             String inputName = newGroupField.getText().trim();
-            // 直接使用用户输入的原始文本作为组名，不再自动添加引号
+            // 为用户输入的文本自动添加引号作为组名
+            String quotedGroupName = "\"" + inputName + "\"";
             
-            if (!inputName.isEmpty() && !sharedGroups.containsKey(inputName)) {
+            if (!inputName.isEmpty() && !sharedGroups.containsKey(quotedGroupName)) {
                 // 创建新组
-                sharedGroups.put(inputName, new UnitGroupInfo());
+                sharedGroups.put(quotedGroupName, new UnitGroupInfo());
                 // 选择新创建的组并关闭对话框
-                onSelectGroup.get(inputName);
+                onSelectGroup.get(quotedGroupName);
                 dialog.hide();
             }
         }).width(120f).row();
