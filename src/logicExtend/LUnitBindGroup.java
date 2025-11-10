@@ -142,10 +142,22 @@ public class LUnitBindGroup {
                 t.label(() -> {
                     if (isSelected) {
                         return "[sky]✅ " + groupName + "[/]";
-                    } else if (isGroupInUse) {
-                        return "[orange]🔒 " + groupName + "[/]";
                     } else {
-                        return "[green]🟢 " + groupName + "[/]";
+                        // 在lambda内部重新计算组是否被使用，避免引用非final变量
+                        boolean isGroupInUseFinal = false;
+                        for (ObjectMap.Entry<Building, String> entry : buildingToGroupName.entries()) {
+                            if (entry.value != null && entry.value.equals(groupName)) {
+                                if (entry.key != null && entry.key.isValid()) {
+                                    isGroupInUseFinal = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (isGroupInUseFinal) {
+                            return "[orange]🔒 " + groupName + "[/]";
+                        } else {
+                            return "[green]🟢 " + groupName + "[/]";
+                        }
                     }
                 }).left().expandX();
                 t.button(Icon.trash, Styles.clearNonei, () -> {
