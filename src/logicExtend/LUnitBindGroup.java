@@ -140,8 +140,14 @@ public class LUnitBindGroup {
                 t.left();
                 // 根据状态显示不同的emoji和颜色：🔒表示被占用，🟢表示可用，✅表示当前选中
                 t.label(() -> {
+                    // 显示组名时移除引号，方便用户阅读
+                    String displayName = groupName;
+                    if (displayName != null && displayName.startsWith("\"") && displayName.endsWith("\"")) {
+                        displayName = displayName.substring(1, displayName.length() - 1);
+                    }
+                    
                     if (isSelected) {
-                        return "[sky]" + "✅" + groupName;
+                        return "[sky]" + "✅" + displayName;
                     } else {
                         // 在lambda内部重新计算组是否被使用，避免引用非final变量
                         boolean isGroupInUseFinal = false;
@@ -154,16 +160,21 @@ public class LUnitBindGroup {
                             }
                         }
                         if (isGroupInUseFinal) {
-                            return "[orange]" + "[🔒]" + groupName;
+                            return "[orange]" + "[🔒]" + displayName;
                         } else {
-                            return "[green]" + "🟢" + groupName;
+                            return "[green]" + "🟢" + displayName;
                         }
                     }
                 }).left().expandX();
                 t.button(Icon.trash, Styles.clearNonei, () -> {
                     // 确认删除对话框
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.delete.confirm", "确认删除"));
-                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", groupName)).width(300f).wrap().row();
+                    // 显示删除消息时移除引号
+                    String displayNameForDelete = groupName;
+                    if (displayNameForDelete != null && displayNameForDelete.startsWith("\"") && displayNameForDelete.endsWith("\"")) {
+                        displayNameForDelete = displayNameForDelete.substring(1, displayNameForDelete.length() - 1);
+                    }
+                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", displayNameForDelete)).width(300f).wrap().row();
                     confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.delete.confirm.yes", "确认删除"), () -> {
                         // 删除组及其所有关联数据
                         sharedGroups.remove(groupName);
@@ -532,8 +543,17 @@ public class LUnitBindGroup {
             
             // 获取并处理组名称
             String groupNameStr = groupName == null ? null : (String)groupName.obj();
-            if (groupNameStr != null && groupNameStr.equals("null")) {
-                groupNameStr = null;
+            if (groupNameStr != null) {
+                // 处理特殊情况：如果组名是字符串"null"，则设置为null
+                if (groupNameStr.equals("null")) {
+                    groupNameStr = null;
+                } else {
+                    // 确保组名是带引号的字符串，避免在游戏中被识别为变量
+                    // 如果组名已经带引号，则保持不变；否则添加引号
+                    if (!groupNameStr.startsWith("\"") || !groupNameStr.endsWith("\"")) {
+                        groupNameStr = "\"" + groupNameStr + "\"";
+                    }
+                }
             }
             
             // 模式判断
