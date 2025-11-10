@@ -85,17 +85,73 @@ public class LUnitBindGroup {
             }).width(300f).pad(4f).row();
         }
         
-        // 添加所有已存在的组
+        // 对组进行排序：当前选中组在最上面，中间是未使用组，下面是已使用组
+        Seq<String> sortedGroups = new Seq<>();
+        Seq<String> unusedGroups = new Seq<>();
+        Seq<String> usedGroups = new Seq<>();
+        
+        // 首先将组分类
         for (String groupName : sharedGroups.keys()) {
             boolean isSelected = currentGroupName != null && currentGroupName.equals(groupName);
             
+            if (isSelected) {
+                // 当前选中组单独处理
+                sortedGroups.add(groupName);
+            } else {
+                // 判断组是否被使用
+                boolean isGroupInUse = false;
+                for (ObjectMap.Entry<Building, String> entry : buildingToGroupName.entries()) {
+                    if (entry.value != null && entry.value.equals(groupName)) {
+                        if (entry.key != null && entry.key.isValid()) {
+                            isGroupInUse = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (isGroupInUse) {
+                    usedGroups.add(groupName);
+                } else {
+                    unusedGroups.add(groupName);
+                }
+            }
+        }
+        
+        // 按照顺序添加到排序后的列表
+        sortedGroups.addAll(unusedGroups);
+        sortedGroups.addAll(usedGroups);
+        
+        // 添加排序后的组列表
+        for (String groupName : sortedGroups) {
+            boolean isSelected = currentGroupName != null && currentGroupName.equals(groupName);
+            
+            // 判断组是否被使用
+            boolean isGroupInUse = false;
+            for (ObjectMap.Entry<Building, String> entry : buildingToGroupName.entries()) {
+                if (entry.value != null && entry.value.equals(groupName)) {
+                    if (entry.key != null && entry.key.isValid()) {
+                        isGroupInUse = true;
+                        break;
+                    }
+                }
+            }
+            
             groupListTable.button(t -> {
                 t.left();
-                t.label(() -> isSelected ? "[cyan]◆[/] " + groupName : "[green]●[/] " + groupName).left().expandX();
+                // 根据状态显示不同的emoji和颜色：🔒表示被占用，🟢表示可用，✅表示当前选中
+                t.label(() -> {
+                    if (isSelected) {
+                        return "[sky]✅ " + groupName + "[/]";
+                    } else if (isGroupInUse) {
+                        return "[orange]🔒 " + groupName + "[/]";
+                    } else {
+                        return "[green]🟢 " + groupName + "[/]";
+                    }
+                }).left().expandX();
                 t.button(Icon.trash, Styles.clearNonei, () -> {
                     // 确认删除对话框
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.delete.confirm", "确认删除"));
-                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", "确定要删除吗")).width(300f).wrap().row();
+                    confirmDialog.cont.add(Core.bundle.format("ubindgroup.groupmanager.delete.message", groupName)).width(300f).wrap().row();
                     confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.delete.confirm.yes", "确认删除"), () -> {
                         // 删除组及其所有关联数据
                         sharedGroups.remove(groupName);
@@ -139,19 +195,13 @@ public class LUnitBindGroup {
         
         dialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.addbutton", "添加组"), () -> {
             String inputName = newGroupField.getText().trim();
-            // 自动添加引号，但避免重复添加
-            String newGroupName;
-            if (inputName.startsWith("\"") && inputName.endsWith("\"")) {
-                newGroupName = inputName;
-            } else {
-                newGroupName = "\"" + inputName + "\"";
-            }
+            // 直接使用用户输入的原始文本作为组名，不再自动添加引号
             
-            if (!inputName.isEmpty() && !sharedGroups.containsKey(newGroupName)) {
+            if (!inputName.isEmpty() && !sharedGroups.containsKey(inputName)) {
                 // 创建新组
-                sharedGroups.put(newGroupName, new UnitGroupInfo());
+                sharedGroups.put(inputName, new UnitGroupInfo());
                 // 选择新创建的组并关闭对话框
-                onSelectGroup.get(newGroupName);
+                onSelectGroup.get(inputName);
                 dialog.hide();
             }
         }).width(120f).row();
