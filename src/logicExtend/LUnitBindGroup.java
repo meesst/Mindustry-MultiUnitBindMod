@@ -213,7 +213,7 @@ public class LUnitBindGroup{
         }
         
         // 获取控制器
-        Building controller = build;
+        Building controller = exec.build;
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
@@ -243,10 +243,10 @@ public class LUnitBindGroup{
         // 获取单位类型和最大数量
         Object typeObj = unitTypeVar != null ? unitTypeVar.obj() : null;
         UnitType type = typeObj instanceof UnitType ? (UnitType)typeObj : null;
-        int maxCount = countVar != null ? Math.max(0, Math.round(countVar.num())) : 1;
+        int maxCount = countVar != null ? Math.max(0, (int)Math.round(countVar.num())) : 1;
 
         // 获取控制器
-        Building controller = build;
+        Building controller = exec.build;
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
