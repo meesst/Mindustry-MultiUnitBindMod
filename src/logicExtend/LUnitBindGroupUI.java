@@ -306,7 +306,7 @@ public class LUnitBindGroupUI {
             this.mode = mode;
         }
         
-        @Override
+        
         public void run(LExecutor executor) {
             // 调用主逻辑类的bindGroup方法
             LUnitBindGroup.bindGroup(
