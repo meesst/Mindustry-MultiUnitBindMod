@@ -20,6 +20,7 @@ import mindustry.ui.dialogs.*;
 import mindustry.world.*;
 
 import static mindustry.Vars.*;
+import static mindustry.logic.LCanvas.*;
 
 /**
  * 单位绑定组UI相关类
@@ -300,7 +301,7 @@ public class LUnitBindGroupUI {
                     dialog.addCloseButton();
                     dialog.show();
                 });
-            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).self(c -> tooltip(c, "ubindgroup.selectmode"));
+            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).self(c -> { tooltip(c, "ubindgroup.selectmode"); });
         }
         
         public LInstruction build(LAssembler build) {
