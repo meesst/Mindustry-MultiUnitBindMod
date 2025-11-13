@@ -4,6 +4,7 @@ import arc.struct.*;
 import arc.util.*;
 import mindustry.gen.*;
 import mindustry.logic.*;
+import mindustry.logic.LExecutor.*;
 import mindustry.type.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.game.Team;
@@ -695,7 +696,7 @@ public class LUnitBindGroup{
     /**
      * 单位绑定组指令类 - 继承LInstruction类
      */
-    public static class UnitBindGroupInstruction extends LInstruction {
+    public static class UnitBindGroupInstruction implements LInstruction {
         private LVar unitTypeVar;
         private LVar countVar;
         private LVar unitVar;
@@ -714,8 +715,7 @@ public class LUnitBindGroup{
         
         @Override
         public void run(LExecutor exec) {
-            // 执行单位绑定组逻辑
-            LUnitBindGroup.bindGroup(exec, unitTypeVar, countVar, unitVar, indexVar, group, mode);
+            bindGroup(exec, unitTypeVar, countVar, unitVar, indexVar, group, mode);
         }
         
         @Override

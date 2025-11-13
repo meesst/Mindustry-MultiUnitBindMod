@@ -12,6 +12,7 @@ import arc.graphics.Color;
 import java.io.*;
 import mindustry.gen.*;
 import mindustry.logic.*;
+import mindustry.logic.LExecutor.*;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
@@ -28,7 +29,7 @@ public class LUnitBindGroupUI {
      * 注册UI解析器
      */
     public static void registerParser() {
-        LAssembler.registerStatement("unitBindGroup", UnitBindGroupStatement::new);
+        LAssembler.customParsers.put("unitBindGroup", UnitBindGroupStatement::new);
     }
     // UI相关的常量定义
     public static final int MODE_GRAB = 1;
@@ -186,10 +187,10 @@ public class LUnitBindGroupUI {
         }
         
         @Override
-        public void build(LAssembler build) {
-            build.addInstruction(new UnitBindGroupInstruction(
+        public LInstruction build(LAssembler build) {
+            return new UnitBindGroupInstruction(
                 unitTypeVar, countVar, unitVar, indexVar, group, mode
-            ));
+            );
         }
         
         public void rebuild(Table table) {
@@ -263,10 +264,7 @@ public class LUnitBindGroupUI {
         
         @Override
         public void compile(LAssembler build) {
-            // 编译时将指令添加到构建器
-            build.addInstruction(new UnitBindGroupInstruction(
-                unitTypeVar, countVar, unitVar, indexVar, group, mode
-            ));
+            // compile方法可以保留为空，因为build方法已经处理了指令生成
         }
         
         @Override
@@ -285,7 +283,7 @@ public class LUnitBindGroupUI {
     /**
      * 单位绑定组指令类 - 负责UI指令逻辑
      */
-    public static class UnitBindGroupInstruction extends LInstruction {
+    public static class UnitBindGroupInstruction implements LInstruction {
         private LVar unitTypeVar;
         private LVar countVar;
         private LVar unitVar;
