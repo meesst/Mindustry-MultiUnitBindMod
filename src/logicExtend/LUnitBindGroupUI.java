@@ -205,11 +205,15 @@ public class LUnitBindGroupUI {
         }
         
         public void build(Table table) {
+            rebuild(table);
+        }
+        
+        private void rebuild(Table table) {
             table.clear();
             
             // 添加模式按钮
             Table modeTable = new Table();
-            modeButton(modeTable);
+            modeButton(modeTable, table);
             
             // 左侧表格：单位类型、数量、单位、索引变量
             Table leftTable = new Table();
@@ -277,29 +281,26 @@ public class LUnitBindGroupUI {
         /**
          * 创建模式切换按钮
          */
-        private void modeButton(Table parent) {
-            Button button = parent.button("", Styles.logict, () -> {
-                // 切换模式
-                mode = mode == MODE_GRAB ? MODE_PASSIVE : MODE_GRAB;
-                rebuild(parent.parent);
-            }).width(180f).get();
-            
-            // 设置按钮文本
-            button.getLabelCell().get().setText(mode == MODE_GRAB ? Core.bundle.get("ubindgroup.mode.grab", "抓取模式") : Core.bundle.get("ubindgroup.mode.passive", "被动模式"));
-            
-            // 添加悬浮提示
-            button.addListener(new Tooltip(tip -> {
-                tip.background(Styles.black6);
-                tip.add(mode == MODE_GRAB ? "抓取模式：获取并控制单位" : "被动模式：访问但不控制单位").pad(4f);
-            }));
-        }
-        
-        // 辅助方法：重建父表格
-        private void rebuild(Table parent) {
-            if (parent != null) {
-                parent.clearChildren();
-                build(parent);
-            }
+        private void modeButton(Table table, Table parent) {
+            table.button(b -> {
+                b.add(mode == MODE_GRAB ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式")).left();
+                b.clicked(() -> {
+                    BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
+                    dialog.cont.setWidth(300f);
+                    dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
+                        mode = MODE_GRAB;
+                        rebuild(parent);
+                        dialog.hide();
+                    }).width(280f).row();
+                    dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
+                        mode = MODE_PASSIVE;
+                        rebuild(parent);
+                        dialog.hide();
+                    }).width(280f).row();
+                    dialog.addCloseButton();
+                    dialog.show();
+                });
+            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).self(c -> tooltip(c, "ubindgroup.selectmode"));
         }
         
         public LInstruction build(LAssembler build) {
