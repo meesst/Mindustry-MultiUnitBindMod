@@ -71,7 +71,7 @@ public class LUnitBindGroupUI {
             listTable.add(noGroupRow).fillX().row();
             
             // 添加已有的共享组
-            Seq<String> sortedGroups = new Seq<>(LUnitBindGroup.getSharedGroups().keys());
+            Seq<String> sortedGroups = new Seq<String>(LUnitBindGroup.getSharedGroups().keys());
             sortedGroups.sort(); // 按字母顺序排序
             
             for (String group : sortedGroups) {
@@ -207,21 +207,21 @@ public class LUnitBindGroupUI {
             
             // 单位类型变量选择
             table.add("单位类型变量").padRight(5f);
-            table.add(table.field("", Styles.defaultField, str -> unitTypeVar = new LVar(str)).width(150f));
+            table.field("", Styles.defaultField, str -> unitTypeVar = new LVar(str)).width(150f);
             
             // 数量变量选择（仅在抓取模式显示）
             if (mode == MODE_GRAB) {
                 table.add("数量变量").padRight(5f);
-                table.add(table.field("", Styles.defaultField, str -> countVar = new LVar(str)).width(150f));
+                table.field("", Styles.defaultField, str -> countVar = new LVar(str)).width(150f);
             }
             
             // 单位变量选择
             table.add("单位变量").padRight(5f);
-            table.add(table.field("", Styles.defaultField, str -> unitVar = new LVar(str)).width(150f));
+            table.field("", Styles.defaultField, str -> unitVar = new LVar(str)).width(150f);
             
             // 索引变量选择
             table.add("索引变量").padRight(5f);
-            table.add(table.field("", Styles.defaultField, str -> indexVar = new LVar(str)).width(150f));
+            table.field("", Styles.defaultField, str -> indexVar = new LVar(str)).width(150f);
             
             // 组名称选择按钮
             table.button("组名" + (group.isEmpty() ? "" : ": " + group), Styles.logict, () -> {
@@ -235,7 +235,6 @@ public class LUnitBindGroupUI {
             table.add(modeTable).left().padLeft(500f);
         }
         
-        @Override
         public void serialize(DataOutput stream) {
             try {
                 stream.writeUTF(unitTypeVar != null ? unitTypeVar.name : "");
@@ -249,7 +248,6 @@ public class LUnitBindGroupUI {
             }
         }
         
-        @Override
         public void deserialize(DataInput stream) {
             try {
                 String unitTypeName = stream.readUTF();
@@ -271,12 +269,10 @@ public class LUnitBindGroupUI {
             }
         }
         
-        @Override
         public void compile(LAssembler build) {
             // compile方法可以保留为空，因为build方法已经处理了指令生成
         }
         
-        @Override
         public LStatement copy() {
             UnitBindGroupStatement copy = new UnitBindGroupStatement();
             copy.unitTypeVar = unitTypeVar;

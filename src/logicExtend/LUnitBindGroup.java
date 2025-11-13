@@ -141,7 +141,7 @@ public class LUnitBindGroup{
         public String getMessage() {
             try {
                 // 使用Core.bundle获取本地化消息，如果失败则返回默认消息
-                return Core.bundle.get("ubindgroup.error." + key, defaultMessage);
+                return defaultMessage;
             } catch (Exception e) {
                 return defaultMessage;
             }
@@ -213,7 +213,7 @@ public class LUnitBindGroup{
         }
         
         // 获取控制器
-        Building controller = exec.building();
+        Building controller = exec.build();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
@@ -224,7 +224,7 @@ public class LUnitBindGroup{
         if (groupName instanceof String) {
             group = (String)groupName;
         } else if (groupName != null) {
-            Object groupObj = groupName instanceof LVar ? exec.var((LVar)groupName) : groupName;
+            Object groupObj = groupName instanceof LVar ? exec.get((LVar)groupName) : groupName;
             group = groupObj instanceof String ? (String)groupObj : null;
         }
         
@@ -241,12 +241,12 @@ public class LUnitBindGroup{
     /** 抓取模式实现 */
     private static void executeMode1(LExecutor exec, String group, LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar) {
         // 获取单位类型和最大数量
-        Object typeObj = unitTypeVar != null ? exec.var(unitTypeVar) : null;
+        Object typeObj = unitTypeVar != null ? exec.get(unitTypeVar) : null;
         UnitType type = typeObj instanceof UnitType ? (UnitType)typeObj : null;
-        int maxCount = countVar != null ? Math.max(0, Math.round(countVar.numval())) : 1;
+        int maxCount = countVar != null ? Math.max(0, Math.round(countVar.numval(exec))) : 1;
 
         // 获取控制器
-        Building controller = exec.building();
+        Building controller = exec.build();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
@@ -724,7 +724,6 @@ public class LUnitBindGroup{
             bindGroup(exec, unitTypeVar, countVar, unitVar, indexVar, group, mode);
         }
         
-        @Override
         public boolean isControlFlow() {
             return false;
         }
