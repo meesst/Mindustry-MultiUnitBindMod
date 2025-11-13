@@ -700,7 +700,8 @@ public class LUnitBindGroup{
     }
     
     /**
-     * 单位绑定组指令类 - 继承LInstruction类
+     * 单位绑定组指令类 - 负责指令逻辑执行
+     * 注意：此内部类主要保留用于兼容性，实际逻辑执行已移至UI类
      */
     public static class UnitBindGroupInstruction implements LInstruction {
         private LVar unitTypeVar;
@@ -709,7 +710,7 @@ public class LUnitBindGroup{
         private LVar indexVar;
         private String group;
         private int mode;
-        
+
         public UnitBindGroupInstruction(LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar, String group, int mode) {
             this.unitTypeVar = unitTypeVar;
             this.countVar = countVar;
@@ -718,12 +719,13 @@ public class LUnitBindGroup{
             this.group = group;
             this.mode = mode;
         }
-        
+
         @Override
         public void run(LExecutor exec) {
+            // 调用主逻辑类的bindGroup方法
             bindGroup(exec, unitTypeVar, countVar, unitVar, indexVar, group, mode);
         }
-        
+
         public boolean isControlFlow() {
             return false;
         }
