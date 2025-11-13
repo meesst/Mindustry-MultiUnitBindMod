@@ -27,13 +27,24 @@ import static mindustry.Vars.*;
  */
 public class LUnitBindGroupUI {
     /**
-     * 注册UI解析器
+     * 注册UI解析器和语句到逻辑系统
      */
-    public static void registerParser() {
-        LAssembler.customParsers.put("unitBindGroup", args -> {
-            UnitBindGroupStatement statement = new UnitBindGroupStatement();
-            return statement;
+    public static void register() {
+        // 注册自定义解析器
+        LAssembler.customParsers.put("ubindgroup", params -> {
+            UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+            if (params.length >= 2) {
+                // 处理参数
+            }
+            return stmt;
         });
+        // 将语句添加到语句列表中，使其在游戏UI中可见
+        LogicIO.allStatements.add(UnitBindGroupStatement::new);
+    }
+    
+    // 静态初始化块，自动注册指令
+    static {
+        register();
     }
     // UI相关的常量定义
     public static final int MODE_GRAB = 1;
@@ -173,7 +184,7 @@ public class LUnitBindGroupUI {
     }
     
     /**
-     * 单位绑定组语句类 - 负责UI构建
+     * 单位绑定组语句类 - 负责UI构建和指令注册
      */
     public static class UnitBindGroupStatement extends LStatement {
         public LVar unitTypeVar;
@@ -182,6 +193,21 @@ public class LUnitBindGroupUI {
         public LVar indexVar;
         public String group = "";
         public int mode = MODE_GRAB;
+        
+        @Override
+        public String name() {
+            return "ubindgroup";
+        }
+        
+        @Override
+        public String description() {
+            return "绑定单位到指定组";
+        }
+        
+        @Override
+        public LCategory category() {
+            return LCategory.unit;
+        }
         
         
         public void build(Table table) {
