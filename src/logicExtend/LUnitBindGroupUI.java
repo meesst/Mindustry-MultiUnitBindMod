@@ -194,17 +194,14 @@ public class LUnitBindGroupUI {
         public String group = "";
         public int mode = MODE_GRAB;
         
-        @Override
         public String name() {
             return "ubindgroup";
         }
         
-        @Override
         public String description() {
             return "绑定单位到指定组";
         }
         
-        @Override
         public LCategory category() {
             return LCategory.unit;
         }
