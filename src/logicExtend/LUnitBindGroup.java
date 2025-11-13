@@ -8,6 +8,7 @@ import mindustry.type.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.game.Team;
 import java.util.Objects;
+import java.util.Iterator;
 
 import static mindustry.Vars.*;
 
@@ -101,17 +102,48 @@ public class LUnitBindGroup{
     // 用于存储共享组的初始配置
     private static final ObjectMap<String, GroupConfig> sharedGroupConfigs = new ObjectMap<>();
     
-    // 错误信息类型枚举
+    /**
+     * 错误类型枚举
+     */
     public enum ErrorType {
-        NONE,
-        INVALID_CONTROLLER,      // 处理器无效
-        INVALID_MODE,           // 模式无效
-        GROUP_NOT_EXIST,        // 共享组不存在
-        GROUP_CONFLICT,         // 组名冲突
-        NO_UNITS_AVAILABLE,     // 无可用单位
-        EMPTY_GROUP,            // 组为空
-        INVALID_COUNT,          // 数量无效
-        UNIT_TYPE_NOT_FOUND     // 单位类型未找到
+        /** 未指定错误 */
+        NONE("none", "未指定错误"),
+        /** 处理器无效 */
+        INVALID_CONTROLLER("invalid_controller", "处理器无效"),
+        /** 模式无效 */
+        INVALID_MODE("invalid_mode", "模式无效"),
+        /** 共享组不存在 */
+        GROUP_NOT_EXIST("group_not_exist", "共享组不存在"),
+        /** 组名冲突 */
+        GROUP_CONFLICT("group_conflict", "组名冲突"),
+        /** 无可用单位 */
+        NO_UNITS_AVAILABLE("no_units_available", "无可用单位"),
+        /** 组为空 */
+        EMPTY_GROUP("empty_group", "组为空"),
+        /** 数量无效 */
+        INVALID_COUNT("invalid_count", "数量无效"),
+        /** 单位类型未找到 */
+        UNIT_TYPE_NOT_FOUND("unit_type_not_found", "单位类型未找到");
+        
+        private final String key;
+        private final String defaultMessage;
+        
+        ErrorType(String key, String defaultMessage) {
+            this.key = key;
+            this.defaultMessage = defaultMessage;
+        }
+        
+        /**
+         * 获取错误消息
+         */
+        public String getMessage() {
+            try {
+                // 使用Core.bundle获取本地化消息，如果失败则返回默认消息
+                return Core.bundle.get("ubindgroup.error." + key, defaultMessage);
+            } catch (Exception e) {
+                return defaultMessage;
+            }
+        }
     }
     
     // 设置错误信息的方法
@@ -136,7 +168,11 @@ public class LUnitBindGroup{
     // 静态初始化块，注册UI解析器
     static {
         // 延迟初始化UI类，避免循环依赖
-        LUnitBindGroupUI.registerParser();
+        try {
+            Class.forName("logicExtend.LUnitBindGroupUI");
+        } catch (ClassNotFoundException e) {
+            Log.warn("LUnitBindGroupUI class not found, skipping UI registration.");
+        }
     }
     
     // 公共方法，提供对共享组的访问
@@ -157,6 +193,21 @@ public class LUnitBindGroup{
         // 定期执行清理操作
         if(cleanupTimer.get(0, cleanupFrequency)) {
             cleanupGroups();
+            periodicCleanup(); // 添加定期清理无效控制器和组的操作
+        }
+        
+        // 错误检查 - 添加对执行器和必要变量的验证
+        if (exec == null) {
+            Log.err("LUnitBindGroup: 执行器为空");
+            if (indexVar != null) indexVar.setnum(-1);
+            if (unitVar != null) unitVar.setobj(null);
+            return;
+        }
+        
+        if (unitVar == null) {
+            Log.err("LUnitBindGroup: 单位变量为空");
+            if (indexVar != null) indexVar.setnum(-2);
+            return;
         }
         
         // 获取控制器
@@ -186,26 +237,26 @@ public class LUnitBindGroup{
         Object typeObj = unitTypeVar != null ? exec.get(unitTypeVar) : null;
         UnitType type = typeObj instanceof UnitType ? (UnitType)typeObj : null;
         int maxCount = countVar != null ? Math.max(0, (int)countVar.numval(exec)) : 1;
-        
+
         // 获取控制器
         Building controller = exec.building();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
         }
-        
+
         // 检查数量是否有效
         if(maxCount <= 0) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_COUNT);
             return;
         }
-        
+
         // 检查是否指定了单位类型但类型无效
         if(unitTypeVar != null && type == null) {
             setError(exec, unitVar, indexVar, ErrorType.UNIT_TYPE_NOT_FOUND);
             return;
         }
-        
+
         // 检查是否有其他逻辑块已在抓取模式下使用了相同的组名
         if(group != null && !group.isEmpty()) {
             // 遍历所有建筑-组映射
@@ -220,15 +271,15 @@ public class LUnitBindGroup{
                 }
             }
         }
-        
+
         // 获取或创建单位组
         UnitGroupInfo info = getOrCreateGroup(group);
-        
+
         // 记录建筑与组的映射关系（在确认无冲突后）
         if(group != null && !group.isEmpty()) {
             buildingToGroupName.put(controller, group);
         }
-        
+
         // 检查参数变化并重新抓取单位
         if(checkAllParamsChanged(controller, type, maxCount, group, 1)) {
             // 更新单位组
@@ -237,14 +288,14 @@ public class LUnitBindGroup{
             // 维护单位池
             maintainUnitPool(info);
         }
-        
+
         // 设置单位变量
         if(!info.units.isEmpty()) {
             Unit unit = info.units.get(info.currentIndex);
             unitVar.setobj(unit);
             if(indexVar != null) indexVar.setnum(info.currentIndex);
-            
-            // 更新当前索引
+
+            // 更新当前索引，确保循环有效
             info.currentIndex = (info.currentIndex + 1) % info.units.size;
         } else {
             setError(exec, unitVar, indexVar, ErrorType.NO_UNITS_AVAILABLE);
@@ -255,14 +306,24 @@ public class LUnitBindGroup{
     private static void executeMode2(LExecutor exec, String group, LVar unitVar, LVar indexVar) {
         // 访问模式：不需要抓取，只访问现有单位组
         UnitGroupInfo info = group != null ? sharedGroups.get(group) : null;
-        
+
+        // 维护单位池，确保单位有效性
+        if(info != null) {
+            maintainUnitPool(info);
+        }
+
         // 设置单位变量
         if(info != null && !info.units.isEmpty()) {
+            // 确保索引在有效范围内
+            if(info.currentIndex >= info.units.size) {
+                info.currentIndex = 0;
+            }
+            
             Unit unit = info.units.get(info.currentIndex);
             unitVar.setobj(unit);
             if(indexVar != null) indexVar.setnum(info.currentIndex);
-            
-            // 更新当前索引
+
+            // 更新当前索引，确保循环有效
             info.currentIndex = (info.currentIndex + 1) % info.units.size;
         } else {
             // 使用setError方法处理错误情况
@@ -296,7 +357,7 @@ public class LUnitBindGroup{
     }
     
     // 独立组清理操作
-    private void cleanupPrivateGroup(UnitGroupInfo info) {
+    private static void cleanupPrivateGroup(UnitGroupInfo info) {
         // 如果当前逻辑块绑定了单位池
         if (info != null) {
             // 如果单位池中有单位对象
@@ -312,7 +373,7 @@ public class LUnitBindGroup{
     }
     
     // 公开组清理操作
-    private void cleanupPublicGroup(UnitGroupInfo info, int mode) {
+    private static void cleanupPublicGroup(UnitGroupInfo info, int mode) {
         // 如果是访问模式，直接跳过清理操作
         if (mode == 2) {
             return;
@@ -333,7 +394,7 @@ public class LUnitBindGroup{
     }
     
     /** 单位池维护逻辑：使用流水线设计，包含单位有效性检查、无效单位解绑和单位池容量维护 */
-    private void cleanupUnits(UnitGroupInfo info) {
+    private static void cleanupUnits(UnitGroupInfo info) {
         // 1. 单位有效性检查
         for(int i = info.units.size - 1; i >= 0; i--) {
             if(!isUnitValid(info.units.get(i))) {
@@ -355,7 +416,7 @@ public class LUnitBindGroup{
     }
     
     /** 清理所有过期的独立组 */
-    private void cleanupGroups() {
+    private static void cleanupGroups() {
         // 只清理独立组（没有公开标记的组）
         ObjectMap<String, UnitGroupInfo> toRemove = new ObjectMap<>();
         
@@ -376,7 +437,7 @@ public class LUnitBindGroup{
     }
     
     /** 抓取符合条件的单位 */
-    private void fetchUnits(LExecutor exec, UnitGroupInfo info, UnitType type, int maxCount) {
+    private static void fetchUnits(LExecutor exec, UnitGroupInfo info, UnitType type, int maxCount) {
         // 计算还需要抓取的单位数量
         int needed = maxCount - info.units.size;
         if(needed <= 0) return;
@@ -409,17 +470,17 @@ public class LUnitBindGroup{
     }
     
     // 判断单位是否被控制
-    private boolean isUnitControlled(Unit unit) {
+    private static boolean isUnitControlled(Unit unit) {
         return unit.controller() != null && !(unit.controller() instanceof LogicAI);
     }
     
     /** 检查单位是否有效 */
-    private boolean isUnitValid(Unit unit) {
+    private static boolean isUnitValid(Unit unit) {
         return unit != null && !unit.dead && unit.type.logicControllable;
     }
     
     /** 检查是否可以控制该单位 */
-    private boolean canControlUnit(LExecutor exec, Unit unit) {
+    private static boolean canControlUnit(LExecutor exec, Unit unit) {
         return unit.team == exec.team || exec.privileged;
     }
     
@@ -565,6 +626,8 @@ public class LUnitBindGroup{
     
     // 维护单位池
     private static void maintainUnitPool(UnitGroupInfo info) {
+        if(info == null || info.units == null) return;
+        
         // 1. 单位有效性检查
         for(int i = info.units.size - 1; i >= 0; i--) {
             Unit unit = info.units.get(i);
@@ -572,16 +635,20 @@ public class LUnitBindGroup{
                 // 2. 解绑无效单位
                 info.units.remove(i);
                 unbindUnit(unit);
-                // 3. 索引调整
+                // 3. 索引调整 - 确保索引不会越界
                 if(i < info.currentIndex) {
                     info.currentIndex--;
                 }
             }
         }
-        
+
         // 确保索引在有效范围内
-        if(info.currentIndex >= info.units.size && !info.units.isEmpty()) {
-            info.currentIndex = 0;
+        if(info.units.isEmpty()) {
+            info.currentIndex = 0; // 空组重置索引为0
+        } else if(info.currentIndex >= info.units.size) {
+            info.currentIndex = 0; // 索引超出范围，重置为0
+        } else if(info.currentIndex < 0) {
+            info.currentIndex = 0; // 防止负索引
         }
     }
     
@@ -625,16 +692,37 @@ public class LUnitBindGroup{
         }
     }
     
-        @Override
-        public LStatement copy() {
-            LUnitBindGroup copy = new LUnitBindGroup();
-            copy.groupName = groupName;
-            copy.mode = mode;
-            copy.unitType = unitType;
-            copy.maxCount = maxCount;
-            copy.indexVar = indexVar;
-            return copy;
+    /**
+     * 单位绑定组指令类 - 继承LInstruction类
+     */
+    public static class UnitBindGroupInstruction extends LInstruction {
+        private LVar unitTypeVar;
+        private LVar countVar;
+        private LVar unitVar;
+        private LVar indexVar;
+        private String group;
+        private int mode;
+        
+        public UnitBindGroupInstruction(LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar, String group, int mode) {
+            this.unitTypeVar = unitTypeVar;
+            this.countVar = countVar;
+            this.unitVar = unitVar;
+            this.indexVar = indexVar;
+            this.group = group;
+            this.mode = mode;
         }
+        
+        @Override
+        public void run(LExecutor exec) {
+            // 执行单位绑定组逻辑
+            LUnitBindGroup.bindGroup(exec, unitTypeVar, countVar, unitVar, indexVar, group, mode);
+        }
+        
+        @Override
+        public boolean isControlFlow() {
+            return false;
+        }
+    }
     
     // UI界面相关代码保持不变（此处省略具体实现）
     // ...

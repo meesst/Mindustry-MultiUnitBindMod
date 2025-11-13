@@ -8,13 +8,14 @@ import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
 import arc.util.*;
+import arc.graphics.Color;
+import java.io.*;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
 import mindustry.world.*;
-import mindustry.graphics.Color;
 
 import static mindustry.Vars.*;
 
@@ -130,11 +131,11 @@ public class LUnitBindGroupUI {
                 actionsTable.add(Core.bundle.get("ubindgroup.groupmanager.unitcount", "单位数量") + ": " + info.units.size).left().row();
                 
                 // 删除组按钮（只有在有组的情况下显示）
-                actionsTable.button(Core.bundle.get("ubindgroup.groupmanager.delete", "删除组"), Styles.logicred, () -> {
+                actionsTable.button(Core.bundle.get("ubindgroup.groupmanager.delete", "删除组"), Styles.danger, () -> {
                     // 确认删除
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.deleteconfirm", "确认删除"));
                     confirmDialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.deleteconfirmtext", "确定要删除这个单位组吗？所有绑定的单位将被解绑。")).width(400f).wrap().row();
-                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.confirm", "确认"), Styles.logicred, () -> {
+                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.confirm", "确认"), Styles.danger, () -> {
                         // 删除组
                             if (LUnitBindGroup.getSharedGroups().containsKey(groupToShow)) {
                                 LUnitBindGroup.UnitGroupInfo groupInfo = LUnitBindGroup.getSharedGroups().get(groupToShow);
@@ -182,6 +183,13 @@ public class LUnitBindGroupUI {
         @Override
         public void build(Table table) {
             rebuild(table);
+        }
+        
+        @Override
+        public void build(LAssembler build) {
+            build.addInstruction(new UnitBindGroupInstruction(
+                unitTypeVar, countVar, unitVar, indexVar, group, mode
+            ));
         }
         
         public void rebuild(Table table) {

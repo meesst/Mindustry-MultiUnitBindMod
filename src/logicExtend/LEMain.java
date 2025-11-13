@@ -11,6 +11,5 @@ public class LEMain extends Mod {
         LAmmo.CreateAmmoStatement.create();
         LAmmo.SetAmmoStatement.create();
         LFunction.LFunctionStatement.create();
-        LUnitBindGroup.UnitBindGroupStatement.create();
     }
 }
