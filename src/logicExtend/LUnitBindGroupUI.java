@@ -18,6 +18,7 @@ import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
 import mindustry.world.*;
+import mindustry.Vars;
 
 import static mindustry.Vars.*;
 
@@ -177,6 +178,12 @@ public class LUnitBindGroupUI {
         public String unitType = null, count = "1", unitVar = "currentUnit", indexVar = "unitIndex", groupName = "\"null\"";
         public int mode = 1; // 1: 正常抓取逻辑，2: 共享组内单位无需抓取
         
+        /**
+         * 静态方法，用于注册这个语句到游戏的逻辑系统中
+         */
+        public static void create() {
+            LAssembler.registerStatement("ubindgroup", UnitBindGroupStatement::new);
+        }
         @Override
         public void build(Table table) {
             rebuild(table);
@@ -207,11 +214,11 @@ public class LUnitBindGroupUI {
                                 int c = 0;
                                 for(UnitType item : Vars.content.units()){
                                     if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                                    i.button(item.uiIcon, Styles.flati, 24f, () -> {
+                                    i.button("", Styles.flati, 24f, () -> {
                                         unitType = "@" + item.name;
                                         field.setText(unitType);
                                         hide.run();
-                                    }).size(40f);
+                                    }).size(40f).get().getStyle().imageUp = item.uiIcon;
 
                                     if(++c % 6 == 0) i.row();
                                 }
