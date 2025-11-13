@@ -27,25 +27,9 @@ import static mindustry.Vars.*;
  */
 public class LUnitBindGroupUI {
     /**
-     * 注册UI解析器和语句到逻辑系统
+     * 注册方法被移除，避免与LUnitBindGroup中的注册冲突
+     * 现在统一由LUnitBindGroup中的UnitBindGroupStatement.create()方法负责注册
      */
-    public static void register() {
-        // 注册自定义解析器
-        LAssembler.customParsers.put("ubindgroup", params -> {
-            UnitBindGroupStatement stmt = new UnitBindGroupStatement();
-            if (params.length >= 2) {
-                // 处理参数
-            }
-            return stmt;
-        });
-        // 将语句添加到语句列表中，使其在游戏UI中可见
-        LogicIO.allStatements.add(UnitBindGroupStatement::new);
-    }
-    
-    // 静态初始化块，自动注册指令
-    static {
-        register();
-    }
     // UI相关的常量定义
     public static final int MODE_GRAB = 1;
     public static final int MODE_PASSIVE = 2;
@@ -187,125 +171,187 @@ public class LUnitBindGroupUI {
      * 单位绑定组语句类 - 负责UI构建和指令注册
      */
     public static class UnitBindGroupStatement extends LStatement {
-        public LVar unitTypeVar;
-        public LVar countVar;
-        public LVar unitVar;
-        public LVar indexVar;
-        public String group = "";
-        public int mode = MODE_GRAB;
+        public String unitType = null, count = "1", unitVar = "currentUnit", indexVar = "unitIndex", groupName = "\"null\"";
+        public int mode = 1; // 1: 正常抓取逻辑，2: 共享组内单位无需抓取
         
-        public String name() {
-            return "ubindgroup";
-        }
-        
-        public String description() {
-            return "绑定单位到指定组";
-        }
-        
-        public LCategory category() {
-            return LCategory.unit;
-        }
-        
-        
+        @Override
         public void build(Table table) {
             rebuild(table);
         }
         
+        private void rebuild(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            // 第一排：单位类型、单位数量和模式选择
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                // 单位类型参数（模式1显示）
+                if (mode == 1) {
+                    t.add(Core.bundle.get("ubindgroup.param.unitType", "type")).padLeft(10).left().self(c -> {
+                        this.param(c);
+                        tooltip(c, "ubindgroup.unittype");
+                    });
+                    TextField field = field(t, unitType, str -> unitType = sanitize(str)).get();
+                    
+                    // 完全按照游戏源代码中的UnitBindStatement实现方式
+                    t.button(b -> {
+                        b.image(Icon.pencilSmall);
+                        b.clicked(() -> showSelectTable(b, (table_, hide) -> {
+                            table_.row();
+                            table_.table(i -> {
+                                i.left();
+                                int c = 0;
+                                for(UnitType item : Vars.content.units()){
+                                    if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                                    i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, 24f, () -> {
+                                        unitType = "@" + item.name;
+                                        field.setText(unitType);
+                                        hide.run();
+                                    }).size(40f);
+
+                                    if(++c % 6 == 0) i.row();
+                                }
+                            }).colspan(3).width(240f).left();
+                        }));
+                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color).self(c -> tooltip(c, "ubindgroup.selectunit"));
+                    
+                    // 数量参数
+                    t.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(c -> {
+                        this.param(c);
+                        tooltip(c, "ubindgroup.count");
+                    });
+                    t.field(count, Styles.nodeField, s -> count = sanitize(s))
+                        .size(144f, 40f).pad(2f).color(t.color)
+                        .width(80f).padRight(10).left();
+                }
+                
+                // 模式选择
+                t.add("mode:").left().self(c -> tooltip(c, "ubindgroup.mode"));
+                modeButton(t, table);
+            }).left();
+            
+            table.row();
+            
+            // 第二排：变量名和组名称参数
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                // 单位变量参数
+                t.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(c -> {
+                    this.param(c);
+                    tooltip(c, "ubindgroup.unitvar");
+                });
+                t.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
+                    .size(144f, 40f).pad(2f).color(t.color)
+                    .width(150f).padRight(0).left();
+                
+                // 索引变量参数
+                t.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(c -> {
+                    this.param(c);
+                    tooltip(c, "ubindgroup.indexvar");
+                });
+                t.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
+                    .size(144f, 40f).pad(2f).color(t.color)
+                    .width(150f).padRight(0).left();
+                
+                // 组名称参数 - 替换为按钮，点击打开组管理窗口
+                t.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(c -> {
+                    this.param(c);
+                    tooltip(c, "ubindgroup.groupname");
+                });
+                t.button(b -> {
+                    // 显示当前选择的组名，参考mode元素按钮的实现方式
+                    String displayText = (groupName == null || groupName.equals("null")) ? 
+                                        Core.bundle.get("ubindgroup.groupmanager.nogroup", "无单位组") : 
+                                        groupName;
+                    b.add(displayText).left();
+                }, Styles.logict, () -> {
+                    // 打开组管理窗口，传递当前模式
+                    String currentGroup = groupName;
+                    showGroupManagerDialog(currentGroup, (selected) -> {
+                        // 更新组名
+                        if (selected == null) {
+                            groupName = "null"; // 表示选择了"无单位组"
+                        } else {
+                            groupName = selected;
+                        }
+                        // 选择组后刷新UI
+                        rebuild(table);
+                    }, this.mode);
+                }).size(150f, 40f).pad(2f).color(t.color)
+                    .padRight(0).left().self(c -> tooltip(c, "ubindgroup.selectgroup"));
+            }).left();
+        }
         
-        public LInstruction build(LAssembler build) {
+        void modeButton(Table table, Table parent) {
+            table.button(b -> {
+                b.add(mode == 1 ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式")).left();
+                b.clicked(() -> {
+                    BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
+                    dialog.cont.setWidth(300f);
+                    dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
+                        mode = 1;
+                        rebuild(parent);
+                        dialog.hide();
+                    }).width(280f).row();
+                    dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
+                        mode = 2;
+                        rebuild(parent);
+                        dialog.hide();
+                    }).width(280f).row();
+                    dialog.addCloseButton();
+                    dialog.show();
+                });
+            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).self(c -> tooltip(c, "ubindgroup.selectmode"));
+        }
+        
+        // 不再需要单独的showUnitTypeSelect方法，按钮逻辑已集成到rebuild方法中
+        void showUnitTypeSelect(Table table) {
+            // 保留此方法以避免编译错误，但实际功能已移至rebuild方法
+        }
+        
+        @Override
+        public LExecutor.LInstruction build(LAssembler builder) {
+            // 单独判断groupName参数，处理"null"字符串情况
+            LVar groupNameVar = null;
+            if (groupName != null && !groupName.equals("null")) {
+                groupNameVar = builder.var(groupName);
+            }
+            
             return new UnitBindGroupInstruction(
-                unitTypeVar, countVar, unitVar, indexVar, group, mode
+                builder.var(unitType),
+                builder.var(count),
+                builder.var(unitVar),
+                indexVar.isEmpty() || indexVar.equals("null") ? null : builder.var(indexVar),
+                groupNameVar,
+                mode
             );
         }
         
-        public void rebuild(Table table) {
-            table.clear();
-            
-            // 模式选择按钮
-            Table modeTable = new Table();
-            modeTable.button(mode == MODE_GRAB ? Core.bundle.get("ubindgroup.mode.grab", "抓取模式") : Core.bundle.get("ubindgroup.mode.passive", "被动模式"), Styles.logict, () -> {
-                // 切换模式
-                mode = mode == MODE_GRAB ? MODE_PASSIVE : MODE_GRAB;
-                rebuild(table);
-            }).width(150f);
-            
-            // 单位类型变量选择
-            table.add("单位类型变量").padRight(5f);
-            table.field("", Styles.defaultField, str -> unitTypeVar = new LVar(str)).width(150f);
-            
-            // 数量变量选择（仅在抓取模式显示）
-            if (mode == MODE_GRAB) {
-                table.add("数量变量").padRight(5f);
-                table.field("", Styles.defaultField, str -> countVar = new LVar(str)).width(150f);
+        @Override
+        public LCategory category() {
+            return LCategory.unit;
+        }
+        
+        @Override
+        public String name() {
+            return Core.bundle.get("lst.ubindgroup", "ubindgroup");
+        }
+        
+        public String description() {
+            return Core.bundle.get("lst.ubindgroup.description", "单位绑定组: 将单位分组管理和访问");
+        }
+        
+        @Override
+        public void write(StringBuilder builder) {
+            builder.append("ubindgroup ").append(unitType).append(" ").append(count).append(" ")
+                   .append(unitVar).append(" " ).append(indexVar);
+            if (groupName != null) {
+                builder.append(" " ).append(groupName);
             }
-            
-            // 单位变量选择
-            table.add("单位变量").padRight(5f);
-            table.field("", Styles.defaultField, str -> unitVar = new LVar(str)).width(150f);
-            
-            // 索引变量选择
-            table.add("索引变量").padRight(5f);
-            table.field("", Styles.defaultField, str -> indexVar = new LVar(str)).width(150f);
-            
-            // 组名称选择按钮
-            table.button("组名" + (group.isEmpty() ? "" : ": " + group), Styles.logict, () -> {
-                LUnitBindGroupUI.showGroupManagerDialog(group, selectedGroup -> {
-                    this.group = selectedGroup != null ? selectedGroup : "";
-                    rebuild(table);
-                }, mode);
-            }).width(200f);
-            
-            table.row();
-            table.add(modeTable).left().padLeft(500f);
-        }
-        
-        public void serialize(DataOutput stream) {
-            try {
-                stream.writeUTF(unitTypeVar != null ? unitTypeVar.name : "");
-                stream.writeUTF(countVar != null ? countVar.name : "");
-                stream.writeUTF(unitVar != null ? unitVar.name : "");
-                stream.writeUTF(indexVar != null ? indexVar.name : "");
-                stream.writeUTF(group);
-                stream.writeInt(mode);
-            } catch (IOException e) {
-                Log.err(e);
-            }
-        }
-        
-        public void deserialize(DataInput stream) {
-            try {
-                String unitTypeName = stream.readUTF();
-                unitTypeVar = !unitTypeName.isEmpty() ? new LVar(unitTypeName) : null;
-                
-                String countVarName = stream.readUTF();
-                countVar = !countVarName.isEmpty() ? new LVar(countVarName) : null;
-                
-                String unitVarName = stream.readUTF();
-                unitVar = !unitVarName.isEmpty() ? new LVar(unitVarName) : null;
-                
-                String indexVarName = stream.readUTF();
-                indexVar = !indexVarName.isEmpty() ? new LVar(indexVarName) : null;
-                
-                group = stream.readUTF();
-                mode = stream.readInt();
-            } catch (IOException e) {
-                Log.err(e);
-            }
-        }
-        
-        public void compile(LAssembler build) {
-            // compile方法可以保留为空，因为build方法已经处理了指令生成
-        }
-        
-        public LStatement copy() {
-            UnitBindGroupStatement copy = new UnitBindGroupStatement();
-            copy.unitTypeVar = unitTypeVar;
-            copy.countVar = countVar;
-            copy.unitVar = unitVar;
-            copy.indexVar = indexVar;
-            copy.group = group;
-            copy.mode = mode;
-            return copy;
+            builder.append(" " ).append(mode);
         }
     }
     
