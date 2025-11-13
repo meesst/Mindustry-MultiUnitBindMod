@@ -71,7 +71,8 @@ public class LUnitBindGroupUI {
             listTable.add(noGroupRow).fillX().row();
             
             // 添加已有的共享组
-            Seq<String> sortedGroups = new Seq<String>(LUnitBindGroup.getSharedGroups().keys());
+            Seq<String> sortedGroups = new Seq<>();
+            sortedGroups.addAll(LUnitBindGroup.getSharedGroups().keys());
             sortedGroups.sort(); // 按字母顺序排序
             
             for (String group : sortedGroups) {
@@ -182,7 +183,7 @@ public class LUnitBindGroupUI {
         public String group = "";
         public int mode = MODE_GRAB;
         
-        @Override
+        
         public void build(Table table) {
             rebuild(table);
         }
