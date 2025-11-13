@@ -6,6 +6,7 @@ import arc.scene.*;
 import arc.scene.event.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
+import arc.scene.style.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.graphics.Color;
@@ -14,6 +15,7 @@ import java.util.function.Consumer;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.logic.LExecutor.*;
+import mindustry.logic.LogicIO;
 import mindustry.type.*;
 import mindustry.ui.*;
 import mindustry.ui.dialogs.*;
@@ -182,7 +184,23 @@ public class LUnitBindGroupUI {
          * 静态方法，用于注册这个语句到游戏的逻辑系统中
          */
         public static void create() {
-            LAssembler.registerStatement("ubindgroup", UnitBindGroupStatement::new);
+            LAssembler.customParsers.put("ubindgroup", params -> {
+                UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+                if (params.length >= 2) stmt.unitType = params[1];
+                if (params.length >= 3) stmt.count = params[2];
+                if (params.length >= 4) stmt.unitVar = params[3];
+                if (params.length >= 5) stmt.indexVar = params[4];
+                if (params.length >= 6) stmt.groupName = params[5];
+                if (params.length >= 7) {
+                    try {
+                        stmt.mode = Integer.parseInt(params[6]);
+                    } catch (NumberFormatException e) {
+                        stmt.mode = 1; // 默认模式
+                    }
+                }
+                return stmt;
+            });
+            LogicIO.allStatements.add(UnitBindGroupStatement::new);
         }
         @Override
         public void build(Table table) {
@@ -218,7 +236,7 @@ public class LUnitBindGroupUI {
                                         unitType = "@" + item.name;
                                         field.setText(unitType);
                                         hide.run();
-                                    }).size(40f).get().getStyle().imageUp = item.uiIcon;
+                                    }).size(40f).get().getStyle().imageUp = new TextureRegionDrawable(item.uiIcon);
 
                                     if(++c % 6 == 0) i.row();
                                 }
