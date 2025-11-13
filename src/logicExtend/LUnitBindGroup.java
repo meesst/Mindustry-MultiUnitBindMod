@@ -8,7 +8,7 @@ import mindustry.logic.LExecutor.*;
 import mindustry.type.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.game.Team;
-import mindustry.entities.units.LogicAI;
+// LogicAI类不存在，已移除导入
 import java.util.Objects;
 import java.util.Iterator;
 
@@ -213,7 +213,7 @@ public class LUnitBindGroup{
         }
         
         // 获取控制器
-        Building controller = exec.build();
+        Building controller = exec.building();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
@@ -224,7 +224,7 @@ public class LUnitBindGroup{
         if (groupName instanceof String) {
             group = (String)groupName;
         } else if (groupName != null) {
-            Object groupObj = exec.get(groupName);
+            Object groupObj = groupName instanceof LVar ? exec.var((LVar)groupName) : groupName;
             group = groupObj instanceof String ? (String)groupObj : null;
         }
         
@@ -241,12 +241,12 @@ public class LUnitBindGroup{
     /** 抓取模式实现 */
     private static void executeMode1(LExecutor exec, String group, LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar) {
         // 获取单位类型和最大数量
-        Object typeObj = unitTypeVar != null ? exec.get(unitTypeVar) : null;
+        Object typeObj = unitTypeVar != null ? exec.var(unitTypeVar) : null;
         UnitType type = typeObj instanceof UnitType ? (UnitType)typeObj : null;
-        int maxCount = countVar != null ? Math.max(0, (int)countVar.numval(exec)) : 1;
+        int maxCount = countVar != null ? Math.max(0, Math.round(countVar.numval())) : 1;
 
         // 获取控制器
-        Building controller = exec.build();
+        Building controller = exec.building();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
@@ -478,7 +478,7 @@ public class LUnitBindGroup{
     
     // 判断单位是否被控制
     private static boolean isUnitControlled(Unit unit) {
-        return unit.controller() != null && !(unit.controller() instanceof LogicAI);
+        return unit.controller() != null;
     }
     
     /** 检查单位是否有效 */

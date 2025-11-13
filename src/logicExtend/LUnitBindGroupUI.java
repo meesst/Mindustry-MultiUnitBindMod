@@ -100,12 +100,12 @@ public class LUnitBindGroupUI {
                 newGroupDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.create", "创建"), () -> {
                     String groupName = groupField.getText().trim();
                     if (groupName.isEmpty()) {
-                        ui.showInfoToast(Core.bundle.get("ubindgroup.groupmanager.emptygroupname", "组名称不能为空"));
+                        ui.showInfoToast("组名称不能为空", 5f);
                         return;
                     }
                     
                     if (LUnitBindGroup.getSharedGroups().containsKey(groupName)) {
-                        ui.showInfoToast(Core.bundle.get("ubindgroup.groupmanager.duplicategroup", "组名称已存在"));
+                        ui.showInfoToast("组名称已存在", 5f);
                         return;
                     }
                     
@@ -206,25 +206,25 @@ public class LUnitBindGroupUI {
             }).width(150f);
             
             // 单位类型变量选择
-            table.add(Core.bundle.get("ubindgroup.param.unittype", "单位类型变量")).padRight(5f);
-            table.add(field(str -> unitTypeVar = new LVar(str), () -> unitTypeVar != null ? unitTypeVar.name : "", false)).width(150f);
+            table.add("单位类型变量").padRight(5f);
+            table.add(table.field("", Styles.defaultField, str -> unitTypeVar = new LVar(str)).width(150f));
             
             // 数量变量选择（仅在抓取模式显示）
             if (mode == MODE_GRAB) {
-                table.add(Core.bundle.get("ubindgroup.param.count", "数量变量")).padRight(5f);
-                table.add(field(str -> countVar = new LVar(str), () -> countVar != null ? countVar.name : "", false)).width(150f);
+                table.add("数量变量").padRight(5f);
+                table.add(table.field("", Styles.defaultField, str -> countVar = new LVar(str)).width(150f));
             }
             
             // 单位变量选择
-            table.add(Core.bundle.get("ubindgroup.param.unit", "单位变量")).padRight(5f);
-            table.add(field(str -> unitVar = new LVar(str), () -> unitVar != null ? unitVar.name : "", false)).width(150f);
+            table.add("单位变量").padRight(5f);
+            table.add(table.field("", Styles.defaultField, str -> unitVar = new LVar(str)).width(150f));
             
             // 索引变量选择
-            table.add(Core.bundle.get("ubindgroup.param.index", "索引变量")).padRight(5f);
-            table.add(field(str -> indexVar = new LVar(str), () -> indexVar != null ? indexVar.name : "", false)).width(150f);
+            table.add("索引变量").padRight(5f);
+            table.add(table.field("", Styles.defaultField, str -> indexVar = new LVar(str)).width(150f));
             
             // 组名称选择按钮
-            table.button(Core.bundle.get("ubindgroup.param.group", "组名") + (group.isEmpty() ? "" : ": " + group), Styles.logict, () -> {
+            table.button("组名" + (group.isEmpty() ? "" : ": " + group), Styles.logict, () -> {
                 LUnitBindGroupUI.showGroupManagerDialog(group, selectedGroup -> {
                     this.group = selectedGroup != null ? selectedGroup : "";
                     rebuild(table);
