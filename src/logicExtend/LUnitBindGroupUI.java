@@ -27,9 +27,12 @@ import static mindustry.Vars.*;
  */
 public class LUnitBindGroupUI {
     /**
-     * 注册方法被移除，避免与LUnitBindGroup中的注册冲突
-     * 现在统一由LUnitBindGroup中的UnitBindGroupStatement.create()方法负责注册
+     * 重新添加register方法以保持与LEMain.java的兼容性
      */
+    public static void register() {
+        // 调用UnitBindGroupStatement的create方法进行注册
+        UnitBindGroupStatement.create();
+    }
     // UI相关的常量定义
     public static final int MODE_GRAB = 1;
     public static final int MODE_PASSIVE = 2;
@@ -191,7 +194,6 @@ public class LUnitBindGroupUI {
                 if (mode == 1) {
                     t.add(Core.bundle.get("ubindgroup.param.unitType", "type")).padLeft(10).left().self(c -> {
                         this.param(c);
-                        tooltip(c, "ubindgroup.unittype");
                     });
                     TextField field = field(t, unitType, str -> unitType = sanitize(str)).get();
                     
@@ -205,7 +207,7 @@ public class LUnitBindGroupUI {
                                 int c = 0;
                                 for(UnitType item : Vars.content.units()){
                                     if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                                    i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, 24f, () -> {
+                                    i.button(item.uiIcon, Styles.flati, 24f, () -> {
                                         unitType = "@" + item.name;
                                         field.setText(unitType);
                                         hide.run();
@@ -215,12 +217,11 @@ public class LUnitBindGroupUI {
                                 }
                             }).colspan(3).width(240f).left();
                         }));
-                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color).self(c -> tooltip(c, "ubindgroup.selectunit"));
+                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color);
                     
                     // 数量参数
                     t.add(Core.bundle.get("ubindgroup.param.count", "count")).padLeft(10).left().self(c -> {
                         this.param(c);
-                        tooltip(c, "ubindgroup.count");
                     });
                     t.field(count, Styles.nodeField, s -> count = sanitize(s))
                         .size(144f, 40f).pad(2f).color(t.color)
@@ -228,7 +229,7 @@ public class LUnitBindGroupUI {
                 }
                 
                 // 模式选择
-                t.add("mode:").left().self(c -> tooltip(c, "ubindgroup.mode"));
+                t.add("mode:").left();
                 modeButton(t, table);
             }).left();
             
@@ -241,7 +242,6 @@ public class LUnitBindGroupUI {
                 // 单位变量参数
                 t.add(Core.bundle.get("ubindgroup.param.var", "unitVar")).padLeft(10).left().self(c -> {
                     this.param(c);
-                    tooltip(c, "ubindgroup.unitvar");
                 });
                 t.field(unitVar, Styles.nodeField, s -> unitVar = sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
@@ -250,7 +250,6 @@ public class LUnitBindGroupUI {
                 // 索引变量参数
                 t.add(Core.bundle.get("ubindgroup.param.index", "indexVar")).padLeft(10).left().self(c -> {
                     this.param(c);
-                    tooltip(c, "ubindgroup.indexvar");
                 });
                 t.field(indexVar, Styles.nodeField, s -> indexVar = sanitize(s))
                     .size(144f, 40f).pad(2f).color(t.color)
@@ -259,7 +258,6 @@ public class LUnitBindGroupUI {
                 // 组名称参数 - 替换为按钮，点击打开组管理窗口
                 t.add(Core.bundle.get("ubindgroup.param.group", "groupName")).padLeft(10).left().self(c -> {
                     this.param(c);
-                    tooltip(c, "ubindgroup.groupname");
                 });
                 t.button(b -> {
                     // 显示当前选择的组名，参考mode元素按钮的实现方式
@@ -281,7 +279,7 @@ public class LUnitBindGroupUI {
                         rebuild(table);
                     }, this.mode);
                 }).size(150f, 40f).pad(2f).color(t.color)
-                    .padRight(0).left().self(c -> tooltip(c, "ubindgroup.selectgroup"));
+                    .padRight(0).left();
             }).left();
         }
         
@@ -304,7 +302,7 @@ public class LUnitBindGroupUI {
                     dialog.addCloseButton();
                     dialog.show();
                 });
-            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).self(c -> tooltip(c, "ubindgroup.selectmode"));
+            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color);
         }
         
         // 不再需要单独的showUnitTypeSelect方法，按钮逻辑已集成到rebuild方法中
@@ -363,10 +361,10 @@ public class LUnitBindGroupUI {
         private LVar countVar;
         private LVar unitVar;
         private LVar indexVar;
-        private String group;
+        private LVar group;
         private int mode;
         
-        public UnitBindGroupInstruction(LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar, String group, int mode) {
+        public UnitBindGroupInstruction(LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar, LVar group, int mode) {
             this.unitTypeVar = unitTypeVar;
             this.countVar = countVar;
             this.unitVar = unitVar;
