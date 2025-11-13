@@ -10,6 +10,7 @@ import arc.struct.*;
 import arc.util.*;
 import arc.graphics.Color;
 import java.io.*;
+import java.util.function.Consumer;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.logic.LExecutor.*;
@@ -29,7 +30,10 @@ public class LUnitBindGroupUI {
      * 注册UI解析器
      */
     public static void registerParser() {
-        LAssembler.customParsers.put("unitBindGroup", UnitBindGroupStatement::new);
+        LAssembler.customParsers.put("unitBindGroup", args -> {
+            UnitBindGroupStatement statement = new UnitBindGroupStatement();
+            return statement;
+        });
     }
     // UI相关的常量定义
     public static final int MODE_GRAB = 1;
@@ -63,8 +67,7 @@ public class LUnitBindGroupUI {
                 callback.accept(null);
                 dialog.hide();
             });
-            noGroupRow.setBackground(currentGroup == null ? Styles.logict : Styles.clear);
-            noGroupRow.pad(4f);
+            noGroupRow.setBackground(currentGroup == null ? Styles.black3 : Styles.none);
             listTable.add(noGroupRow).fillX().row();
             
             // 添加已有的共享组
@@ -80,8 +83,7 @@ public class LUnitBindGroupUI {
                     callback.accept(group);
                     dialog.hide();
                 });
-                groupRow.setBackground(currentGroup != null && currentGroup.equals(group) ? Styles.logict : Styles.clear);
-                groupRow.pad(4f);
+                groupRow.setBackground(currentGroup != null && currentGroup.equals(group) ? Styles.black3 : Styles.none);
                 listTable.add(groupRow).fillX().row();
             }
             
@@ -98,12 +100,12 @@ public class LUnitBindGroupUI {
                 newGroupDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.create", "创建"), () -> {
                     String groupName = groupField.getText().trim();
                     if (groupName.isEmpty()) {
-                        Vars.ui.showInfoToast(Core.bundle.get("ubindgroup.groupmanager.emptygroupname", "组名称不能为空"));
+                        ui.showInfoToast(Core.bundle.get("ubindgroup.groupmanager.emptygroupname", "组名称不能为空"));
                         return;
                     }
                     
                     if (LUnitBindGroup.getSharedGroups().containsKey(groupName)) {
-                        Vars.ui.showInfoToast(Core.bundle.get("ubindgroup.groupmanager.duplicategroup", "组名称已存在"));
+                        ui.showInfoToast(Core.bundle.get("ubindgroup.groupmanager.duplicategroup", "组名称已存在"));
                         return;
                     }
                     
@@ -119,7 +121,6 @@ public class LUnitBindGroupUI {
             
             // 右侧操作面板
             Table actionsTable = new Table();
-            actionsTable.padLeft(20f);
             
             // 组信息
             actionsTable.add(Core.bundle.get("ubindgroup.groupmanager.info", "组信息")).left().row();
@@ -132,11 +133,11 @@ public class LUnitBindGroupUI {
                 actionsTable.add(Core.bundle.get("ubindgroup.groupmanager.unitcount", "单位数量") + ": " + info.units.size).left().row();
                 
                 // 删除组按钮（只有在有组的情况下显示）
-                actionsTable.button(Core.bundle.get("ubindgroup.groupmanager.delete", "删除组"), Styles.danger, () -> {
+                actionsTable.button(Core.bundle.get("ubindgroup.groupmanager.delete", "删除组"), Styles.defaultt, () -> {
                     // 确认删除
                     BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.deleteconfirm", "确认删除"));
                     confirmDialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.deleteconfirmtext", "确定要删除这个单位组吗？所有绑定的单位将被解绑。")).width(400f).wrap().row();
-                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.confirm", "确认"), Styles.danger, () -> {
+                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.confirm", "确认"), Styles.defaultt, () -> {
                         // 删除组
                             if (LUnitBindGroup.getSharedGroups().containsKey(groupToShow)) {
                                 LUnitBindGroup.UnitGroupInfo groupInfo = LUnitBindGroup.getSharedGroups().get(groupToShow);
@@ -206,21 +207,21 @@ public class LUnitBindGroupUI {
             
             // 单位类型变量选择
             table.add(Core.bundle.get("ubindgroup.param.unittype", "单位类型变量")).padRight(5f);
-            table.add(field(l -> unitTypeVar = l, () -> unitTypeVar, false)).width(150f).padRight(10f);
+            table.add(field(str -> unitTypeVar = new LVar(str), () -> unitTypeVar != null ? unitTypeVar.name : "", false)).width(150f);
             
             // 数量变量选择（仅在抓取模式显示）
             if (mode == MODE_GRAB) {
                 table.add(Core.bundle.get("ubindgroup.param.count", "数量变量")).padRight(5f);
-                table.add(field(l -> countVar = l, () -> countVar, false)).width(150f).padRight(10f);
+                table.add(field(str -> countVar = new LVar(str), () -> countVar != null ? countVar.name : "", false)).width(150f);
             }
             
             // 单位变量选择
             table.add(Core.bundle.get("ubindgroup.param.unit", "单位变量")).padRight(5f);
-            table.add(field(l -> unitVar = l, () -> unitVar, false)).width(150f).padRight(10f);
+            table.add(field(str -> unitVar = new LVar(str), () -> unitVar != null ? unitVar.name : "", false)).width(150f);
             
             // 索引变量选择
             table.add(Core.bundle.get("ubindgroup.param.index", "索引变量")).padRight(5f);
-            table.add(field(l -> indexVar = l, () -> indexVar, false)).width(150f).padRight(10f);
+            table.add(field(str -> indexVar = new LVar(str), () -> indexVar != null ? indexVar.name : "", false)).width(150f);
             
             // 组名称选择按钮
             table.button(Core.bundle.get("ubindgroup.param.group", "组名") + (group.isEmpty() ? "" : ": " + group), Styles.logict, () -> {
@@ -236,30 +237,38 @@ public class LUnitBindGroupUI {
         
         @Override
         public void serialize(DataOutput stream) {
-            writeVar(unitTypeVar, stream);
-            writeVar(countVar, stream);
-            writeVar(unitVar, stream);
-            writeVar(indexVar, stream);
             try {
+                stream.writeUTF(unitTypeVar != null ? unitTypeVar.name : "");
+                stream.writeUTF(countVar != null ? countVar.name : "");
+                stream.writeUTF(unitVar != null ? unitVar.name : "");
+                stream.writeUTF(indexVar != null ? indexVar.name : "");
                 stream.writeUTF(group);
+                stream.writeInt(mode);
             } catch (IOException e) {
                 Log.err(e);
             }
-            stream.writeInt(mode);
         }
         
         @Override
         public void deserialize(DataInput stream) {
-            unitTypeVar = readVar(stream);
-            countVar = readVar(stream);
-            unitVar = readVar(stream);
-            indexVar = readVar(stream);
             try {
+                String unitTypeName = stream.readUTF();
+                unitTypeVar = !unitTypeName.isEmpty() ? new LVar(unitTypeName) : null;
+                
+                String countVarName = stream.readUTF();
+                countVar = !countVarName.isEmpty() ? new LVar(countVarName) : null;
+                
+                String unitVarName = stream.readUTF();
+                unitVar = !unitVarName.isEmpty() ? new LVar(unitVarName) : null;
+                
+                String indexVarName = stream.readUTF();
+                indexVar = !indexVarName.isEmpty() ? new LVar(indexVarName) : null;
+                
                 group = stream.readUTF();
+                mode = stream.readInt();
             } catch (IOException e) {
                 Log.err(e);
             }
-            mode = stream.readInt();
         }
         
         @Override

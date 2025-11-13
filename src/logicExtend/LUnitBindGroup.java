@@ -8,6 +8,7 @@ import mindustry.logic.LExecutor.*;
 import mindustry.type.*;
 import mindustry.world.blocks.logic.*;
 import mindustry.game.Team;
+import mindustry.entities.units.LogicAI;
 import java.util.Objects;
 import java.util.Iterator;
 
@@ -190,7 +191,7 @@ public class LUnitBindGroup{
     }
     
     /** 静态绑定方法，供逻辑指令调用 */
-    public static void bindGroup(LExecutor exec, LVar unitType, LVar count, LVar unitVar, LVar indexVar, LVar groupName, int mode) {
+    public static void bindGroup(LExecutor exec, LVar unitType, LVar count, LVar unitVar, LVar indexVar, Object groupName, int mode) {
         // 定期执行清理操作
         if(cleanupTimer.get(0, cleanupFrequency)) {
             cleanupGroups();
@@ -212,15 +213,20 @@ public class LUnitBindGroup{
         }
         
         // 获取控制器
-        Building controller = exec.building();
+        Building controller = exec.build();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
         }
         
         // 获取参数值
-        Object groupObj = groupName == null ? null : exec.get(groupName);
-        String group = groupObj instanceof String ? (String)groupObj : null;
+        String group = null;
+        if (groupName instanceof String) {
+            group = (String)groupName;
+        } else if (groupName != null) {
+            Object groupObj = exec.get(groupName);
+            group = groupObj instanceof String ? (String)groupObj : null;
+        }
         
         // 根据模式执行不同逻辑
         if(mode == 1) {
@@ -240,7 +246,7 @@ public class LUnitBindGroup{
         int maxCount = countVar != null ? Math.max(0, (int)countVar.numval(exec)) : 1;
 
         // 获取控制器
-        Building controller = exec.building();
+        Building controller = exec.build();
         if(controller == null) {
             setError(exec, unitVar, indexVar, ErrorType.INVALID_CONTROLLER);
             return;
