@@ -1,402 +1,243 @@
 package logicExtend;
 
-import arc.*;
-import arc.func.*;
-import arc.scene.*;
-import arc.scene.event.*;
+import arc.func.Cons;
+import arc.graphics.Color;
+import arc.scene.Group;
+import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
-import arc.struct.*;
 import arc.util.*;
-import arc.graphics.Color;
-import java.io.*;
-import java.util.function.Consumer;
+import arc.util.Bundle;
 import mindustry.gen.*;
 import mindustry.logic.*;
-import mindustry.logic.LExecutor.*;
 import mindustry.type.*;
-import mindustry.ui.*;
+import mindustry.ui.Styles;
 import mindustry.ui.dialogs.*;
-import mindustry.world.*;
+import mindustry.gen.Tex;
 
 import static mindustry.Vars.*;
-import static mindustry.logic.LCanvas.*;
 
-/**
- * 单位绑定组UI相关类
- * 负责处理UI构建、模式选择、参数缓存等UI逻辑
- */
 public class LUnitBindGroupUI {
-    /**
-     * 注册UI解析器和语句到逻辑系统
-     */
+    // 注册方法
     public static void register() {
-        // 注册自定义解析器
-        LAssembler.customParsers.put("ubindgroup", params -> {
-            UnitBindGroupStatement stmt = new UnitBindGroupStatement();
-            if (params.length >= 2) {
-                // 处理参数
-            }
-            return stmt;
-        });
-        // 将语句添加到语句列表中，使其在游戏UI中可见
-        LogicIO.allStatements.add(UnitBindGroupStatement::new);
+        // 将在后面实现
     }
     
-    // 移除静态初始化块，避免重复注册指令
-    // 指令注册现在通过LEMain.java中的LUnitBindGroupUI.register()方法统一管理
-    // UI相关的常量定义
-    public static final int MODE_GRAB = 1;
-    public static final int MODE_PASSIVE = 2;
-    
-    /**
-     * 显示组管理对话框
-     */
-    public static void showGroupManagerDialog(String currentGroup, Consumer<String> callback, int mode) {
-        BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.title", "单位组管理"));
-        dialog.setFillParent(false);
-        dialog.cont.setWidth(500f);
-        dialog.closeOnBack();
-        
-        // 左侧：组列表
-        // 右侧：组信息和操作按钮
-        dialog.cont.table(t -> {
-            t.setColor(t.color);
-            
-            // 左侧组列表
-            Table listTable = new Table();
-            ScrollPane listScroll = new ScrollPane(listTable, Styles.smallPane);
-            listScroll.setFadeScrollBars(false);
-            
-            // 添加"无单位组"选项
-            Table noGroupRow = new Table();
-            noGroupRow.add(Core.bundle.get("ubindgroup.groupmanager.nogroup", "无单位组")).left().fillX().pad(4f);
-            noGroupRow.row();
-            noGroupRow.add().height(1f).fillX().color(Color.darkGray);
-            noGroupRow.clicked(() -> {
-                callback.accept(null);
-                dialog.hide();
-            });
-            noGroupRow.setBackground(currentGroup == null ? Styles.black3 : Styles.none);
-            listTable.add(noGroupRow).fillX().row();
-            
-            // 添加已有的共享组
-            Seq<String> sortedGroups = new Seq<>();
-            sortedGroups.addAll(LUnitBindGroup.getSharedGroups().keys());
-            sortedGroups.sort(); // 按字母顺序排序
-            
-            for (String group : sortedGroups) {
-                Table groupRow = new Table();
-                groupRow.add(group).left().fillX().pad(4f);
-                groupRow.row();
-                groupRow.add().height(1f).fillX().color(Color.darkGray);
-                groupRow.clicked(() -> {
-                    callback.accept(group);
-                    dialog.hide();
-                });
-                groupRow.setBackground(currentGroup != null && currentGroup.equals(group) ? Styles.black3 : Styles.none);
-                listTable.add(groupRow).fillX().row();
-            }
-            
-            // 添加新组按钮
-            listTable.button(Core.bundle.get("ubindgroup.groupmanager.newgroup", "新建组"), Styles.logict, () -> {
-                dialog.hide();
-                
-                // 打开新组对话框
-                BaseDialog newGroupDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.newgrouptitle", "新建单位组"));
-                TextField groupField = new TextField("", Styles.nodeField);
-                newGroupDialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.groupname", "组名称")).padRight(10f);
-                newGroupDialog.cont.add(groupField).width(200f).row();
-                
-                newGroupDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.create", "创建"), () -> {
-                    String groupName = groupField.getText().trim();
-                    if (groupName.isEmpty()) {
-                        ui.showInfoToast("组名称不能为空", 5f);
-                        return;
-                    }
-                    
-                    if (LUnitBindGroup.getSharedGroups().containsKey(groupName)) {
-                        ui.showInfoToast("组名称已存在", 5f);
-                        return;
-                    }
-                    
-                    // 创建新组
-                    LUnitBindGroup.createNewGroup(groupName);
-                    callback.accept(groupName);
-                    newGroupDialog.hide();
-                }).row();
-                
-                newGroupDialog.addCloseButton();
-                newGroupDialog.show();
-            }).width(200f).padTop(10f).row();
-            
-            // 右侧操作面板
-            Table actionsTable = new Table();
-            
-            // 组信息
-            actionsTable.add(Core.bundle.get("ubindgroup.groupmanager.info", "组信息")).left().row();
-            actionsTable.image().height(1f).fillX().color(Color.darkGray).row();
-            
-            // 显示当前选中组的信息
-            String groupToShow = currentGroup;
-            if (groupToShow != null && LUnitBindGroup.getSharedGroups().containsKey(groupToShow)) {
-                LUnitBindGroup.UnitGroupInfo info = LUnitBindGroup.getSharedGroups().get(groupToShow);
-                actionsTable.add(Core.bundle.get("ubindgroup.groupmanager.unitcount", "单位数量") + ": " + info.units.size).left().row();
-                
-                // 删除组按钮（只有在有组的情况下显示）
-                actionsTable.button(Core.bundle.get("ubindgroup.groupmanager.delete", "删除组"), Styles.defaultt, () -> {
-                    // 确认删除
-                    BaseDialog confirmDialog = new BaseDialog(Core.bundle.get("ubindgroup.groupmanager.deleteconfirm", "确认删除"));
-                    confirmDialog.cont.add(Core.bundle.get("ubindgroup.groupmanager.deleteconfirmtext", "确定要删除这个单位组吗？所有绑定的单位将被解绑。")).width(400f).wrap().row();
-                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.confirm", "确认"), Styles.defaultt, () -> {
-                        // 删除组
-                            if (LUnitBindGroup.getSharedGroups().containsKey(groupToShow)) {
-                                LUnitBindGroup.UnitGroupInfo groupInfo = LUnitBindGroup.getSharedGroups().get(groupToShow);
-                                // 解绑所有单位
-                                if (groupInfo.units != null) {
-                                    for (Unit unit : groupInfo.units) {
-                                        LUnitBindGroup.unbindUnit(unit);
-                                    }
-                                }
-                                LUnitBindGroup.deleteGroup(groupToShow);
-                            // 切换到"无单位组"
-                            callback.accept(null);
-                            dialog.hide();
-                        }
-                        confirmDialog.hide();
-                    }).size(120f, 50f).padRight(20f);
-                    confirmDialog.cont.button(Core.bundle.get("ubindgroup.groupmanager.cancel", "取消"), Styles.logict, () -> {
-                        confirmDialog.hide();
-                    }).size(120f, 50f);
-                    confirmDialog.show();
-                }).size(150f, 50f).padTop(20f);
-            } else {
-                actionsTable.add(Core.bundle.get("ubindgroup.groupmanager.nogroupselected", "未选中任何单位组")).left().row();
-            }
-            
-            t.add(listScroll).size(250f, 400f);
-            t.add(actionsTable).fillY().pad(10f);
-        });
-        
-        dialog.addCloseButton();
-        dialog.show();
-    }
-    
-    /**
-     * 单位绑定组语句类 - 负责UI构建和指令注册
-     */
+    // 单位绑定组指令类
     public static class UnitBindGroupStatement extends LStatement {
-        public LVar unitTypeVar;
-        public LVar countVar;
-        public LVar unitVar;
-        public LVar indexVar;
-        public String group = "";
-        public int mode = MODE_GRAB;
+        // 参数定义
+        public String type = "@poly";
+        public String count = "1";
+        public String group = "stand-alone";
+        public String mode = "grabbing";
+        public String unitVar = "currentUnit";
+        public String indexVar = "unitIndex";
         
-        public String name() {
-            return "ubindgroup";
+        // 悬浮提示辅助方法
+        protected <T extends Element> T tooltip(T element, String text) {
+            element.setTooltip(text);
+            return element;
         }
         
-        public String description() {
-            return "绑定单位到指定组";
-        }
-        
-        public LCategory category() {
-            return LCategory.unit;
-        }
-        
-        public void build(Table table) {
-            rebuild(table);
-        }
-        
-        private void rebuild(Table table) {
-            table.clear();
+        // 显示单位类型选择器
+        protected void showUnitTypeSelector(String current, Cons<String> setter) {
+            BaseDialog dialog = new BaseDialog(Bundle.get("ubindgroup.selectunit"));
+            dialog.addCloseButton();
             
-            // 添加模式按钮
-            Table modeTable = new Table();
-            modeButton(modeTable, table);
+            // 创建单位类型选择器，按照知识库中的标准实现
+            Table selectTable = new Table();
+            ScrollPane pane = new ScrollPane(selectTable, Styles.smallPane);
+            dialog.cont.add(pane).size(600f, 500f);
             
-            // 左侧表格：单位类型、数量、单位、索引变量
-            Table leftTable = new Table();
-            leftTable.table(tt -> {
-                // 单位类型变量选择
-                tt.add("单位类型变量").padRight(5f);
-                TextField typeField = tt.field("", Styles.defaultField, str -> unitTypeVar = new LVar(str)).width(150f).get();
-                // 添加悬浮提示
-                typeField.addListener(new Tooltip(tip -> {
-                    tip.background(Styles.black6);
-                    tip.add("输入单位类型变量名").pad(4f);
-                }));
-                tt.row();
-                
-                // 数量变量选择（仅在抓取模式显示）
-                if (mode == MODE_GRAB) {
-                    tt.add("数量变量").padRight(5f);
-                    TextField countField = tt.field("", Styles.defaultField, str -> countVar = new LVar(str)).width(150f).get();
-                    countField.addListener(new Tooltip(tip -> {
-                        tip.background(Styles.black6);
-                        tip.add("输入最大单位数量变量名").pad(4f);
-                    }));
-                    tt.row();
+            // 先添加@poly选项
+            Button polyButton = selectTable.button("@poly", Tex.pane, Styles.cleari, () -> {
+                setter.get("@poly");
+                dialog.hide();
+            }).size(140f, 50f);
+            if (current.equals("@poly")) {
+                polyButton.color.set(Color.lightGray);
+            }
+            
+            // 按照4列网格布局显示所有单位类型
+            int cols = 4;
+            int i = 1; // 从1开始，因为0位置已经放了@poly
+            
+            for (UnitType unitType : content.units()) {
+                // 新行检查
+                if (i % cols == 0) {
+                    selectTable.row();
                 }
                 
-                // 单位变量选择
-                tt.add("单位变量").padRight(5f);
-                TextField unitField = tt.field("", Styles.defaultField, str -> unitVar = new LVar(str)).width(150f).get();
-                unitField.addListener(new Tooltip(tip -> {
-                    tip.background(Styles.black6);
-                    tip.add("输入单位变量名").pad(4f);
-                }));
-                tt.row();
+                Button button = selectTable.button(unitType.localizedName, Tex.pane, Styles.cleari, () -> {
+                    setter.get(unitType.name);
+                    dialog.hide();
+                }).size(140f, 50f).get();
                 
-                // 索引变量选择
-                tt.add("索引变量").padRight(5f);
-                TextField indexField = tt.field("", Styles.defaultField, str -> indexVar = new LVar(str)).width(150f).get();
-                indexField.addListener(new Tooltip(tip -> {
-                    tip.background(Styles.black6);
-                    tip.add("输入索引变量名").pad(4f);
-                }));
-            });
+                // 高亮当前选中的单位类型
+                if (current.equals(unitType.name)) {
+                    button.color.set(Color.lightGray);
+                }
+                
+                i++;
+            }
             
-            // 右侧表格：组名称选择
-            Table rightTable = new Table();
-            Button groupButton = rightTable.button("组名" + (group.isEmpty() ? "" : ": " + group), Styles.logict, () -> {
-                LUnitBindGroupUI.showGroupManagerDialog(group, selectedGroup -> {
-                    this.group = selectedGroup != null ? selectedGroup : "";
+            dialog.show();
+        }
+        
+        // 显示组管理窗口
+        protected void showGroupManager() {
+            BaseDialog dialog = new BaseDialog(Bundle.get("ubindgroup.groupmanager.title"));
+            
+            // 获取共享组列表（从LUnitBindGroup类中获取）
+            ObjectMap<String, LUnitBindGroup.UnitGroupInfo> sharedGroups = LUnitBindGroup.getSharedGroups();
+            
+            // 创建组列表
+            Table groupList = new Table();
+            ScrollPane pane = new ScrollPane(groupList, Styles.smallPane);
+            dialog.cont.add(pane).size(400f, 400f).row();
+            
+            // 更新列表的方法
+            Runnable updateList = () -> {
+                groupList.clear();
+                
+                // 添加默认组（不可删除）
+                if (!mode.equals("access")) { // 只有在mode不是access时才显示stand-alone
+                    Button standAloneButton = groupList.button("stand-alone", Tex.pane, Styles.cleari, () -> {
+                        group = "stand-alone";
+                        dialog.hide();
+                    }).size(380f, 50f).row().get();
+                    if (group.equals("stand-alone")) {
+                        standAloneButton.color.set(Color.lightGray);
+                    }
+                }
+                
+                // 添加其他共享组
+                for (String groupName : sharedGroups.keys()) {
+                    groupList.table(t -> {
+                        Button button = t.button(groupName, Tex.pane, Styles.cleari, () -> {
+                            group = groupName;
+                            dialog.hide();
+                        }).size(300f, 50f).get();
+                        if (group.equals(groupName)) {
+                            button.color.set(Color.lightGray);
+                        }
+                        
+                        // 添加删除按钮
+                        t.button("X", Tex.redPane, Styles.cleari, () -> {
+                            // 显示删除确认对话框
+                            BaseDialog confirm = new BaseDialog(Bundle.get("ubindgroup.groupmanager.delete.confirm"));
+                            confirm.cont.add(Bundle.format("ubindgroup.groupmanager.delete.message", groupName)).row();
+                            confirm.buttons.button(Bundle.get("ubindgroup.groupmanager.delete.confirm.yes"), () -> {
+                                LUnitBindGroup.deleteGroup(groupName);
+                                updateList.run();
+                                confirm.hide();
+                            }).size(150f, 50f);
+                            confirm.buttons.button(Bundle.get("ubindgroup.groupmanager.delete.confirm.no"), confirm::hide).size(150f, 50f);
+                            confirm.show();
+                        }).size(60f, 50f);
+                    }).row();
+                }
+            };
+            
+            // 初始更新列表
+            updateList.run();
+            
+            // 添加新组的输入框
+            Table addGroupTable = new Table();
+            TextField newGroupName = addGroupTable.field("", text -> {}).size(250f, 50f).get();
+            newGroupName.setMessageText(Bundle.get("ubindgroup.groupmanager.add"));
+            addGroupTable.button(Bundle.get("ubindgroup.groupmanager.addbutton"), () -> {
+                if (!newGroupName.getText().trim().isEmpty() && 
+                    !newGroupName.getText().trim().equals("stand-alone") &&
+                    !sharedGroups.containsKey(newGroupName.getText().trim())) {
+                    LUnitBindGroup.createNewGroup(newGroupName.getText().trim());
+                    updateList.run();
+                    newGroupName.setText("");
+                }
+            }).size(100f, 50f);
+            
+            dialog.cont.add(addGroupTable).row();
+            dialog.buttons.button("Close", dialog::hide).size(150f, 50f);
+            dialog.show();
+        }
+        
+        @Override
+        public void build(Table table) {
+            // 第一行：type, count, mode
+            table.table(row -> {
+                // 只有在mode不是access时才显示type和count参数
+                if (!mode.equals("access")) {
+                    // type参数
+                    row.add(tooltip(new Label("Type: "), Bundle.get("ubindgroup.param.unitType.tooltip")));
+                    row.table(t -> {
+                        Button typeButton = t.button(() -> type, Tex.pane, Styles.cleari, () -> 
+                            showUnitTypeSelector(type, value -> type = value)
+                        ).size(160f, 40f).get();
+                        typeButton.setTooltip(Bundle.get("ubindgroup.selectunit"));
+                    });
+                    
+                    // count参数
+                    row.add(tooltip(new Label("Count: "), Bundle.get("ubindgroup.param.count.tooltip")));
+                    row.addField(count, text -> count = text).size(80f);
+                }
+                
+                // mode参数
+                row.add(tooltip(new Label("Mode: "), Bundle.get("ubindgroup.mode.tooltip")));
+                row.button(()-> mode, Tex.pane, Styles.cleari, () -> {
+                    // 简单的模式切换逻辑
+                    if (mode.equals("grabbing")) {
+                        mode = "access";
+                    } else {
+                        mode = "grabbing";
+                    }
+                    // 重建UI以反映更改
+                    table.clearChildren();
                     build(table);
-                }, mode);
-            }).width(200f).padBottom(20f).get();
+                }).size(120f).tooltip(Bundle.get("ubindgroup.mode"));
+            }).row();
             
-            groupButton.addListener(new Tooltip(tip -> {
-                tip.background(Styles.black6);
-                tip.add("选择或创建单位组").pad(4f);
-            }));
-            
-            // 组合布局
-            table.add(leftTable).left();
-            table.add(rightTable).left().padLeft(20f);
-            table.row();
-            table.add(modeTable).left().padTop(10f).colspan(2);
-        }
-        
-        /**
-         * 创建模式切换按钮
-         */
-        private void modeButton(Table table, Table parent) {
-            table.button(b -> {
-                b.add(mode == MODE_GRAB ? Core.bundle.get("ubindgroup.mode.capture", "抓取模式") : Core.bundle.get("ubindgroup.mode.access", "访问模式")).left();
-                b.clicked(() -> {
-                    BaseDialog dialog = new BaseDialog(Core.bundle.get("ubindgroup.mode.select.title", "选择模式"));
-                    dialog.cont.setWidth(300f);
-                    dialog.cont.button("1. " + Core.bundle.get("ubindgroup.mode.capture", "抓取模式"), () -> {
-                        mode = MODE_GRAB;
-                        rebuild(parent);
-                        dialog.hide();
-                    }).width(280f).row();
-                    dialog.cont.button("2. " + Core.bundle.get("ubindgroup.mode.access", "访问模式"), () -> {
-                        mode = MODE_PASSIVE;
-                        rebuild(parent);
-                        dialog.hide();
-                    }).width(280f).row();
-                    dialog.addCloseButton();
-                    dialog.show();
+            // 第二行：unitVar, indexVar, group
+            table.table(row -> {
+                // unitVar参数
+                row.add(tooltip(new Label("Unit Var: "), Bundle.get("ubindgroup.param.var.tooltip")));
+                row.addField(unitVar, text -> unitVar = text).size(120f);
+                
+                // indexVar参数
+                row.add(tooltip(new Label("Index Var: "), Bundle.get("ubindgroup.param.index.tooltip")));
+                row.addField(indexVar, text -> indexVar = text).size(120f);
+                
+                // group参数
+                row.add(tooltip(new Label("Group: "), Bundle.get("ubindgroup.param.group.tooltip")));
+                row.table(t -> {
+                    t.add(group).size(120f);
+                    t.button(tooltip(new Button("Manage", Styles.logict), Bundle.get("ubindgroup.groupmanager.title")), () -> 
+                        showGroupManager()
+                    ).size(80f);
                 });
-            }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).self(c -> { tooltip(c, "ubindgroup.selectmode"); });
+            }).row();
         }
         
-        public LInstruction build(LAssembler build) {
-            return new UnitBindGroupInstruction(
-                unitTypeVar, countVar, unitVar, indexVar, group, mode
+        @Override
+        public LInstruction build(LAssembler builder) {
+            // 构建并返回LUnitBindGroupInstruction指令
+            return new LUnitBindGroupInstruction(
+                type,
+                builder.resolveLabel(count),
+                group,
+                mode.equals("access"),
+                builder.resolveVar(unitVar, false),
+                builder.resolveVar(indexVar, false)
             );
         }
         
-        public void serialize(DataOutput stream) {
-            try {
-                stream.writeUTF(unitTypeVar != null ? unitTypeVar.name : "");
-                stream.writeUTF(countVar != null ? countVar.name : "");
-                stream.writeUTF(unitVar != null ? unitVar.name : "");
-                stream.writeUTF(indexVar != null ? indexVar.name : "");
-                stream.writeUTF(group);
-                stream.writeInt(mode);
-            } catch (IOException e) {
-                Log.err(e);
-            }
+        // 静态create方法，用于创建语句实例
+        public static UnitBindGroupStatement create() {
+            return new UnitBindGroupStatement();
         }
         
-        public void deserialize(DataInput stream) {
-            try {
-                String unitTypeName = stream.readUTF();
-                unitTypeVar = !unitTypeName.isEmpty() ? new LVar(unitTypeName) : null;
-                
-                String countVarName = stream.readUTF();
-                countVar = !countVarName.isEmpty() ? new LVar(countVarName) : null;
-                
-                String unitVarName = stream.readUTF();
-                unitVar = !unitVarName.isEmpty() ? new LVar(unitVarName) : null;
-                
-                String indexVarName = stream.readUTF();
-                indexVar = !indexVarName.isEmpty() ? new LVar(indexVarName) : null;
-                
-                group = stream.readUTF();
-                mode = stream.readInt();
-            } catch (IOException e) {
-                Log.err(e);
-            }
+        @Override
+        public Category category() {
+            return LCategoryExt.units; // 使用units分类
         }
-        
-        public void compile(LAssembler build) {
-            // compile方法可以保留为空，因为build方法已经处理了指令生成
-        }
-        
-        public LStatement copy() {
-            UnitBindGroupStatement copy = new UnitBindGroupStatement();
-            copy.unitTypeVar = unitTypeVar;
-            copy.countVar = countVar;
-            copy.unitVar = unitVar;
-            copy.indexVar = indexVar;
-            copy.group = group;
-            copy.mode = mode;
-            return copy;
-        }
-    }
-    
-    /**
-     * 单位绑定组指令类 - 负责UI指令逻辑
-     */
-    public static class UnitBindGroupInstruction implements LInstruction {
-        private LVar unitTypeVar;
-        private LVar countVar;
-        private LVar unitVar;
-        private LVar indexVar;
-        private String group;
-        private int mode;
-        
-        public UnitBindGroupInstruction(LVar unitTypeVar, LVar countVar, LVar unitVar, LVar indexVar, String group, int mode) {
-            this.unitTypeVar = unitTypeVar;
-            this.countVar = countVar;
-            this.unitVar = unitVar;
-            this.indexVar = indexVar;
-            this.group = group;
-            this.mode = mode;
-        }
-        
-        
-        public void run(LExecutor executor) {
-            // 调用主逻辑类的bindGroup方法
-            LUnitBindGroup.bindGroup(
-                executor, unitTypeVar, countVar, unitVar, indexVar, group, mode
-            );
-        }
-        
-        public boolean isControlFlow() {
-            return false;
-        }
-    }
-    
-    /**
-     * 无参数版本的showGroupManagerDialog方法，保持向后兼容
-     */
-    public static void showGroupManagerDialog() {
-        showGroupManagerDialog(null, groupName -> {}, MODE_GRAB);
     }
 }
