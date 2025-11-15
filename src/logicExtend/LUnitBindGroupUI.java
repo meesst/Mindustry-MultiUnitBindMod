@@ -2,18 +2,18 @@ package logicExtend;
 
 import arc.func.Cons;
 import arc.graphics.Color;
+import arc.scene.Element;
 import arc.scene.Group;
 import arc.scene.style.TextureRegionDrawable;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
+import arc.struct.ObjectMap;
 import arc.util.*;
-import arc.util.Bundle;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.type.*;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.*;
-import mindustry.gen.Tex;
 
 import static mindustry.Vars.*;
 
@@ -41,7 +41,7 @@ public class LUnitBindGroupUI {
         
         // 显示单位类型选择器
         protected void showUnitTypeSelector(String current, Cons<String> setter) {
-            BaseDialog dialog = new BaseDialog(Bundle.get("ubindgroup.selectunit"));
+            BaseDialog dialog = new BaseDialog("Select Unit Type");
             dialog.addCloseButton();
             
             // 创建单位类型选择器，按照知识库中的标准实现
@@ -50,10 +50,11 @@ public class LUnitBindGroupUI {
             dialog.cont.add(pane).size(600f, 500f);
             
             // 先添加@poly选项
-            Button polyButton = selectTable.button("@poly", Tex.pane, Styles.cleari, () -> {
+            Button polyButton = selectTable.button("@poly", Styles.cleari, () -> {
                 setter.get("@poly");
                 dialog.hide();
-            }).size(140f, 50f);
+            }).size(140f, 50f).get();
+            polyButton.background(Tex.pane);
             if (current.equals("@poly")) {
                 polyButton.color.set(Color.lightGray);
             }
@@ -68,10 +69,11 @@ public class LUnitBindGroupUI {
                     selectTable.row();
                 }
                 
-                Button button = selectTable.button(unitType.localizedName, Tex.pane, Styles.cleari, () -> {
+                Button button = selectTable.button(unitType.localizedName, Styles.cleari, () -> {
                     setter.get(unitType.name);
                     dialog.hide();
                 }).size(140f, 50f).get();
+                button.background(Tex.pane);
                 
                 // 高亮当前选中的单位类型
                 if (current.equals(unitType.name)) {
@@ -86,7 +88,7 @@ public class LUnitBindGroupUI {
         
         // 显示组管理窗口
         protected void showGroupManager() {
-            BaseDialog dialog = new BaseDialog(Bundle.get("ubindgroup.groupmanager.title"));
+            BaseDialog dialog = new BaseDialog("Group Manager");
             
             // 获取共享组列表（从LUnitBindGroup类中获取）
             ObjectMap<String, LUnitBindGroup.UnitGroupInfo> sharedGroups = LUnitBindGroup.getSharedGroups();
@@ -102,10 +104,11 @@ public class LUnitBindGroupUI {
                 
                 // 添加默认组（不可删除）
                 if (!mode.equals("access")) { // 只有在mode不是access时才显示stand-alone
-                    Button standAloneButton = groupList.button("stand-alone", Tex.pane, Styles.cleari, () -> {
+                    Button standAloneButton = groupList.button("stand-alone", Styles.cleari, () -> {
                         group = "stand-alone";
                         dialog.hide();
                     }).size(380f, 50f).row().get();
+                    standAloneButton.background(Tex.pane);
                     if (group.equals("stand-alone")) {
                         standAloneButton.color.set(Color.lightGray);
                     }
@@ -114,25 +117,26 @@ public class LUnitBindGroupUI {
                 // 添加其他共享组
                 for (String groupName : sharedGroups.keys()) {
                     groupList.table(t -> {
-                        Button button = t.button(groupName, Tex.pane, Styles.cleari, () -> {
+                        Button button = t.button(groupName, Styles.cleari, () -> {
                             group = groupName;
                             dialog.hide();
                         }).size(300f, 50f).get();
+                        button.background(Tex.pane);
                         if (group.equals(groupName)) {
                             button.color.set(Color.lightGray);
                         }
                         
                         // 添加删除按钮
-                        t.button("X", Tex.redPane, Styles.cleari, () -> {
+                        t.button("X", Styles.cleari, () -> {
                             // 显示删除确认对话框
-                            BaseDialog confirm = new BaseDialog(Bundle.get("ubindgroup.groupmanager.delete.confirm"));
-                            confirm.cont.add(Bundle.format("ubindgroup.groupmanager.delete.message", groupName)).row();
-                            confirm.buttons.button(Bundle.get("ubindgroup.groupmanager.delete.confirm.yes"), () -> {
+                            BaseDialog confirm = new BaseDialog("Delete Confirmation");
+                            confirm.cont.add("Are you sure you want to delete group: " + groupName).row();
+                            confirm.buttons.button("Yes", () -> {
                                 LUnitBindGroup.deleteGroup(groupName);
                                 updateList.run();
                                 confirm.hide();
                             }).size(150f, 50f);
-                            confirm.buttons.button(Bundle.get("ubindgroup.groupmanager.delete.confirm.no"), confirm::hide).size(150f, 50f);
+                            confirm.buttons.button("No", confirm::hide).size(150f, 50f);
                             confirm.show();
                         }).size(60f, 50f);
                     }).row();
@@ -145,8 +149,8 @@ public class LUnitBindGroupUI {
             // 添加新组的输入框
             Table addGroupTable = new Table();
             TextField newGroupName = addGroupTable.field("", text -> {}).size(250f, 50f).get();
-            newGroupName.setMessageText(Bundle.get("ubindgroup.groupmanager.add"));
-            addGroupTable.button(Bundle.get("ubindgroup.groupmanager.addbutton"), () -> {
+            newGroupName.setMessageText("New group name");
+            addGroupTable.button("Add", () -> {
                 if (!newGroupName.getText().trim().isEmpty() && 
                     !newGroupName.getText().trim().equals("stand-alone") &&
                     !sharedGroups.containsKey(newGroupName.getText().trim())) {
@@ -168,22 +172,25 @@ public class LUnitBindGroupUI {
                 // 只有在mode不是access时才显示type和count参数
                 if (!mode.equals("access")) {
                     // type参数
-                    row.add(tooltip(new Label("Type: "), Bundle.get("ubindgroup.param.unitType.tooltip")));
+                    row.add(tooltip(new Label("Type: "), "Unit type to bind"));
                     row.table(t -> {
-                        Button typeButton = t.button(() -> type, Tex.pane, Styles.cleari, () -> 
+                        Button typeButton = t.button(type, Styles.cleari, () -> 
                             showUnitTypeSelector(type, value -> type = value)
                         ).size(160f, 40f).get();
-                        typeButton.setTooltip(Bundle.get("ubindgroup.selectunit"));
+                        typeButton.background(Tex.pane);
+                        typeButton.setTooltip("Select Unit");
                     });
                     
                     // count参数
-                    row.add(tooltip(new Label("Count: "), Bundle.get("ubindgroup.param.count.tooltip")));
-                    row.addField(count, text -> count = text).size(80f);
+                    row.add(tooltip(new Label("Count: "), "Number of units to bind"));
+                    TextField countField = new TextField(count);
+                    countField.changed(() -> count = countField.getText());
+                    row.add(countField).size(80f);
                 }
                 
                 // mode参数
-                row.add(tooltip(new Label("Mode: "), Bundle.get("ubindgroup.mode.tooltip")));
-                row.button(()-> mode, Tex.pane, Styles.cleari, () -> {
+                row.add(tooltip(new Label("Mode: "), "Binding mode"));
+                row.button(mode, Styles.cleari, () -> {
                     // 简单的模式切换逻辑
                     if (mode.equals("grabbing")) {
                         mode = "access";
@@ -193,24 +200,28 @@ public class LUnitBindGroupUI {
                     // 重建UI以反映更改
                     table.clearChildren();
                     build(table);
-                }).size(120f).tooltip(Bundle.get("ubindgroup.mode"));
+                }).size(120f).tooltip("Toggle mode");
             }).row();
             
             // 第二行：unitVar, indexVar, group
             table.table(row -> {
                 // unitVar参数
-                row.add(tooltip(new Label("Unit Var: "), Bundle.get("ubindgroup.param.var.tooltip")));
-                row.addField(unitVar, text -> unitVar = text).size(120f);
+                row.add(tooltip(new Label("Unit Var: "), "Unit variable name"));
+                TextField unitVarField = new TextField(unitVar);
+                unitVarField.changed(() -> unitVar = unitVarField.getText());
+                row.add(unitVarField).size(120f);
                 
                 // indexVar参数
-                row.add(tooltip(new Label("Index Var: "), Bundle.get("ubindgroup.param.index.tooltip")));
-                row.addField(indexVar, text -> indexVar = text).size(120f);
+                row.add(tooltip(new Label("Index Var: "), "Index variable name"));
+                TextField indexVarField = new TextField(indexVar);
+                indexVarField.changed(() -> indexVar = indexVarField.getText());
+                row.add(indexVarField).size(120f);
                 
                 // group参数
-                row.add(tooltip(new Label("Group: "), Bundle.get("ubindgroup.param.group.tooltip")));
+                row.add(tooltip(new Label("Group: "), "Binding group"));
                 row.table(t -> {
                     t.add(group).size(120f);
-                    t.button(tooltip(new Button("Manage", Styles.logict), Bundle.get("ubindgroup.groupmanager.title")), () -> 
+                    t.button("Manage", Styles.logict, () -> 
                         showGroupManager()
                     ).size(80f);
                 });
@@ -218,16 +229,9 @@ public class LUnitBindGroupUI {
         }
         
         @Override
-        public LInstruction build(LAssembler builder) {
-            // 构建并返回LUnitBindGroupInstruction指令
-            return new LUnitBindGroupInstruction(
-                type,
-                builder.resolveLabel(count),
-                group,
-                mode.equals("access"),
-                builder.resolveVar(unitVar, false),
-                builder.resolveVar(indexVar, false)
-            );
+        public LStatement build(LAssembler builder) {
+            // 返回this以保持当前语句配置
+            return this;
         }
         
         // 静态create方法，用于创建语句实例
@@ -237,7 +241,7 @@ public class LUnitBindGroupUI {
         
         @Override
         public Category category() {
-            return LCategoryExt.units; // 使用units分类
+            return LCategory.units; // 使用units分类
         }
     }
 }
