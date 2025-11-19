@@ -102,9 +102,9 @@ public class LUnitBindGroupUI {
             ScrollPane pane = new ScrollPane(groupList, Styles.smallPane);
             dialog.cont.add(pane).size(400f, 400f).row();
             
-            // 更新列表的方法
-            Runnable updateList = null; // 初始化变量
-            updateList = () -> {
+            // 更新列表的方法 - 使用单元素数组解决lambda中可变变量问题
+            Runnable[] updateList = {null};
+            updateList[0] = () -> {
                 groupList.clear();
                 
                 // 添加默认组（不可删除）
@@ -145,7 +145,7 @@ public class LUnitBindGroupUI {
                             confirm.cont.add("Are you sure you want to delete group: " + groupName).row();
                             confirm.buttons.button("Yes", () -> {
                                 LUnitBindGroup.deleteGroup(groupName);
-                                updateList.run();
+                                updateList[0].run();
                                 confirm.hide();
                             }).size(150f, 50f);
                             confirm.buttons.button("No", confirm::hide).size(150f, 50f);
@@ -156,7 +156,7 @@ public class LUnitBindGroupUI {
             };
             
             // 初始更新列表
-            updateList.run();
+            updateList[0].run();
             
             // 添加新组的输入框
             Table addGroupTable = new Table();
@@ -167,7 +167,7 @@ public class LUnitBindGroupUI {
                     !newGroupName.getText().trim().equals("stand-alone") &&
                     !sharedGroups.containsKey(newGroupName.getText().trim())) {
                     LUnitBindGroup.createNewGroup(newGroupName.getText().trim());
-                    updateList.run();
+                    updateList[0].run();
                     newGroupName.setText("");
                 }
             }).size(100f, 50f);
