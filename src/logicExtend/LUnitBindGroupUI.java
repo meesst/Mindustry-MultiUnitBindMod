@@ -20,7 +20,20 @@ import static mindustry.Vars.*;
 public class LUnitBindGroupUI {
     // 注册方法
     public static void register() {
-        // 将在后面实现
+        // 使用LAssembler.customParsers注册自定义指令
+        LAssembler.customParsers.put("unitBindGroup", args -> {
+            UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+            
+            // 解析参数
+            if(args.length > 0) stmt.type = args[0];
+            if(args.length > 1) stmt.count = args[1];
+            if(args.length > 2) stmt.group = args[2];
+            if(args.length > 3) stmt.mode = args[3];
+            if(args.length > 4) stmt.unitVar = args[4];
+            if(args.length > 5) stmt.indexVar = args[5];
+            
+            return stmt;
+        });
     }
     
     // 单位绑定组指令类
