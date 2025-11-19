@@ -34,6 +34,8 @@ public class LUnitBindGroupUI {
             
             return stmt;
         });
+        // 添加到LogicIO.allStatements中，这是关键的一步
+        LogicIO.allStatements.add(UnitBindGroupStatement::new);
     }
     
     // 单位绑定组指令类
