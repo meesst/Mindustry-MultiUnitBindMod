@@ -113,7 +113,8 @@ public class LUnitBindGroupUI {
                     }, Styles.logict, () -> {
                         group = "stand-alone";
                         dialog.hide();
-                    }).size(380f, 50f).row().get();
+                    }).size(380f, 50f).get();
+                    groupList.row();
                     standAloneButton.background(Tex.pane);
                     if (group.equals("stand-alone")) {
                         standAloneButton.color.set(Color.lightGray);
@@ -242,10 +243,18 @@ public class LUnitBindGroupUI {
         }
         
         @Override
-        public LInstruction build(LAssembler builder) {
-            // 创建并返回适当的LInstruction实例
-            // 这里假设LUnitBindGroupInstruction存在并接受相应参数
-            return new LUnitBindGroupInstruction();
+        public LExecutor.LInstruction build(LAssembler builder) {
+            // 将字符串参数解析为LVar
+            LVar unitTypeVar = builder.getVar(type);
+            LVar countVar = builder.getVar(count);
+            LVar unitVarVar = builder.getVar(unitVar);
+            LVar indexVarVar = builder.getVar(indexVar);
+            
+            // 将mode转换为整数
+            int modeInt = mode.equals("access") ? 2 : 1;
+            
+            // 创建并返回LUnitBindGroupInstruction实例
+            return new LUnitBindGroup.UnitBindGroupInstruction(unitTypeVar, countVar, unitVarVar, indexVarVar, group, modeInt);
         }
         
         // 静态create方法，用于创建语句实例

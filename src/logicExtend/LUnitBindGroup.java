@@ -26,6 +26,8 @@ public class LUnitBindGroup{
         public UnitType lastType = null;
         // 是否公开组
         public boolean isPublic = false;
+        // 最后访问时间（用于清理）
+        public long lastAccessTime = Time.millis();
     }
     
     // 共享组配置类，用于存储共享组的初始参数
@@ -313,6 +315,7 @@ public class LUnitBindGroup{
     private static void executeMode2(LExecutor exec, String group, LVar unitVar, LVar indexVar) {
         // 访问模式：不需要抓取，只访问现有单位组
         UnitGroupInfo info = group != null ? sharedGroups.get(group) : null;
+        if (info != null) info.lastAccessTime = Time.millis();
 
         // 维护单位池，确保单位有效性
         if(info != null) {
@@ -349,10 +352,14 @@ public class LUnitBindGroup{
         if (name != null && !name.isEmpty()) {
             // 共享组
             UnitGroupInfo info = sharedGroups.get(name);
-            if (info == null) {
-                info = new UnitGroupInfo();
-                sharedGroups.put(name, info);
-                sharedGroupMaxCounts.put(name, Integer.MAX_VALUE);
+        if (info == null) {
+            info = new UnitGroupInfo();
+            info.isPublic = true;
+            info.lastAccessTime = Time.millis();
+            sharedGroups.put(name, info);
+            sharedGroupMaxCounts.put(name, Integer.MAX_VALUE);
+        } else {
+            info.lastAccessTime = Time.millis();
                 
                 // 注意：控制器与组名的映射关系已在executeMode1中检查冲突后记录
             }
@@ -549,6 +556,7 @@ public class LUnitBindGroup{
             if (!isInUse) {
                 // 解绑所有单位并清理组
                 UnitGroupInfo info = sharedGroups.get(groupName);
+        if (info != null) info.lastAccessTime = Time.millis();
                 if (info != null && info.units != null) {
                     for (Unit unit : info.units) {
                         unbindUnit(unit);
@@ -573,6 +581,20 @@ public class LUnitBindGroup{
         
         invalidControllers.each((controller, info) -> {
             cleanupInvalidController(controller);
+        });
+        
+        // 清理长时间未访问的共享组（超过5分钟未访问）
+        long currentTime = Time.millis();
+        ObjectSet<String> groupsToRemove = new ObjectSet<>();
+        sharedGroups.each((groupName, info) -> {
+            // 检查是否超过5分钟未访问且组为空
+            if (currentTime - info.lastAccessTime > 5 * 60 * 1000L && info.units.isEmpty()) {
+                groupsToRemove.add(groupName);
+            }
+        });
+        
+        groupsToRemove.each(groupName -> {
+            cleanupUnusedGroup(groupName);
         });
         
         // 清理无效的建筑-组映射
@@ -622,6 +644,7 @@ public class LUnitBindGroup{
             }
         } else {
             UnitGroupInfo info = individualGroups.get(controller);
+        if (info != null) info.lastAccessTime = Time.millis();
             if (info != null && info.units != null) {
                 for (Unit unit : info.units) {
                     unbindUnit(unit);
