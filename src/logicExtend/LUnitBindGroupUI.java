@@ -46,7 +46,7 @@ public class LUnitBindGroupUI {
                     t.table(i -> {
                         i.left();
                         int c = 0;
-                        for(UnitType item : Vars.content.units()){
+                        for(UnitType item : content.units()){
                             if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
                             i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
                                 type = "@" + item.name;
@@ -62,7 +62,7 @@ public class LUnitBindGroupUI {
         }
 
         @Override
-        public LInstruction build(LAssembler builder) {
+        public LExecutor.LInstruction build(LAssembler builder) {
             return new UnitBindGroupI(builder.var(type));
         }
 
@@ -78,10 +78,10 @@ public class LUnitBindGroupUI {
     }
     
     // 单位绑定组指令实现类 - 直接复制游戏源代码中的UnitBindI实现
-    public static class UnitBindGroupI implements LInstruction {
-        public LVar type;
+    public static class UnitBindGroupI implements LExecutor.LInstruction {
+        public LExecutor.LVar type;
 
-        public UnitBindGroupI(LVar type) {
+        public UnitBindGroupI(LExecutor.LVar type) {
             this.type = type;
         }
 
