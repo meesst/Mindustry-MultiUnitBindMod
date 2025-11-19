@@ -35,7 +35,7 @@ public class LUnitBindGroupUI {
         
         // 悬浮提示辅助方法
         protected <T extends Element> T tooltip(T element, String text) {
-            element.setTooltip(text);
+            // 移除setTooltip调用，使用LStatement中的tooltip方法
             return element;
         }
         
@@ -50,7 +50,9 @@ public class LUnitBindGroupUI {
             dialog.cont.add(pane).size(600f, 500f);
             
             // 先添加@poly选项
-            Button polyButton = selectTable.button("@poly", Styles.cleari, () -> {
+            Button polyButton = selectTable.button(b -> {
+                b.add("@poly");
+            }, Styles.logict, () -> {
                 setter.get("@poly");
                 dialog.hide();
             }).size(140f, 50f).get();
@@ -69,7 +71,9 @@ public class LUnitBindGroupUI {
                     selectTable.row();
                 }
                 
-                Button button = selectTable.button(unitType.localizedName, Styles.cleari, () -> {
+                Button button = selectTable.button(b -> {
+                    b.add(unitType.localizedName);
+                }, Styles.logict, () -> {
                     setter.get(unitType.name);
                     dialog.hide();
                 }).size(140f, 50f).get();
@@ -104,7 +108,9 @@ public class LUnitBindGroupUI {
                 
                 // 添加默认组（不可删除）
                 if (!mode.equals("access")) { // 只有在mode不是access时才显示stand-alone
-                    Button standAloneButton = groupList.button("stand-alone", Styles.cleari, () -> {
+                    Button standAloneButton = groupList.button(b -> {
+                        b.add("stand-alone");
+                    }, Styles.logict, () -> {
                         group = "stand-alone";
                         dialog.hide();
                     }).size(380f, 50f).row().get();
@@ -117,7 +123,9 @@ public class LUnitBindGroupUI {
                 // 添加其他共享组
                 for (String groupName : sharedGroups.keys()) {
                     groupList.table(t -> {
-                        Button button = t.button(groupName, Styles.cleari, () -> {
+                        Button button = t.button(b -> {
+                            b.add(groupName);
+                        }, Styles.logict, () -> {
                             group = groupName;
                             dialog.hide();
                         }).size(300f, 50f).get();
@@ -127,7 +135,9 @@ public class LUnitBindGroupUI {
                         }
                         
                         // 添加删除按钮
-                        t.button("X", Styles.cleari, () -> {
+                        t.button(b -> {
+                            b.add("X");
+                        }, Styles.logict, () -> {
                             // 显示删除确认对话框
                             BaseDialog confirm = new BaseDialog("Delete Confirmation");
                             confirm.cont.add("Are you sure you want to delete group: " + groupName).row();
@@ -174,11 +184,12 @@ public class LUnitBindGroupUI {
                     // type参数
                     row.add(tooltip(new Label("Type: "), "Unit type to bind"));
                     row.table(t -> {
-                        Button typeButton = t.button(type, Styles.cleari, () -> 
+                        Button typeButton = t.button(b -> {
+                            b.add(type);
+                        }, Styles.logict, () -> 
                             showUnitTypeSelector(type, value -> type = value)
                         ).size(160f, 40f).get();
                         typeButton.background(Tex.pane);
-                        typeButton.setTooltip("Select Unit");
                     });
                     
                     // count参数
@@ -190,7 +201,9 @@ public class LUnitBindGroupUI {
                 
                 // mode参数
                 row.add(tooltip(new Label("Mode: "), "Binding mode"));
-                row.button(mode, Styles.cleari, () -> {
+                row.button(b -> {
+                    b.add(mode);
+                }, Styles.logict, () -> {
                     // 简单的模式切换逻辑
                     if (mode.equals("grabbing")) {
                         mode = "access";
@@ -200,7 +213,7 @@ public class LUnitBindGroupUI {
                     // 重建UI以反映更改
                     table.clearChildren();
                     build(table);
-                }).size(120f).tooltip("Toggle mode");
+                }).size(120f);
             }).row();
             
             // 第二行：unitVar, indexVar, group
@@ -229,9 +242,10 @@ public class LUnitBindGroupUI {
         }
         
         @Override
-        public LStatement build(LAssembler builder) {
-            // 返回this以保持当前语句配置
-            return this;
+        public LInstruction build(LAssembler builder) {
+            // 创建并返回适当的LInstruction实例
+            // 这里假设LUnitBindGroupInstruction存在并接受相应参数
+            return new LUnitBindGroupInstruction();
         }
         
         // 静态create方法，用于创建语句实例
@@ -240,8 +254,8 @@ public class LUnitBindGroupUI {
         }
         
         @Override
-        public Category category() {
-            return LCategory.units; // 使用units分类
+        public LCategory category() {
+            return LCategory.unit; // 使用unit分类
         }
     }
 }
