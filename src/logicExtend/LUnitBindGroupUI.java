@@ -103,7 +103,8 @@ public class LUnitBindGroupUI {
             dialog.cont.add(pane).size(400f, 400f).row();
             
             // 更新列表的方法
-            Runnable updateList = () -> {
+            Runnable updateList = null; // 初始化变量
+            updateList = () -> {
                 groupList.clear();
                 
                 // 添加默认组（不可删除）
