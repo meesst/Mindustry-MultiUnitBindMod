@@ -1,5 +1,6 @@
 package logicExtend;
 
+import arc.struct.Seq;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.scene.style.TextureRegionDrawable;
@@ -35,7 +36,7 @@ public class LUnitBindGroupUI {
         public void build(Table table) {
             table.add(" type ");
 
-            TextField field = field(table, type, str -> type = str).get();
+            TextField field = field(type, str -> type = str).get();
 
             table.button(b -> {
                 b.image(Icon.pencilSmall);
@@ -44,9 +45,9 @@ public class LUnitBindGroupUI {
                     t.table(i -> {
                         i.left();
                         int c = 0;
-                        for(UnitType item : Vars.content.units()){
+                        for(UnitType item : content.units()){
                             if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                            i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, Styles.iconSmall, () -> {
                                 type = "@" + item.name;
                                 field.setText(type);
                                 hide.run();
@@ -60,13 +61,13 @@ public class LUnitBindGroupUI {
         }
 
         @Override
-        public LInstruction build(LAssembler builder) {
+        public LExecutor.LInstruction build(LAssembler builder) {
             return new UnitBindGroupI(builder.var(type));
         }
 
         @Override
-        public LCategory category() {
-            return LCategory.unit;
+        public LExecutor.LCategory category() {
+            return LExecutor.LCategory.unit;
         }
         
         // 静态create方法
@@ -76,10 +77,10 @@ public class LUnitBindGroupUI {
     }
     
     // 单位绑定组指令实现类 - 直接复制游戏源代码中的UnitBindI实现
-    public static class UnitBindGroupI implements LInstruction {
-        public LVar type;
+    public static class UnitBindGroupI implements LExecutor.LInstruction {
+        public LExecutor.LVar type;
 
-        public UnitBindGroupI(LVar type) {
+        public UnitBindGroupI(LExecutor.LVar type) {
             this.type = type;
         }
 
@@ -88,12 +89,13 @@ public class LUnitBindGroupUI {
 
         @Override
         public void run(LExecutor exec) {
+            // 指令执行逻辑
             if(exec.binds == null || exec.binds.length != content.units().size) {
                 exec.binds = new int[content.units().size];
             }
 
             //binding to `null` was previously possible, but was too powerful and exploitable
-            if(type.obj() instanceof UnitType type && type.logicControllable) {
+            if(this.type.obj() instanceof UnitType type && type.logicControllable) {
                 Seq<Unit> seq = exec.team.data().unitCache(type);
 
                 if(seq != null && seq.any()) {
@@ -107,7 +109,7 @@ public class LUnitBindGroupUI {
                     //no units of this type found
                     exec.unit.setconst(null);
                 }
-            } else if(type.obj() instanceof Unit u && (u.team == exec.team || exec.privileged) && u.type.logicControllable) {
+            } else if(this.type.obj() instanceof Unit u && (u.team == exec.team || exec.privileged) && u.type.logicControllable) {
                 //bind to specific unit object
                 exec.unit.setconst(u);
             } else {
