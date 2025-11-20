@@ -79,11 +79,11 @@ public class LUnitBindGroupUI {
         
         // 静态create方法，用于注册指令
         public static void create() {
-            // 注册自定义解析器
+            // 注册自定义解析器 - 与register()方法保持一致，参数在位置0
             LAssembler.customParsers.put("unitBindGroup", (params) -> {
                 UnitBindGroupStatement stmt = new UnitBindGroupStatement();
-                if (params.length >= 2) {
-                    stmt.type = params[1];
+                if (params.length > 0) {
+                    stmt.type = params[0];
                 }
                 stmt.afterRead();
                 return stmt;
