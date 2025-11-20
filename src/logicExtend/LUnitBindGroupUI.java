@@ -73,9 +73,9 @@ public class LUnitBindGroupUI {
         
         // 重写write方法，确保指令可以被正确序列化
         @Override
-        public void write(StringBuilder builder) {
-            builder.append("unitBindGroup ").append(type).append(" ");
-        }
+    public void write(StringBuilder builder){
+        builder.append("unitBindGroup ").append(type);
+    }
         
         // 静态create方法，用于注册指令
         public static void create() {
