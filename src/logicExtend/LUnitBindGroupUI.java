@@ -74,15 +74,22 @@ public class LUnitBindGroupUI {
         // 重写write方法，确保指令可以被正确序列化
         @Override
         public void write(StringBuilder builder) {
-            builder.append("unitBindGroup ");
-            if(type != null && !type.isEmpty()) {
-                builder.append(type);
-            }
+            builder.append("unitBindGroup ").append(type != null ? type : "@poly");
         }
         
-        // 静态create方法
-        public static UnitBindGroupStatement create() {
-            return new UnitBindGroupStatement();
+        // 静态create方法，用于注册指令
+        public static void create() {
+            // 注册自定义解析器
+            LAssembler.customParsers.put("unitBindGroup", (params) -> {
+                UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+                if (params.length >= 2) {
+                    stmt.type = params[1];
+                }
+                stmt.afterRead();
+                return stmt;
+            });
+            // 添加到所有语句列表
+            LogicIO.allStatements.add(UnitBindGroupStatement::new);
         }
     }
     
