@@ -14,25 +14,9 @@ import static mindustry.Vars.*;
 import static mindustry.logic.LCanvas.*;
 
 public class LUnitBindGroupUI {
-    // 注册方法
+    // 为了与LEMain中的调用兼容，保留register方法但委托给内部类的create方法
     public static void register() {
-        // 使用LAssembler.customParsers注册自定义指令
-        LAssembler.customParsers.put("unitBindGroup", args -> {
-            // 添加调试日志
-            System.out.println("unitBindGroup custom parser called with args length: " + args.length);
-            for (int i = 0; i < args.length; i++) {
-                System.out.println("arg[" + i + "] = " + args[i]);
-            }
-            
-            UnitBindGroupStatement stmt = new UnitBindGroupStatement();
-            
-            // 根据LParser源码分析，参数应该从索引1开始（索引0是指令名称）
-            if(args.length > 1) stmt.type = args[1];
-            
-            return stmt;
-        });
-        // 添加到LogicIO.allStatements中
-        LogicIO.allStatements.add(UnitBindGroupStatement::new);
+        UnitBindGroupStatement.create();
     }
     
     // 单位绑定组指令类 - 直接复制游戏源代码中的UnitBindStatement实现
@@ -83,10 +67,10 @@ public class LUnitBindGroupUI {
         builder.append("unitBindGroup ").append(type);
     }
         
-        // 静态create方法，用于注册指令
+        // 静态create方法，用于注册指令 - 与LStringMerge保持一致的模式
         public static void create() {
-            // 注册自定义解析器 - 与register()方法保持一致，参数在位置0
-            LAssembler.customParsers.put("unitBindGroup", (params) -> {
+            // 注册自定义解析器
+            LAssembler.customParsers.put("unitBindGroup", params -> {
                 // 添加调试日志
                 System.out.println("UnitBindGroupStatement.create() called with params length: " + params.length);
                 for (int i = 0; i < params.length; i++) {
