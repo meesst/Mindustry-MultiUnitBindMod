@@ -18,10 +18,16 @@ public class LUnitBindGroupUI {
     public static void register() {
         // 使用LAssembler.customParsers注册自定义指令
         LAssembler.customParsers.put("unitBindGroup", args -> {
+            // 添加调试日志
+            System.out.println("unitBindGroup custom parser called with args length: " + args.length);
+            for (int i = 0; i < args.length; i++) {
+                System.out.println("arg[" + i + "] = " + args[i]);
+            }
+            
             UnitBindGroupStatement stmt = new UnitBindGroupStatement();
             
-            // 解析参数 - 保持和游戏源代码一致，只解析一个type参数
-            if(args.length > 0) stmt.type = args[0];
+            // 根据LParser源码分析，参数应该从索引1开始（索引0是指令名称）
+            if(args.length > 1) stmt.type = args[1];
             
             return stmt;
         });
@@ -81,9 +87,17 @@ public class LUnitBindGroupUI {
         public static void create() {
             // 注册自定义解析器 - 与register()方法保持一致，参数在位置0
             LAssembler.customParsers.put("unitBindGroup", (params) -> {
+                // 添加调试日志
+                System.out.println("UnitBindGroupStatement.create() called with params length: " + params.length);
+                for (int i = 0; i < params.length; i++) {
+                    System.out.println("param[" + i + "] = " + params[i]);
+                }
+                
                 UnitBindGroupStatement stmt = new UnitBindGroupStatement();
-                if (params.length > 0) {
-                    stmt.type = params[0];
+                // 根据LParser源码分析，参数应该从索引1开始（索引0是指令名称）
+                if (params.length > 1) {
+                    stmt.type = params[1];
+                    System.out.println("Setting statement.type to: " + params[1]);
                 }
                 stmt.afterRead();
                 return stmt;
