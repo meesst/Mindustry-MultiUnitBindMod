@@ -79,9 +79,9 @@ public class LUnitBindGroupUI {
     
     // 单位绑定组指令实现类 - 直接复制游戏源代码中的UnitBindI实现
     public static class UnitBindGroupI implements LExecutor.LInstruction {
-        public LExecutor.LVar type;
+        public LVar type;
 
-        public UnitBindGroupI(LExecutor.LVar type) {
+        public UnitBindGroupI(LVar type) {
             this.type = type;
         }
 
