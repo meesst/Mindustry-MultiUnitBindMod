@@ -125,8 +125,8 @@ public class LUnitBindGroupUI {
                 // 获取同类型的所有单位列表
                 Seq<Unit> seq = exec.team.data().unitCache(type);
 
-                // 如果存在该类型的单位
-                if(seq.size > 0) {
+                // 如果存在该类型的单位且seq不为null
+                if(seq != null && seq.size > 0) {
                     // 确保计数器在有效范围内循环（防止索引越界）
                     exec.binds[type.id] %= seq.size;
                     // 绑定到当前索引对应的单位
