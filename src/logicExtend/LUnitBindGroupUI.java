@@ -71,6 +71,15 @@ public class LUnitBindGroupUI {
             return LCategory.unit;
         }
         
+        // 重写write方法，确保指令可以被正确序列化
+        @Override
+        public void write(StringBuilder builder) {
+            builder.append("unitBindGroup ");
+            if(type != null && !type.isEmpty()) {
+                builder.append(type);
+            }
+        }
+        
         // 静态create方法
         public static UnitBindGroupStatement create() {
             return new UnitBindGroupStatement();
