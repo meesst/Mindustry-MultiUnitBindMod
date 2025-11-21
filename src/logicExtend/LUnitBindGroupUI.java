@@ -33,7 +33,7 @@ public class LUnitBindGroupUI {
             table.add(" type ").left().self(this::param); // 显示标签，添加空格并添加左对齐和参数样式
 
             // 创建可编辑的文本字段，用于输入或显示单位类型标识
-            fields(table, type, str -> type = str);
+            TextField typeField = field(table, type, str -> type = str).get();
 
             // 添加选择按钮，点击后显示单位类型选择界面
             table.button(b -> {
@@ -52,7 +52,7 @@ public class LUnitBindGroupUI {
                             // 为每个符合条件的单位类型创建一个选择按钮
                             i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
                                 type = "@" + item.name; // 设置选中的单位类型标识
-                                rebuild(table);    // 更新UI
+                                typeField.setText(type);    // 更新UI
                                 hide.run();            // 关闭选择对话框
                             }).size(40f); // 按钮大小
 
@@ -61,22 +61,22 @@ public class LUnitBindGroupUI {
                         }
                     }).colspan(3).width(240f).left(); // 表格宽度和对齐方式
                 })); // 结束showSelectTable调用
-            }, Styles.logict, () -> {}).size(40f).padLeft(2).color(table.color); // 按钮样式和尺寸，调整间距为2
+            }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color); // 按钮样式和尺寸，调整间距为2
             
             // 添加count标签和文本输入框
             table.add(" count ").left().self(this::param); // 显示count标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
-            fields(table, count, str -> count = str);
+            field(table, count, str -> count = str);
             
             // 添加第二排参数
             table.row();
             table.add(" unitVar ").left().self(this::param); // 显示unitVar标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示单位变量名
-            fields(table, unitVar, str -> unitVar = str);
+            field(table, unitVar, str -> unitVar = str);
             
             table.add(" indexVar ").left().self(this::param); // 显示indexVar标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示索引变量名
-            fields(table, indexVar, str -> indexVar = str);
+            field(table, indexVar, str -> indexVar = str);
         }
         
         // 添加rebuild方法以支持UI更新
