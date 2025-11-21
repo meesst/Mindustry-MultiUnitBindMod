@@ -68,6 +68,8 @@ public class LUnitBindGroupUI {
             // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
             field(table, count, str -> count = str);
             
+            // 暂时注释掉第二排UI元素，用于测试第一排布局问题
+            /*
             // 添加第二排参数
             table.row();
             table.add(" unitVar ").left().self(this::param); // 显示unitVar标签，添加空格并添加左对齐和参数样式
@@ -77,6 +79,7 @@ public class LUnitBindGroupUI {
             table.add(" indexVar ").left().self(this::param); // 显示indexVar标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示索引变量名
             field(table, indexVar, str -> indexVar = str);
+            */
         }
         
         // 添加rebuild方法以支持UI更新
