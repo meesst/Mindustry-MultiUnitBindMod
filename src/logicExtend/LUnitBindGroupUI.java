@@ -26,6 +26,10 @@ public class LUnitBindGroupUI {
         public String unitVar = "currentUnit";
         /** 存储单位索引的变量名，默认值为unitIndex */
         public String indexVar = "unitIndex";
+        /** 绑定模式，默认值为Capture-unit */
+        public String mode = "Capture-unit";
+        /** 绑定组类型，默认值为stand-alone */
+        public String group = "stand-alone";
 
         /** 构建指令的UI界面 */
         @Override
@@ -37,7 +41,7 @@ public class LUnitBindGroupUI {
             table.clearChildren();
             table.left();
             
-            // 第一排：type和count参数（使用嵌套Table）
+            // 第一排：type、count和mode参数（使用嵌套Table）
             table.table(t -> {
                 t.setColor(table.color);
                 
@@ -78,12 +82,25 @@ public class LUnitBindGroupUI {
                 t.add(" count ").left().self(this::param); // 显示count标签，添加空格并添加左对齐和参数样式
                 // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
                 field(t, count, str -> count = str);
+                
+                // 添加mode标签和选择按钮
+                t.add(" mode ").left().self(this::param); // 显示mode标签，添加空格并添加左对齐和参数样式
+                // 创建mode选择按钮
+                t.button(b -> {
+                    b.left(); // 左对齐
+                    // 显示当前选中的mode值
+                    b.add(mode).left();
+                    // 点击事件处理：显示mode选择列表
+                    b.clicked(() -> showSelect(b, Seq.with("Capture-unit", "visiting-unit"), value -> {
+                        mode = value; // 设置选中的值
+                    }));
+                }, Styles.logict, () -> {}).minWidth(120f).height(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸
             }).left();
             
             // 换行到第二排
             table.row();
             
-            // 第二排：unitVar和indexVar参数（使用嵌套Table）
+            // 第二排：unitVar、indexVar和group参数（使用嵌套Table）
             table.table(t -> {
                 t.setColor(table.color);
                 
@@ -94,16 +111,29 @@ public class LUnitBindGroupUI {
                 t.add(" indexVar ").left().self(this::param); // 显示indexVar标签，添加空格并添加左对齐和参数样式
                 // 创建可编辑的文本字段，用于输入或显示索引变量名
                 field(t, indexVar, str -> indexVar = str);
+                
+                // 添加group标签和选择按钮
+                t.add(" group ").left().self(this::param); // 显示group标签，添加空格并添加左对齐和参数样式
+                // 创建group选择按钮
+                t.button(b -> {
+                    b.left(); // 左对齐
+                    // 显示当前选中的group值
+                    b.add(group).left();
+                    // 点击事件处理：显示group选择列表
+                    b.clicked(() -> showSelect(b, Seq.with("stand-alone"), value -> {
+                        group = value; // 设置选中的值
+                    }));
+                }, Styles.logict, () -> {}).minWidth(120f).height(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸
             }).left();
         }
         
-        // 已通过private rebuild方法实现UI更新功能
+    
 
         /** 构建指令的执行实例 */
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 将所有参数转换为LVar对象，并创建执行器实例
-            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(unitVar), builder.var(indexVar));
+            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(mode), builder.var(unitVar), builder.var(indexVar), builder.var(group));
         }
 
         /** 指定指令在逻辑编辑器中的分类 */
@@ -122,10 +152,14 @@ public class LUnitBindGroupUI {
                 if (params.length >= 2) stmt.type = params[1];
                 // 如果有第二个参数，则设置count值
                 if (params.length >= 3) stmt.count = params[2];
-                // 如果有第三个参数，则设置unitVar值
-                if (params.length >= 4) stmt.unitVar = params[3];
-                // 如果有第四个参数，则设置indexVar值
-                if (params.length >= 5) stmt.indexVar = params[4];
+                // 如果有第三个参数，则设置mode值
+                if (params.length >= 4) stmt.mode = params[3];
+                // 如果有第四个参数，则设置unitVar值
+                if (params.length >= 5) stmt.unitVar = params[4];
+                // 如果有第五个参数，则设置indexVar值
+                if (params.length >= 6) stmt.indexVar = params[5];
+                // 如果有第六个参数，则设置group值
+                if (params.length >= 7) stmt.group = params[6];
                 // 读取后处理，确保指令状态正确
                 stmt.afterRead();
                 return stmt;
@@ -137,8 +171,8 @@ public class LUnitBindGroupUI {
         /** 序列化指令到字符串 */
         @Override
         public void write(StringBuilder builder){
-            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar
-            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar);
+            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + mode + 空格 + unitVar + 空格 + indexVar + 空格 + group
+            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(mode).append(" ").append(unitVar).append(" ").append(indexVar).append(" ").append(group);
         }
     }
     
@@ -152,13 +186,19 @@ public class LUnitBindGroupUI {
         public LVar unitVar;
         /** 单位索引变量的变量引用 */
         public LVar indexVar;
+        /** 绑定模式变量 */
+        public LVar mode;
+        /** 绑定组类型变量 */
+        public LVar group;
 
-        /** 构造函数，指定目标单位类型、数量、单位变量和索引变量 */
-        public UnitBindGroupI(LVar type, LVar count, LVar unitVar, LVar indexVar) {
+        /** 构造函数，指定目标单位类型、数量、模式、单位变量和索引变量 */
+        public UnitBindGroupI(LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
             this.type = type;
             this.count = count;
+            this.mode = mode;
             this.unitVar = unitVar;
             this.indexVar = indexVar;
+            this.group = group;
         }
 
         /** 空构造函数 */
