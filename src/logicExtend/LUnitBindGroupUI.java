@@ -97,11 +97,7 @@ public class LUnitBindGroupUI {
             }).left();
         }
         
-        // 添加rebuild方法以支持UI更新
-        void rebuild(Table table) {
-            table.clearChildren();
-            build(table);
-        }
+        // 已通过private rebuild方法实现UI更新功能
 
         /** 构建指令的执行实例 */
         @Override
