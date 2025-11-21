@@ -20,6 +20,12 @@ public class LUnitBindGroupUI {
     public static class UnitBindGroupStatement extends LStatement {
         /** 目标单位类型标识，默认绑定到多足单位类型 */
         public String type = "@poly";
+        /** 绑定的单位数量，默认值为1 */
+        public String count = "1";
+        /** 存储当前单位的变量名，默认值为currentUnit */
+        public String unitVar = "currentUnit";
+        /** 存储单位索引的变量名，默认值为unitIndex */
+        public String indexVar = "unitIndex";
 
         /** 构建指令的UI界面 */
         @Override
@@ -56,14 +62,29 @@ public class LUnitBindGroupUI {
                     }).colspan(3).width(240f).left(); // 表格宽度和对齐方式
                 })); // 结束showSelectTable调用
             }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(table.color); // 按钮样式和尺寸
+            
+            // 添加count标签和文本输入框
+            table.add(" count "); // 显示count标签
+            // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
+            field(table, count, str -> count = str);
+            
+            // 添加第二排参数
+            table.row();
+            table.add(" unitVar "); // 显示unitVar标签
+            // 创建可编辑的文本字段，用于输入或显示单位变量名
+            field(table, unitVar, str -> unitVar = str);
+            
+            table.add(" indexVar "); // 显示indexVar标签
+            // 创建可编辑的文本字段，用于输入或显示索引变量名
+            field(table, indexVar, str -> indexVar = str);
         
         }
 
         /** 构建指令的执行实例 */
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            // 将字符串类型标识转换为LVar对象，并创建执行器实例
-            return new UnitBindGroupI(builder.var(type));
+            // 将所有参数转换为LVar对象，并创建执行器实例
+            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(unitVar), builder.var(indexVar));
         }
 
         /** 指定指令在逻辑编辑器中的分类 */
@@ -80,6 +101,12 @@ public class LUnitBindGroupUI {
                 UnitBindGroupStatement stmt = new UnitBindGroupStatement();
                 // 如果有参数，则设置单位类型
                 if (params.length >= 2) stmt.type = params[1];
+                // 如果有第二个参数，则设置count值
+                if (params.length >= 3) stmt.count = params[2];
+                // 如果有第三个参数，则设置unitVar值
+                if (params.length >= 4) stmt.unitVar = params[3];
+                // 如果有第四个参数，则设置indexVar值
+                if (params.length >= 5) stmt.indexVar = params[4];
                 // 读取后处理，确保指令状态正确
                 stmt.afterRead();
                 return stmt;
@@ -91,8 +118,8 @@ public class LUnitBindGroupUI {
         /** 序列化指令到字符串 */
         @Override
         public void write(StringBuilder builder){
-            // 格式：指令名称 + 空格 + 单位类型标识
-            builder.append("unitBindGroup ").append(type);
+            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar
+            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar);
         }
     }
     
@@ -100,10 +127,19 @@ public class LUnitBindGroupUI {
     public static class UnitBindGroupI implements LExecutor.LInstruction {
         /** 单位类型变量 */
         public LVar type;
+        /** 绑定的单位数量变量 */
+        public LVar count;
+        /** 当前单位变量的变量引用 */
+        public LVar unitVar;
+        /** 单位索引变量的变量引用 */
+        public LVar indexVar;
 
-        /** 构造函数，指定目标单位类型 */
-        public UnitBindGroupI(LVar type) {
+        /** 构造函数，指定目标单位类型、数量、单位变量和索引变量 */
+        public UnitBindGroupI(LVar type, LVar count, LVar unitVar, LVar indexVar) {
             this.type = type;
+            this.count = count;
+            this.unitVar = unitVar;
+            this.indexVar = indexVar;
         }
 
         /** 空构造函数 */
@@ -131,8 +167,11 @@ public class LUnitBindGroupUI {
                     exec.binds[type.id] %= seq.size;
                     // 绑定到当前索引对应的单位
                     exec.unit.setconst(seq.get(exec.binds[type.id]));
-                    // 索引递增，下次执行时将绑定到下一个单位
-                    exec.binds[type.id]++;
+                    
+                    // 计算递增步长，默认为1
+                    int step = Math.max(1, (int)exec.numval(count));
+                    // 索引递增，下次执行时将绑定到下一个单位，步长为count值
+                    exec.binds[type.id] += step;
                 } else {
                     // 没有找到该类型的单位，清空当前绑定
                     exec.unit.setconst(null);
