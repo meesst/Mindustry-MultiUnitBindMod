@@ -30,7 +30,7 @@ public class LUnitBindGroupUI {
         /** 构建指令的UI界面 */
         @Override
         public void build(Table table) {
-            table.add("type").left().self(this::param); // 显示标签，移除多余空格并添加左对齐和参数样式
+            table.add(" type ").left().self(this::param); // 显示标签，添加空格并添加左对齐和参数样式
 
             // 创建可编辑的文本字段，用于输入或显示单位类型标识
             fields(table, type, str -> type = str);
@@ -64,17 +64,17 @@ public class LUnitBindGroupUI {
             }, Styles.logict, () -> {}).size(40f).padLeft(2).color(table.color); // 按钮样式和尺寸，调整间距为2
             
             // 添加count标签和文本输入框
-            table.add("count").left().self(this::param); // 显示count标签，移除多余空格并添加左对齐和参数样式
+            table.add(" count ").left().self(this::param); // 显示count标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
             fields(table, count, str -> count = str);
             
             // 添加第二排参数
             table.row();
-            table.add("unitVar").left().self(this::param); // 显示unitVar标签，移除多余空格并添加左对齐和参数样式
+            table.add(" unitVar ").left().self(this::param); // 显示unitVar标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示单位变量名
             fields(table, unitVar, str -> unitVar = str);
             
-            table.add("indexVar").left().self(this::param); // 显示indexVar标签，移除多余空格并添加左对齐和参数样式
+            table.add(" indexVar ").left().self(this::param); // 显示indexVar标签，添加空格并添加左对齐和参数样式
             // 创建可编辑的文本字段，用于输入或显示索引变量名
             fields(table, indexVar, str -> indexVar = str);
         }
