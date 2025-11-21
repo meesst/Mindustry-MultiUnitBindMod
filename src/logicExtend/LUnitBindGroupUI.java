@@ -91,7 +91,7 @@ public class LUnitBindGroupUI {
                     // 显示当前选中的mode值
                     b.add(mode).left();
                     // 点击事件处理：显示mode选择列表
-                    b.clicked(() -> showSelect(b, Seq.with("Capture-unit", "visiting-unit"), mode, value -> {
+                    b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
                         mode = value; // 设置选中的值
                     }));
                 }, Styles.logict, () -> {}).minWidth(120f).height(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸
@@ -120,7 +120,7 @@ public class LUnitBindGroupUI {
                     // 显示当前选中的group值
                     b.add(group).left();
                     // 点击事件处理：显示group选择列表
-                    b.clicked(() -> showSelect(b, Seq.with("stand-alone"), group, value -> {
+                    b.clicked(() -> showSelect(b, new String[]{"stand-alone"}, group, value -> {
                         group = value; // 设置选中的值
                     }));
                 }, Styles.logict, () -> {}).minWidth(120f).height(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸
