@@ -96,7 +96,6 @@ public class LUnitBindGroupUI {
                 field(t, indexVar, str -> indexVar = str);
             }).left();
         }
-        }
         
         // 添加rebuild方法以支持UI更新
         void rebuild(Table table) {
