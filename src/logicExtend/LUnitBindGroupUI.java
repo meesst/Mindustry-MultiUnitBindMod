@@ -167,11 +167,8 @@ public class LUnitBindGroupUI {
                     exec.binds[type.id] %= seq.size;
                     // 绑定到当前索引对应的单位
                     exec.unit.setconst(seq.get(exec.binds[type.id]));
-                    
-                    // 计算递增步长，默认为1
-                    int step = Math.max(1, (int)exec.numval(count));
-                    // 索引递增，下次执行时将绑定到下一个单位，步长为count值
-                    exec.binds[type.id] += step;
+                    // 索引递增，下次执行时将绑定到下一个单位
+                    exec.binds[type.id]++;
                 } else {
                     // 没有找到该类型的单位，清空当前绑定
                     exec.unit.setconst(null);
