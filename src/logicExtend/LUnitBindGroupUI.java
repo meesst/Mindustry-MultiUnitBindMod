@@ -22,6 +22,8 @@ public class LUnitBindGroupUI {
     
     /** 单位绑定组指令类 */
     public static class UnitBindGroupStatement extends LStatement {
+        /** 静态频道列表，用于持久化存储所有频道 */
+        public static Seq<String> channels = null;
         /** 目标单位类型标识，默认绑定到多足单位类型 */
         public String type = "@poly";
         /** 绑定的单位数量，默认值为1 */
@@ -120,11 +122,15 @@ public class LUnitBindGroupUI {
                 t.button(b -> {
                     b.label(() -> group);
                     b.clicked(() -> {
-                        // 使用动态集合存储频道列表
-                        Seq<String> channels = new Seq<>();
-                        // 添加默认频道
-                        channels.add("stand-alone");
-                        
+                        // 使用静态集合存储频道列表，确保频道持久化
+                        Seq<String> channels = UnitBindGroupStatement.channels;
+                        // 如果channels为空，则初始化并添加默认频道
+                        if(channels == null) {
+                            channels = new Seq<>();
+                            channels.add("stand-alone");
+                            UnitBindGroupStatement.channels = channels;
+                        }
+                         
                         // 使用showSelectTable自定义实现，支持1列布局、滚动以及添加/删除频道功能
                         showSelectTable(b, (menuTable, hide) -> {
                             ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
@@ -148,7 +154,7 @@ public class LUnitBindGroupUI {
                                             UnitBindGroupStatement.this.group = channel;
                                             rebuild(table);
                                             hide.run();
-                                        }).size(140, 50).padRight(5)
+                                        }).size(140, 50).padRight(5).left()
                                          .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
@@ -159,7 +165,7 @@ public class LUnitBindGroupUI {
                                         }).size(30, 30);
                                         }
                                         
-                                        channelList.add(row).row();
+                                        channelList.add(row).left().row();
                                     }
                                 }
                             };
