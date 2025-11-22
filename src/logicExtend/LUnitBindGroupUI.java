@@ -115,10 +115,40 @@ public class LUnitBindGroupUI {
                 // 创建group选择按钮
                 t.button(b -> {
                     b.label(() -> group);
-                    b.clicked(() -> showSelect(b, new String[]{"stand-alone", "test"}, group, value -> {
-                        group = value;
-                        rebuild(table);// 更新ui
-                    }, 2, cell -> cell.size(160, 50)));// 下拉菜单尺寸
+                    b.clicked(() -> {
+                        // 动态生成Channel 1到Channel 10的选项
+                        String[] channels = new String[12]; // 10个Channel + 2个现有选项
+                        channels[0] = "stand-alone";
+                        channels[1] = "test";
+                        for(int i = 0; i < 10; i++) {
+                            channels[i + 2] = "Channel " + (i + 1);
+                        }
+                        
+                        // 使用showSelectTable自定义实现，支持1列布局和滚动
+                        showSelectTable(b, (t, hide) -> {
+                            ButtonGroup<Button> group = new ButtonGroup<>();
+                            
+                            // 创建ScrollPane来支持滚动
+                            ScrollPane scrollPane = new ScrollPane(new Table());
+                            scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
+                            
+                            Table content = scrollPane.getTable();
+                            content.defaults().size(160, 50);
+                            
+                            // 添加所有选项
+                            for(String channel : channels) {
+                                content.button(channel, Styles.logicTogglet, () -> {
+                                    UnitBindGroupStatement.this.group = channel;
+                                    rebuild(table);
+                                    hide.run();
+                                }).checked(UnitBindGroupStatement.this.group.equals(channel)).group(group);
+                                content.row(); // 每个选项一行，实现1列布局
+                            }
+                            
+                            // 设置固定大小的容器
+                            t.add(scrollPane).width(180f).height(300f);
+                        });
+                    });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
         }
