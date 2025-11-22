@@ -87,14 +87,12 @@ public class LUnitBindGroupUI {
                 t.add(" mode ").left().self(this::param); // 显示mode标签，添加空格并添加左对齐和参数样式
                 // 创建mode选择按钮
                 t.button(b -> {
-                    b.left(); // 左对齐
-                    // 显示当前选中的mode值
-                    b.add(mode).left();
-                    // 点击事件处理：显示mode选择列表
+                    b.label(() -> mode);
                     b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
-                        mode = value; // 设置选中的值
-                    }));
-                }, Styles.logict, () -> {}).minWidth(120f).height(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸
+                        mode = value;
+                        rebuild(table);
+                    }, 2, cell -> cell.size(110, 50)));
+                }, Styles.logict, () -> {}).size(110, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
             
             // 换行到第二排
