@@ -91,8 +91,8 @@ public class LUnitBindGroupUI {
                     b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
                         mode = value;
                         rebuild(table);
-                    }, 2, cell -> cell.size(110, 50)));
-                }, Styles.logict, () -> {}).size(110, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
+                    }, 2, cell -> cell.size(132, 50)));
+                }, Styles.logict, () -> {}).size(132, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸（宽度增加20%）
             }).left();
             
             // 换行到第二排
