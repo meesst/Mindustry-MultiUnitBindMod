@@ -184,7 +184,7 @@ public class LUnitBindGroupUI {
                             TextField newChannelField = field(addSection, newChannelBuilder.toString(), str -> {
                                 newChannelBuilder.setLength(0);
                                 newChannelBuilder.append(str);
-                            }).get();
+                            }).color(Pal.accent).get();
                             newChannelField.setSize(100, 40);
                             
                             addSection.button(btn -> {
