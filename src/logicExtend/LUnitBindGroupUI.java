@@ -155,7 +155,7 @@ public class LUnitBindGroupUI {
                                     
                                     // 只允许删除自定义频道，不允许删除默认频道
                                     if(!channel.equals("stand-alone") && !channel.equals("test")) {
-                                        row.button(Icon.trash, Styles.cleart, 20f, () -> {
+                                        row.button("-", Styles.cleart, () -> {
                                         channels.remove(channel);
                                         updateChannelList.run();
                                     }).size(30, 30);
