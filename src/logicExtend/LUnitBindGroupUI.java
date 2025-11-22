@@ -90,9 +90,9 @@ public class LUnitBindGroupUI {
                     b.label(() -> mode);
                     b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
                         mode = value;
-                        rebuild(table);
-                    }, 2, cell -> cell.size(132, 50)));
-                }, Styles.logict, () -> {}).size(132, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸（宽度增加20%）
+                        rebuild(table);// 更新ui
+                    }, 2, cell -> cell.size(160, 50)));// 下拉菜单尺寸
+                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
             
             // 换行到第二排
@@ -110,18 +110,16 @@ public class LUnitBindGroupUI {
                 // 创建可编辑的文本字段，用于输入或显示索引变量名
                 field(t, indexVar, str -> indexVar = str);
                 
-                // 添加group标签和选择按钮
+                 // 添加group标签和选择按钮
                 t.add(" group ").left().self(this::param); // 显示group标签，添加空格并添加左对齐和参数样式
                 // 创建group选择按钮
                 t.button(b -> {
-                    b.left(); // 左对齐
-                    // 显示当前选中的group值
-                    b.add(group).left();
-                    // 点击事件处理：显示group选择列表
-                    b.clicked(() -> showSelect(b, new String[]{"stand-alone"}, group, value -> {
-                        group = value; // 设置选中的值
-                    }));
-                }, Styles.logict, () -> {}).minWidth(120f).height(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸
+                    b.label(() -> group);
+                    b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, group, value -> {
+                        group = value;
+                        rebuild(table);// 更新ui
+                    }, 2, cell -> cell.size(160, 50)));// 下拉菜单尺寸
+                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
         }
         
