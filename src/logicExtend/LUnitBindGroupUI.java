@@ -142,28 +142,33 @@ public class LUnitBindGroupUI {
                             channelList.defaults().size(160, 50);
                             
                             // 添加频道列表更新方法
-                            Runnable updateChannelList = () -> {
-                                channelList.clearChildren();
-                                for(String channel : channels) {
-                                    Table row = new Table();
-                                    row.button(channel, Styles.logicTogglet, () -> {
-                                        UnitBindGroupStatement.this.group = channel;
-                                        rebuild(table);
-                                        hide.run();
-                                    }).size(140, 50).padRight(5)
-                                     .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
-                                    
-                                    // 只允许删除自定义频道，不允许删除默认频道
-                                    if(!channel.equals("stand-alone") && !channel.equals("test")) {
-                                        row.button("-", Styles.cleart, () -> {
-                                        channels.remove(channel);
-                                        updateChannelList.run();
-                                    }).size(30, 30);
+                            final Runnable[] updateChannelListRef = new Runnable[1];
+                            updateChannelListRef[0] = new Runnable() {
+                                @Override
+                                public void run() {
+                                    channelList.clearChildren();
+                                    for(String channel : channels) {
+                                        Table row = new Table();
+                                        row.button(channel, Styles.logicTogglet, () -> {
+                                            UnitBindGroupStatement.this.group = channel;
+                                            rebuild(table);
+                                            hide.run();
+                                        }).size(140, 50).padRight(5)
+                                         .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
+                                        
+                                        // 只允许删除自定义频道，不允许删除默认频道
+                                        if(!channel.equals("stand-alone") && !channel.equals("test")) {
+                                            row.button("-", Styles.cleart, () -> {
+                                            channels.remove(channel);
+                                            updateChannelListRef[0].run();
+                                        }).size(30, 30);
+                                        }
+                                        
+                                        channelList.add(row).row();
                                     }
-                                    
-                                    channelList.add(row).row();
                                 }
                             };
+                            Runnable updateChannelList = updateChannelListRef[0];
                             
                             // 初始化频道列表
                             updateChannelList.run();
