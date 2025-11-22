@@ -115,7 +115,7 @@ public class LUnitBindGroupUI {
                 // 创建group选择按钮
                 t.button(b -> {
                     b.label(() -> group);
-                    b.clicked(() -> showSelect(b, new String[]{"stand-alone"}, group, value -> {
+                    b.clicked(() -> showSelect(b, new String[]{"stand-alone", "test"}, group, value -> {
                         group = value;
                         rebuild(table);// 更新ui
                     }, 2, cell -> cell.size(160, 50)));// 下拉菜单尺寸
