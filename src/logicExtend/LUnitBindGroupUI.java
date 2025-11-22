@@ -158,10 +158,13 @@ public class LUnitBindGroupUI {
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
                                         if(!channel.equals("stand-alone")) {
-                                            row.button("Del", Styles.cleart, () -> {
-                                            UnitBindGroupStatement.channels.remove(channel);
-                                            updateChannelListRef[0].run();
-                                        }).size(30, 30);
+                                            row.button(b -> {
+                                                b.label(() -> "Del");
+                                                b.clicked(() -> {
+                                                    UnitBindGroupStatement.channels.remove(channel);
+                                                    updateChannelListRef[0].run();
+                                                });
+                                            }, Styles.logict, () -> {}).size(60, 30).padLeft(5);
                                         }
                                         
                                         channelList.add(row).left().row();
@@ -175,15 +178,28 @@ public class LUnitBindGroupUI {
                             
                             // 创建添加新频道的部分
                             Table addSection = new Table();
-                            TextField newChannelField = addSection.field("", str -> {}).size(100, 36).get();
-                            addSection.button("Add", Styles.logict, () -> {
-                                String newChannel = newChannelField.getText().trim();
-                                if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
-                                    UnitBindGroupStatement.channels.add(newChannel);
-                                    updateChannelList.run();
-                                    newChannelField.clearText();
-                                }
-                            }).size(60, 36).padLeft(5);
+                            // 使用StringBuilder来存储临时的新频道名
+                            StringBuilder newChannelBuilder = new StringBuilder();
+                            // 创建可编辑的文本字段，用于输入新频道名
+                            TextField newChannelField = field(addSection, newChannelBuilder.toString(), str -> {
+                                newChannelBuilder.setLength(0);
+                                newChannelBuilder.append(str);
+                            }).get();
+                            newChannelField.setSize(100, 36);
+                            
+                            addSection.button(b -> {
+                                b.label(() -> "Add");
+                                b.clicked(() -> {
+                                    String newChannel = newChannelBuilder.toString().trim();
+                                    if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
+                                        UnitBindGroupStatement.channels.add(newChannel);
+                                        updateChannelList.run();
+                                        // 清空输入框
+                                        newChannelBuilder.setLength(0);
+                                        newChannelField.setText("");
+                                    }
+                                });
+                            }, Styles.logict, () -> {}).size(60, 36).padLeft(5);
                             
                             
                             // 创建ScrollPane来支持滚动
