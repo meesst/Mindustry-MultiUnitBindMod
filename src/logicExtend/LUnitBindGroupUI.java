@@ -125,14 +125,11 @@ public class LUnitBindGroupUI {
                         }
                         
                         // 使用showSelectTable自定义实现，支持1列布局和滚动
-                        showSelectTable(b, (t, hide) -> {
-                            ButtonGroup<Button> group = new ButtonGroup<>();
+                        showSelectTable(b, (menuTable, hide) -> {
+                            ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
                             
-                            // 创建ScrollPane来支持滚动
-                            ScrollPane scrollPane = new ScrollPane(new Table());
-                            scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
-                            
-                            Table content = scrollPane.getTable();
+                            // 创建内容表格
+                            Table content = new Table();
                             content.defaults().size(160, 50);
                             
                             // 添加所有选项
@@ -141,12 +138,16 @@ public class LUnitBindGroupUI {
                                     UnitBindGroupStatement.this.group = channel;
                                     rebuild(table);
                                     hide.run();
-                                }).checked(UnitBindGroupStatement.this.group.equals(channel)).group(group);
+                                }).checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
                                 content.row(); // 每个选项一行，实现1列布局
                             }
                             
+                            // 创建ScrollPane来支持滚动
+                            ScrollPane scrollPane = new ScrollPane(content);
+                            scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
+                            
                             // 设置固定大小的容器
-                            t.add(scrollPane).width(180f).height(300f);
+                            menuTable.add(scrollPane).width(180f).height(300f);
                         });
                     });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
