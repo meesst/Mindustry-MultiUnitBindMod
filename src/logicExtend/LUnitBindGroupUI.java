@@ -164,7 +164,7 @@ public class LUnitBindGroupUI {
                                                     UnitBindGroupStatement.channels.remove(channel);
                                                     updateChannelListRef[0].run();
                                                 });
-                                            }, Styles.logict, () -> {}).size(60, 30).padLeft(5);
+                                            }, Styles.logict, () -> {}).size(60, 50).color(t.color).padLeft(5);
                                         }
                                         
                                         channelList.add(row).left().row();
@@ -185,11 +185,11 @@ public class LUnitBindGroupUI {
                                 newChannelBuilder.setLength(0);
                                 newChannelBuilder.append(str);
                             }).get();
-                            newChannelField.setSize(100, 36);
+                            newChannelField.setSize(100, 40);
                             
-                            addSection.button(b -> {
-                                b.label(() -> "Add");
-                                b.clicked(() -> {
+                            addSection.button(btn -> {
+                                btn.label(() -> "Add");
+                                btn.clicked(() -> {
                                     String newChannel = newChannelBuilder.toString().trim();
                                     if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
                                         UnitBindGroupStatement.channels.add(newChannel);
@@ -199,7 +199,7 @@ public class LUnitBindGroupUI {
                                         newChannelField.setText("");
                                     }
                                 });
-                            }, Styles.logict, () -> {}).size(60, 36).padLeft(5);
+                            }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
                             
                             
                             // 创建ScrollPane来支持滚动
