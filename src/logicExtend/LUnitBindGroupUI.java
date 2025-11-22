@@ -122,14 +122,13 @@ public class LUnitBindGroupUI {
                 t.button(b -> {
                     b.label(() -> group);
                     b.clicked(() -> {
-                        // 使用静态集合存储频道列表，确保频道持久化
-                        Seq<String> channels = UnitBindGroupStatement.channels;
-                        // 如果channels为空，则初始化并添加默认频道
-                        if(channels == null) {
-                            channels = new Seq<>();
-                            channels.add("stand-alone");
-                            UnitBindGroupStatement.channels = channels;
+                        // 确保静态频道列表初始化
+                        if(UnitBindGroupStatement.channels == null) {
+                            UnitBindGroupStatement.channels = new Seq<>();
+                            UnitBindGroupStatement.channels.add("stand-alone");
                         }
+                        // 使用final修饰符确保lambda表达式可以引用该变量
+                        final Seq<String> channels = UnitBindGroupStatement.channels;
                          
                         // 使用showSelectTable自定义实现，支持1列布局、滚动以及添加/删除频道功能
                         showSelectTable(b, (menuTable, hide) -> {
@@ -148,7 +147,7 @@ public class LUnitBindGroupUI {
                                 @Override
                                 public void run() {
                                     channelList.clearChildren();
-                                    for(String channel : channels) {
+                                    for(String channel : UnitBindGroupStatement.channels) {
                                         Table row = new Table();
                                         row.button(channel, Styles.logicTogglet, () -> {
                                             UnitBindGroupStatement.this.group = channel;
@@ -160,7 +159,7 @@ public class LUnitBindGroupUI {
                                         // 只允许删除自定义频道，不允许删除默认频道
                                         if(!channel.equals("stand-alone")) {
                                             row.button("Del", Styles.cleart, () -> {
-                                            channels.remove(channel);
+                                            UnitBindGroupStatement.channels.remove(channel);
                                             updateChannelListRef[0].run();
                                         }).size(30, 30);
                                         }
@@ -179,8 +178,8 @@ public class LUnitBindGroupUI {
                             TextField newChannelField = addSection.field("", str -> {}).size(100, 36).get();
                             addSection.button("Add", Styles.logict, () -> {
                                 String newChannel = newChannelField.getText().trim();
-                                if(!newChannel.isEmpty() && !channels.contains(newChannel)) {
-                                    channels.add(newChannel);
+                                if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
+                                    UnitBindGroupStatement.channels.add(newChannel);
                                     updateChannelList.run();
                                     newChannelField.clearText();
                                 }
