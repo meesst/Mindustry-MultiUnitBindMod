@@ -186,12 +186,12 @@ public class LUnitBindGroupUI {
                             scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
                             
                             // 组装主内容
-                            mainContent.add(scrollPane).width(260f).height(300f);
+                            mainContent.add(scrollPane).width(240f).height(220f);
                             mainContent.row();
                             mainContent.add(addSection).padTop(5);
                             
                             // 设置固定大小的容器
-                            menuTable.add(mainContent).width(190f).height(300f);
+                            menuTable.add(mainContent).width(250f).height(300f);
                         });
                     });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
