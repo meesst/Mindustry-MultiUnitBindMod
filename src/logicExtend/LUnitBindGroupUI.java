@@ -124,11 +124,6 @@ public class LUnitBindGroupUI {
                         Seq<String> channels = new Seq<>();
                         // 添加默认频道
                         channels.add("stand-alone");
-                        channels.add("test");
-                        // 添加初始频道
-                        for(int i = 1; i <= 10; i++) {
-                            channels.add("Channel " + i);
-                        }
                         
                         // 使用showSelectTable自定义实现，支持1列布局、滚动以及添加/删除频道功能
                         showSelectTable(b, (menuTable, hide) -> {
@@ -157,8 +152,8 @@ public class LUnitBindGroupUI {
                                          .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
-                                        if(!channel.equals("stand-alone") && !channel.equals("test")) {
-                                            row.button("-", Styles.cleart, () -> {
+                                        if(!channel.equals("stand-alone")) {
+                                            row.button("Del", Styles.cleart, () -> {
                                             channels.remove(channel);
                                             updateChannelListRef[0].run();
                                         }).size(30, 30);
@@ -185,25 +180,13 @@ public class LUnitBindGroupUI {
                                 }
                             }).size(60, 36).padLeft(5);
                             
-                            // 创建自动生成频道按钮
-                            addSection.row();
-                            addSection.button("生成10个频道", Styles.logict, () -> {
-                                // 生成1-10的频道，如果不存在则添加
-                                for(int i = 1; i <= 10; i++) {
-                                    String channelName = "Channel " + i;
-                                    if(!channels.contains(channelName)) {
-                                        channels.add(channelName);
-                                    }
-                                }
-                                updateChannelList.run();
-                            }).size(160, 36).padTop(5);
                             
                             // 创建ScrollPane来支持滚动
                             ScrollPane scrollPane = new ScrollPane(channelList);
                             scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
                             
                             // 组装主内容
-                            mainContent.add(scrollPane).width(180f).height(220f);
+                            mainContent.add(scrollPane).width(260f).height(300f);
                             mainContent.row();
                             mainContent.add(addSection).padTop(5);
                             
