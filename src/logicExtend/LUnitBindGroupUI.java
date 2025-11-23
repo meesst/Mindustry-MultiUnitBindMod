@@ -220,10 +220,10 @@ public class LUnitBindGroupUI {
                             
                             // 组装主内容
                             // 1. 添加滚动的频道列表并设置大小(width=240f, height=220f)
-                            mainContent.add(scrollPane).width(240f).height(220f);
+                            mainContent.add(scrollPane).width(248f).height(220f);
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
-                            mainContent.add(addSection).padTop(5).width(240f).height(65f);
+                            mainContent.add(addSection).padTop(5).width(248f).height(65f);
                             
                             // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
                             menuTable.add(mainContent).width(250f).height(300f);
