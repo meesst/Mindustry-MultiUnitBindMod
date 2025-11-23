@@ -13,9 +13,11 @@ import arc.scene.ui.ButtonGroup;
 import arc.scene.ui.TextField;
 import arc.scene.style.Drawable;
 import mindustry.gen.Icon;
+import arc.Core;
 
 import static mindustry.Vars.*;
 import static mindustry.logic.LCanvas.*;
+import static arc.Core.*;
 
 /** 单位绑定组逻辑指令UI类 */
 public class LUnitBindGroupUI {
