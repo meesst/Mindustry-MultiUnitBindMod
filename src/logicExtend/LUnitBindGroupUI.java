@@ -135,8 +135,18 @@ public class LUnitBindGroupUI {
                 // 添加group标签和选择按钮
                 t.add(" group ").left().self(this::param); // 显示group标签，添加空格并添加左对齐和参数样式
                 // 创建group选择按钮
-                t.button(b -> {
-                    b.label(() -> group);
+                        t.button(b -> {
+                            b.label(() -> {
+                                // 显示时去掉引号
+                                String displayGroup = group;
+                                if(group.startsWith("\"")) {
+                                    displayGroup = group.substring(1);
+                                }
+                                if(displayGroup.endsWith("\"")) {
+                                    displayGroup = displayGroup.substring(0, displayGroup.length() - 1);
+                                }
+                                return displayGroup;
+                            });
                     b.clicked(() -> {
                         // 确保静态频道列表初始化
                         if(UnitBindGroupStatement.channels == null){
@@ -170,12 +180,21 @@ public class LUnitBindGroupUI {
                                     for(String channel : UnitBindGroupStatement.channels) {
                                         Table row = new Table();
                                         row.left().marginLeft(0); // 设置行左对齐并添加0像素左边距
+                                        // 获取不带引号的group值用于比较
+                                        String groupWithoutQuotes = UnitBindGroupStatement.this.group;
+                                        if(groupWithoutQuotes.startsWith("\"")) {
+                                            groupWithoutQuotes = groupWithoutQuotes.substring(1);
+                                        }
+                                        if(groupWithoutQuotes.endsWith("\"")) {
+                                            groupWithoutQuotes = groupWithoutQuotes.substring(0, groupWithoutQuotes.length() - 1);
+                                        }
+                                         
                                         row.button(channel, Styles.logicTogglet, () -> {
                                             UnitBindGroupStatement.this.group = "\"" + channel + "\"";
                                             rebuild(table);
                                             hide.run();
                                         }).size(140, 40).padRight(5).left()
-                                         .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
+                                         .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup);
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
                                         if(!channel.equals("stand-alone")) {
