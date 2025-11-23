@@ -160,7 +160,7 @@ public class LUnitBindGroupUI {
                                         b.label(() -> channel);
                                         // 保持选中状态显示
                                         if(UnitBindGroupStatement.this.group.equals(channel)) {
-                                            b.setBackground(Styles.logicToggletDown);
+                                            b.setBackground(Styles.accentDrawable);
                                         }
                                     }, Styles.logict, () -> {
                                         UnitBindGroupStatement.this.group = channel;
