@@ -235,6 +235,7 @@ public class LUnitBindGroupUI {
                                 btn.clicked(() -> {
                                     String newChannel = newChannelBuilder.toString().trim();
                                     if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
+                                        newChannel = "unit-" + newChannel;
                                         UnitBindGroupStatement.channels.add(newChannel);
                                         // 保存更新后的频道列表到设置中
                                         Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
@@ -254,10 +255,10 @@ public class LUnitBindGroupUI {
                             // 组装主内容
                             // 1. 添加滚动的频道列表并设置大小(width=240f, height=220f)
                             mainContent.row();
-                            mainContent.add(scrollPane).padTop(5).width(260f).height(215f);
+                            mainContent.add(scrollPane).padTop(5).width(260f).height(215f).left();
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
-                            mainContent.add(addSection).padTop(5).width(260f).height(65f);
+                            mainContent.add(addSection).padTop(5).width(260f).height(65f).left();
                             
                             // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
                             menuTable.add(mainContent).width(260f).height(300f);
