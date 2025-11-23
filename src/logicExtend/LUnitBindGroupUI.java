@@ -95,11 +95,17 @@ public class LUnitBindGroupUI {
                 t.add(" mode ").left().self(this::param); // 显示mode标签，添加空格并添加左对齐和参数样式
                 // 创建mode选择按钮
                 t.button(b -> {
-                    b.label(() -> mode);
-                    b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
-                        mode = "\"" + value + "\"";
-                        rebuild(table);// 更新ui
-                    }, 1, cell -> cell.size(160, 50)));// 下拉菜单尺寸
+                    // 显示时去掉引号，让UI显示更清晰
+                    b.label(() -> mode.replaceAll("^\\"|\\"$", ""));
+                    b.clicked(() -> {
+                        // 用于比较的临时变量，去掉引号
+                        String modeWithoutQuotes = mode.replaceAll("^\\"|\\"$", "");
+                        showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, modeWithoutQuotes, value -> {
+                            // 存储时添加引号
+                            mode = "\"" + value + "\"";
+                            rebuild(table); // 更新ui
+                        }, 1, cell -> cell.size(160, 50));// 下拉菜单尺寸
+                    });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
             
