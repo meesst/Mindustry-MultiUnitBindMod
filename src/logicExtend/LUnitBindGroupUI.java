@@ -53,43 +53,52 @@ public class LUnitBindGroupUI {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                t.add(" type ").left().self(this::param); // 显示标签，添加空格并添加左对齐和参数样式
-
-                // 创建可编辑的文本字段，用于输入或显示单位类型标识
-                TextField typeField = field(t, type, str -> type = str).get();
-
-                // 添加选择按钮，点击后显示单位类型选择界面
-                t.button(b -> {
-                    b.image(Icon.pencilSmall); // 按钮图标
-                    // 点击事件处理：显示单位类型选择对话框
-                    b.clicked(() -> showSelectTable(b, (tableSelect, hide) -> {
-                        tableSelect.row(); // 换行
-                        // 创建表格来显示所有可选的单位类型
-                        tableSelect.table(i -> {
-                            i.left(); // 左对齐
-                            int c = 0; // 计数器，用于控制每行显示的单位数量
-                            // 遍历所有可用的单位类型
-                            for(UnitType item : content.units()){
-                                // 过滤条件：必须已解锁、未隐藏且支持逻辑控制
-                                if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                                // 为每个符合条件的单位类型创建一个选择按钮
-                                i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
-                                    type = "@" + item.name; // 设置选中的单位类型标识
-                                    typeField.setText(type);    // 更新UI
-                                    hide.run();            // 关闭选择对话框
-                                }).size(40f); // 按钮大小
-
-                                // 每6个单位类型换行
-                                if(++c % 6 == 0) i.row();
-                            }
-                        }).colspan(3).width(240f).left(); // 表格宽度和对齐方式
-                    })); // 结束showSelectTable调用
-                }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸，调整间距为2
+                // 获取不带引号的mode值用于条件判断
+                String modeWithoutQuotes = mode;
+                if(modeWithoutQuotes.startsWith("\"") && modeWithoutQuotes.endsWith("\"")){
+                    modeWithoutQuotes = modeWithoutQuotes.substring(1, modeWithoutQuotes.length() - 1);
+                }
                 
-                // 添加count标签和文本输入框
-                t.add(" count ").left().self(this::param); // 显示count标签，添加空格并添加左对齐和参数样式
-                // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
-                field(t, count, str -> count = str);
+                // 当mode不是visiting-unit时显示type和count参数
+                if(!"visiting-unit".equals(modeWithoutQuotes)) {
+                    t.add(" type ").left().self(this::param); // 显示标签，添加空格并添加左对齐和参数样式
+
+                    // 创建可编辑的文本字段，用于输入或显示单位类型标识
+                    TextField typeField = field(t, type, str -> type = str).get();
+
+                    // 添加选择按钮，点击后显示单位类型选择界面
+                    t.button(b -> {
+                        b.image(Icon.pencilSmall); // 按钮图标
+                        // 点击事件处理：显示单位类型选择对话框
+                        b.clicked(() -> showSelectTable(b, (tableSelect, hide) -> {
+                            tableSelect.row(); // 换行
+                            // 创建表格来显示所有可选的单位类型
+                            tableSelect.table(i -> {
+                                i.left(); // 左对齐
+                                int c = 0; // 计数器，用于控制每行显示的单位数量
+                                // 遍历所有可用的单位类型
+                                for(UnitType item : content.units()){
+                                    // 过滤条件：必须已解锁、未隐藏且支持逻辑控制
+                                    if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                                    // 为每个符合条件的单位类型创建一个选择按钮
+                                    i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                        type = "@" + item.name; // 设置选中的单位类型标识
+                                        typeField.setText(type);    // 更新UI
+                                        hide.run();            // 关闭选择对话框
+                                    }).size(40f); // 按钮大小
+
+                                    // 每6个单位类型换行
+                                    if(++c % 6 == 0) i.row();
+                                }
+                            }).colspan(3).width(240f).left(); // 表格宽度和对齐方式
+                        })); // 结束showSelectTable调用
+                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸，调整间距为2
+                    
+                    // 添加count标签和文本输入框
+                    t.add(" count ").left().self(this::param); // 显示count标签，添加空格并添加左对齐和参数样式
+                    // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
+                    field(t, count, str -> count = str);
+                }
                 
                 // 添加mode标签和选择按钮
                 t.add(" mode ").left().self(this::param); // 显示mode标签，添加空格并添加左对齐和参数样式
