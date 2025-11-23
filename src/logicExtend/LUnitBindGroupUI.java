@@ -155,7 +155,7 @@ public class LUnitBindGroupUI {
                                     channelList.clearChildren();
                                     for(String channel : UnitBindGroupStatement.channels) {
                                         Table row = new Table();
-                                        row.left().padLeft(10); // 设置行左对齐并添加10像素左边距
+                                        row.left().marginLeft(10); // 设置行左对齐并添加10像素左边距
                                         row.button(channel, Styles.logicTogglet, () -> {
                                             UnitBindGroupStatement.this.group = channel;
                                             rebuild(table);
