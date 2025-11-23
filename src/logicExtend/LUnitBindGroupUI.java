@@ -99,7 +99,7 @@ public class LUnitBindGroupUI {
                     b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
                         mode = value;
                         rebuild(table);// 更新ui
-                    }, 2, cell -> cell.size(160, 50)));// 下拉菜单尺寸
+                    }, 1, cell -> cell.size(160, 50)));// 下拉菜单尺寸
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
             
@@ -140,14 +140,14 @@ public class LUnitBindGroupUI {
                         showSelectTable(b, (menuTable, hide) -> {
                             ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
                             
-                            // 创建主内容表格
+                            // 创建主内容表格容器 - 用于组织整个自定义选择界面的UI元素
                             Table mainContent = new Table();
                             
-                            // 创建频道列表内容表格
+                            // 创建频道列表内容表格容器 - 用于显示所有可选的频道项
                             Table channelList = new Table();
-                            channelList.defaults().size(160, 50).left(); // 设置默认左对齐
+                            channelList.defaults().size(160, 50).left(); // 设置默认左对齐和尺寸
                             
-                            // 添加频道列表更新方法
+                            // 添加频道列表项table容器
                             final Runnable[] updateChannelListRef = new Runnable[1];
                             updateChannelListRef[0] = new Runnable() {
                                 @Override
@@ -155,7 +155,7 @@ public class LUnitBindGroupUI {
                                     channelList.clearChildren();
                                     for(String channel : UnitBindGroupStatement.channels) {
                                         Table row = new Table();
-                                        row.left().marginLeft(10); // 设置行左对齐并添加10像素左边距
+                                        row.left().marginLeft(0); // 设置行左对齐并添加0像素左边距
                                         row.button(channel, Styles.logicTogglet, () -> {
                                             UnitBindGroupStatement.this.group = channel;
                                             rebuild(table);
@@ -185,8 +185,9 @@ public class LUnitBindGroupUI {
                             // 初始化频道列表
                             updateChannelList.run();
                             
-                            // 创建添加新频道的部分
+                            // 创建自定义添加新频道的部分table - 用于添加新的频道分组
                             Table addSection = new Table();
+                            addSection.defaults().left().marginLeft(0); // 设置默认左对齐
                             // 使用StringBuilder来存储临时的新频道名
                             StringBuilder newChannelBuilder = new StringBuilder();
                             // 创建可编辑的文本字段，用于输入新频道名
@@ -213,16 +214,18 @@ public class LUnitBindGroupUI {
                             }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
                             
                             
-                            // 创建ScrollPane来支持滚动
+                            // 创建ScrollPane来支持滚动 - 使频道列表可以垂直滚动
                             ScrollPane scrollPane = new ScrollPane(channelList);
                             scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
                             
                             // 组装主内容
+                            // 1. 添加滚动的频道列表并设置大小(width=240f, height=220f)
                             mainContent.add(scrollPane).width(240f).height(220f);
                             mainContent.row();
-                            mainContent.add(addSection).padTop(5);
+                            // 2. 添加新频道输入区域，设置顶部边距和左对齐
+                            mainContent.add(addSection).padTop(5).width(240f).height(65f);
                             
-                            // 设置固定大小的容器
+                            // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
                             menuTable.add(mainContent).width(250f).height(300f);
                         });
                     });
