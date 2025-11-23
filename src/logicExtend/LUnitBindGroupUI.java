@@ -97,7 +97,7 @@ public class LUnitBindGroupUI {
                 t.button(b -> {
                     b.label(() -> mode);
                     b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
-                        mode = "@" + value;
+                        mode = "\"" + value + "\"";
                         rebuild(table);// 更新ui
                     }, 1, cell -> cell.size(160, 50)));// 下拉菜单尺寸
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
@@ -157,7 +157,7 @@ public class LUnitBindGroupUI {
                                         Table row = new Table();
                                         row.left().marginLeft(0); // 设置行左对齐并添加0像素左边距
                                         row.button(channel, Styles.logicTogglet, () -> {
-                                            UnitBindGroupStatement.this.group = "@" + channel;
+                                            UnitBindGroupStatement.this.group = "\"" + channel + "\"";
                                             rebuild(table);
                                             hide.run();
                                         }).size(140, 40).padRight(5).left()
