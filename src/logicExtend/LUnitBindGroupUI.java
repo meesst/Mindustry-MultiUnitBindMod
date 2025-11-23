@@ -123,9 +123,13 @@ public class LUnitBindGroupUI {
                     b.label(() -> group);
                     b.clicked(() -> {
                         // 确保静态频道列表初始化
-                        if(UnitBindGroupStatement.channels == null) {
-                            UnitBindGroupStatement.channels = new Seq<>();
-                            UnitBindGroupStatement.channels.add("stand-alone");
+                        if(UnitBindGroupStatement.channels == null){
+                            // 尝试从设置中读取保存的频道列表，如果不存在则创建新的
+                            UnitBindGroupStatement.channels = Core.settings.getJson("unit-bind-channels", Seq.class, String.class, () -> {
+                                Seq<String> defaultChannels = new Seq<>();
+                                defaultChannels.add("stand-alone");
+                                return defaultChannels;
+                            });
                         }
                         // 使用final修饰符确保lambda表达式可以引用该变量
                         final Seq<String> channels = UnitBindGroupStatement.channels;
@@ -153,7 +157,7 @@ public class LUnitBindGroupUI {
                                             UnitBindGroupStatement.this.group = channel;
                                             rebuild(table);
                                             hide.run();
-                                        }).size(140, 50).padRight(5).left()
+                                        }).size(140, 40).padRight(5).left()
                                          .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
@@ -162,9 +166,11 @@ public class LUnitBindGroupUI {
                                                 b.label(() -> "Del");
                                                 b.clicked(() -> {
                                                     UnitBindGroupStatement.channels.remove(channel);
+                                                    // 保存更新后的频道列表到设置中
+                                                    Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
                                                     updateChannelListRef[0].run();
                                                 });
-                                            }, Styles.logict, () -> {}).size(60, 50).color(t.color).padLeft(5);
+                                            }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
                                         }
                                         
                                         channelList.add(row).left().row();
@@ -184,7 +190,7 @@ public class LUnitBindGroupUI {
                             TextField newChannelField = field(addSection, newChannelBuilder.toString(), str -> {
                                 newChannelBuilder.setLength(0);
                                 newChannelBuilder.append(str);
-                            }).color(Pal.accent).get();
+                            }).color(t.color).get();
                             newChannelField.setSize(100, 40);
                             
                             addSection.button(btn -> {
@@ -193,6 +199,8 @@ public class LUnitBindGroupUI {
                                     String newChannel = newChannelBuilder.toString().trim();
                                     if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
                                         UnitBindGroupStatement.channels.add(newChannel);
+                                        // 保存更新后的频道列表到设置中
+                                        Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
                                         updateChannelList.run();
                                         // 清空输入框
                                         newChannelBuilder.setLength(0);
