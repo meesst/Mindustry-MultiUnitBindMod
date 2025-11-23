@@ -96,10 +96,18 @@ public class LUnitBindGroupUI {
                 // 创建mode选择按钮
                 t.button(b -> {
                     // 显示时去掉引号，让UI显示更清晰
-                    b.label(() -> mode.replaceAll("^\\"|\\"$", ""));
+                    b.label(() -> {
+                        if(mode.startsWith("\"") && mode.endsWith("\"")){
+                            return mode.substring(1, mode.length() - 1);
+                        }
+                        return mode;
+                    });
                     b.clicked(() -> {
                         // 用于比较的临时变量，去掉引号
-                        String modeWithoutQuotes = mode.replaceAll("^\\"|\\"$", "");
+                        String modeWithoutQuotes = mode;
+                        if(modeWithoutQuotes.startsWith("\"") && modeWithoutQuotes.endsWith("\"")){
+                            modeWithoutQuotes = modeWithoutQuotes.substring(1, modeWithoutQuotes.length() - 1);
+                        }
                         showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, modeWithoutQuotes, value -> {
                             // 存储时添加引号
                             mode = "\"" + value + "\"";
