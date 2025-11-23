@@ -154,28 +154,35 @@ public class LUnitBindGroupUI {
                                 public void run() {
                                     channelList.clearChildren();
                                     for(String channel : UnitBindGroupStatement.channels) {
-                                        Table row = new Table();
-                                        row.button(channel, Styles.logicTogglet, () -> {
-                                            UnitBindGroupStatement.this.group = channel;
-                                            rebuild(table);
-                                            hide.run();
-                                        }).size(140, 40).padRight(5).left()
-                                         .checked(UnitBindGroupStatement.this.group.equals(channel)).group(buttonGroup);
-                                        
-                                        // 只允许删除自定义频道，不允许删除默认频道
-                                        if(!channel.equals("stand-alone")) {
-                                            row.button(b -> {
-                                                b.label(() -> "Del");
-                                                b.clicked(() -> {
-                                                    UnitBindGroupStatement.channels.remove(channel);
-                                                    // 保存更新后的频道列表到设置中
-                                                    Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
-                                                    updateChannelListRef[0].run();
-                                                });
-                                            }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
+                                        // 创建按钮使用与第124-126行类似的样式
+                                    Table row = new Table();
+                                    row.button(b -> {
+                                        b.label(() -> channel);
+                                        // 保持选中状态显示
+                                        if(UnitBindGroupStatement.this.group.equals(channel)) {
+                                            b.setBackground(Styles.logicToggletDown);
                                         }
-                                        
-                                        channelList.add(row).left().row();
+                                    }, Styles.logict, () -> {
+                                        UnitBindGroupStatement.this.group = channel;
+                                        rebuild(table);
+                                        hide.run();
+                                    }).size(160, 40).color(t.color).left().padRight(5)
+                                     .group(buttonGroup);
+                                    
+                                    // 只允许删除自定义频道，不允许删除默认频道
+                                    if(!channel.equals("stand-alone")) {
+                                        row.button(b -> {
+                                            b.label(() -> "Del");
+                                            b.clicked(() -> {
+                                                UnitBindGroupStatement.channels.remove(channel);
+                                                // 保存更新后的频道列表到设置中
+                                                Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
+                                                updateChannelListRef[0].run();
+                                            });
+                                        }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
+                                    }
+                                    
+                                    channelList.add(row).left().row();
                                     }
                                 }
                             };
