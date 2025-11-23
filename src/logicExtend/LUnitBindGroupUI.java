@@ -97,7 +97,7 @@ public class LUnitBindGroupUI {
                 t.button(b -> {
                     b.label(() -> mode);
                     b.clicked(() -> showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, mode, value -> {
-                        mode = value;
+                        mode = "@" + value;
                         rebuild(table);// 更新ui
                     }, 1, cell -> cell.size(160, 50)));// 下拉菜单尺寸
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
@@ -157,7 +157,7 @@ public class LUnitBindGroupUI {
                                         Table row = new Table();
                                         row.left().marginLeft(0); // 设置行左对齐并添加0像素左边距
                                         row.button(channel, Styles.logicTogglet, () -> {
-                                            UnitBindGroupStatement.this.group = channel;
+                                            UnitBindGroupStatement.this.group = "@" + channel;
                                             rebuild(table);
                                             hide.run();
                                         }).size(140, 40).padRight(5).left()
@@ -220,13 +220,13 @@ public class LUnitBindGroupUI {
                             
                             // 组装主内容
                             // 1. 添加滚动的频道列表并设置大小(width=240f, height=220f)
-                            mainContent.add(scrollPane).width(248f).height(220f);
+                            mainContent.add(scrollPane).width(260f).height(220f);
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
-                            mainContent.add(addSection).padTop(5).width(248f).height(65f);
+                            mainContent.add(addSection).padTop(5).width(260f).height(65f);
                             
                             // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
-                            menuTable.add(mainContent).width(250f).height(300f);
+                            menuTable.add(mainContent).width(260f).height(300f);
                         });
                     });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
