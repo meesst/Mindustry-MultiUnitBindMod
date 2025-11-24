@@ -49,18 +49,18 @@ public class LUnitBindGroupUI {
             table.clearChildren();
             table.left();
             
-            // 第一排：type、count和mode参数（使用嵌套Table）
+            // 获取不带引号的mode值用于条件判断
+            String modeWithoutQuotes = mode;
+            if(modeWithoutQuotes.startsWith("\"") && modeWithoutQuotes.endsWith("\"")){
+                modeWithoutQuotes = modeWithoutQuotes.substring(1, modeWithoutQuotes.length() - 1);
+            }
+            
+            // 第一排：根据mode决定显示哪些参数（使用嵌套Table）
             table.table(t -> {
                 t.setColor(table.color);
                 
-                // 获取不带引号的mode值用于条件判断
-                String modeWithoutQuotes = mode;
-                if(modeWithoutQuotes.startsWith("\"") && modeWithoutQuotes.endsWith("\"")){
-                    modeWithoutQuotes = modeWithoutQuotes.substring(1, modeWithoutQuotes.length() - 1);
-                }
-                
-                // 当mode不是visiting-unit时显示type和count参数
-                if(!"visiting-unit".equals(modeWithoutQuotes)) {
+                // 只有当mode不是visiting-unit时，才显示type和count参数
+                if(!modeWithoutQuotes.equals("visiting-unit")) {
                     t.add(" type ").left().self(this::param); // 显示标签，添加空格并添加左对齐和参数样式
 
                     // 创建可编辑的文本字段，用于输入或显示单位类型标识
@@ -100,7 +100,7 @@ public class LUnitBindGroupUI {
                     field(t, count, str -> count = str);
                 }
                 
-                // 添加mode标签和选择按钮
+                // 总是显示mode标签和选择按钮
                 t.add(" mode ").left().self(this::param); // 显示mode标签，添加空格并添加左对齐和参数样式
                 // 创建mode选择按钮
                 t.button(b -> {
@@ -113,11 +113,11 @@ public class LUnitBindGroupUI {
                     });
                     b.clicked(() -> {
                         // 用于比较的临时变量，去掉引号
-                        String modeWithoutQuotes = mode;
-                        if(modeWithoutQuotes.startsWith("\"") && modeWithoutQuotes.endsWith("\"")){
-                            modeWithoutQuotes = modeWithoutQuotes.substring(1, modeWithoutQuotes.length() - 1);
+                        String modeWithoutQuotesLocal = mode;
+                        if(modeWithoutQuotesLocal.startsWith("\"") && modeWithoutQuotesLocal.endsWith("\"")){
+                            modeWithoutQuotesLocal = modeWithoutQuotesLocal.substring(1, modeWithoutQuotesLocal.length() - 1);
                         }
-                        showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, modeWithoutQuotes, value -> {
+                        showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, modeWithoutQuotesLocal, value -> {
                             // 存储时添加引号
                             mode = "\"" + value + "\"";
                             rebuild(table); // 更新ui
