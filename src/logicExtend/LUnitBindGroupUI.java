@@ -50,10 +50,11 @@ public class LUnitBindGroupUI {
             table.left();
             
             // 获取不带引号的mode值用于条件判断
-            String modeWithoutQuotes = mode;
-            if(modeWithoutQuotes.startsWith("\"") && modeWithoutQuotes.endsWith("\"")){
-                modeWithoutQuotes = modeWithoutQuotes.substring(1, modeWithoutQuotes.length() - 1);
+            String tempMode = mode;
+            if(tempMode.startsWith("\"") && tempMode.endsWith("\"")){
+                tempMode = tempMode.substring(1, tempMode.length() - 1);
             }
+            final String modeWithoutQuotes = tempMode;
             
             // 第一排：根据mode决定显示哪些参数（使用嵌套Table）
             table.table(t -> {
