@@ -16,7 +16,7 @@ import mindustry.gen.Icon;
 import arc.Core;
 
 import static mindustry.Vars.*;
-import static mindustry.logic.LCanvas.*;
+import static mindustry.logic.LCanvas.tooltip;
 import static arc.Core.*;
 
 /** 单位绑定组逻辑指令UI类 */
