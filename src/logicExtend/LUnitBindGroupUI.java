@@ -179,7 +179,7 @@ public class LUnitBindGroupUI {
                             
                             // 创建频道列表内容表格容器 - 用于显示所有可选的频道项
                             Table channelList = new Table();
-                            channelList.defaults().left().marginLeft(0); // 设置默认左对齐
+                            channelList.defaults().left().marginLeft(16); // 设置默认左对齐
                             channelList.marginRight(20f); // 为滚动条留出空间
                         
                             // 添加频道列表项table容器
@@ -265,14 +265,13 @@ public class LUnitBindGroupUI {
                             scrollPane.setOverscroll(false, false); // 禁用过度滚动效果
                             // 组装主内容
                             // 1. 添加滚动的频道列表并设置大小(width=260f, height=260f)
-                            // 确保内容左对齐，不被滚动条挤压
-                            mainContent.add(scrollPane).padTop(5).width(260f).height(245f).left().uniformX();
+                            mainContent.add(scrollPane).padTop(5).width(260f).height(240f).left().uniformX();// 确保内容左对齐，不被滚动条挤压
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
-                            mainContent.add(addSection).padTop(5).width(260f).height(40f).left().uniformX();
+                            mainContent.add(addSection).padTop(5).width(260f).height(40f).left();
                             
                             // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
-                            menuTable.add(mainContent).width(260f).height(300f);
+                            menuTable.add(mainContent).width(270f).height(300f);
                         });
                     });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
