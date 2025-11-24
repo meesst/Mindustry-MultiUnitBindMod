@@ -180,6 +180,7 @@ public class LUnitBindGroupUI {
                             // 创建频道列表内容表格容器 - 用于显示所有可选的频道项
                             Table channelList = new Table();
                             channelList.defaults().left().marginLeft(0); // 设置默认左对齐
+                            channelList.marginRight(20f); // 为滚动条留出空间
                         
                             // 添加频道列表项table容器
                             final Runnable[] updateChannelListRef = new Runnable[1];
@@ -259,15 +260,16 @@ public class LUnitBindGroupUI {
                             
                             
                             // 创建ScrollPane来支持滚动 - 使频道列表可以垂直滚动
-                            ScrollPane scrollPane = new ScrollPane(channelList);
+                            ScrollPane scrollPane = new ScrollPane(channelList, Styles.smallPane); // 使用smallPane样式，滚动条更薄
                             scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
-                            scrollPane.defaults().left().marginLeft(0); // 设置默认左对齐
+                            scrollPane.setOverscroll(false, false); // 禁用过度滚动效果
                             // 组装主内容
-                            // 1. 添加滚动的频道列表并设置大小(width=240f, height=220f)
-                            mainContent.add(scrollPane).padTop(5).width(260f).height(215f).left();
+                            // 1. 添加滚动的频道列表并设置大小(width=260f, height=260f)
+                            // 确保内容左对齐，不被滚动条挤压
+                            mainContent.add(scrollPane).width(260f).height(260f).left().uniformX();
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
-                            mainContent.add(addSection).padTop(5).width(260f).height(65f).left();
+                            mainContent.add(addSection).width(260f).height(40f).left();
                             
                             // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
                             menuTable.add(mainContent).width(260f).height(300f);
