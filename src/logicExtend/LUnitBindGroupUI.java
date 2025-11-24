@@ -204,7 +204,7 @@ public class LUnitBindGroupUI {
                                             UnitBindGroupStatement.this.group = "\"" + channel + "\"";
                                             rebuild(table);
                                             hide.run();
-                                        }).size(100, 40).padRight(5).left()
+                                        }).size(160, 40).padRight(5).left()
                                          .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup);
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
@@ -231,14 +231,14 @@ public class LUnitBindGroupUI {
                             
                             // 创建自定义添加新频道的部分table - 用于添加新的频道分组
                             Table addSection = new Table();
-                            addSection.defaults().left().marginLeft(0); // 设置默认左对齐
+                            addSection.defaults().left().marginLeft(0).marginRight(20f); // 设置默认左对齐
                             // 使用StringBuilder来存储临时的新频道名
                             StringBuilder newChannelBuilder = new StringBuilder();
                             // 创建可编辑的文本字段，用于输入新频道名
                             TextField newChannelField = field(addSection, newChannelBuilder.toString(), str -> {
                                 newChannelBuilder.setLength(0);
                                 newChannelBuilder.append(str);
-                            }).size(100, 40).color(t.color).left().get();
+                            }).size(160, 40).color(t.color).left().padRight(5).get();
                            
                             
                             addSection.button(btn -> {
@@ -266,10 +266,10 @@ public class LUnitBindGroupUI {
                             // 组装主内容
                             // 1. 添加滚动的频道列表并设置大小(width=260f, height=260f)
                             // 确保内容左对齐，不被滚动条挤压
-                            mainContent.add(scrollPane).width(260f).height(260f).left().uniformX();
+                            mainContent.add(scrollPane).padTop(5).width(260f).height(250f).left().uniformX();
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
-                            mainContent.add(addSection).width(260f).height(40f).left();
+                            mainContent.add(addSection).padTop(5).width(260f).height(40f).left();
                             
                             // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
                             menuTable.add(mainContent).width(260f).height(300f);
