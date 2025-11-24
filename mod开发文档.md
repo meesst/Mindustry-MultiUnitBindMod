@@ -102,6 +102,54 @@ Mindustry-MultiUnitBindMod/
 - 支持多种操作模式，包括单位捕获和控制
 - 通过变量系统将执行结果反馈给逻辑系统
 
+### 5. 指令标签多语言悬浮提示实现
+#### 核心实现机制
+- **实现原理**：利用Mindustry游戏的LCanvas.tooltip()静态方法为指令参数标签添加多语言悬浮提示
+- **关键类和方法**：
+  - `LStatement.param()`：为参数标签添加多语言悬浮提示的主要方法
+  - `LCanvas.tooltip()`：实际处理悬浮提示显示的底层方法
+  - `Core.bundle`：访问游戏多语言系统的核心实例
+
+#### 多语言键名构建规则
+- **键名格式**：`指令名.参数名`（例如：`radar.from`）
+- **自动构建**：param()方法内部会自动使用当前指令的名称和参数标签文本来构建多语言键
+- **实现细节**：通过`name().getText().trim()`获取指令名称，与参数标签文本结合
+
+#### 具体实现步骤
+1. **在LStatement子类中添加参数标签**
+   ```java
+   table.add(" 参数名 ").self(this::param); // 使用param()方法添加悬浮提示
+   ```
+
+2. **在语言包文件中添加翻译**
+   - 在项目的`assets/bundles/`目录下创建或修改对应语言的properties文件
+   - 格式：`指令名.参数名=参数说明文本`
+   - 示例（中文支持）：`radar.from=来源单位：指定要扫描的单位`
+
+3. **支持移动和桌面平台**
+   - 自动适配不同平台的交互方式
+   - 桌面版：鼠标悬停显示提示
+   - 移动版：长按显示提示
+
+#### 代码示例
+```java
+// 在自定义LStatement子类的build方法中
+@Override
+public void build(LCanvas canvas, Table table) {
+    // 添加带悬浮提示的参数标签
+    table.add(" from ").self(this::param);
+    fields(table, input -> from = input);
+    
+    table.add(" target ").self(this::param);
+    fields(table, input -> target = input);
+}
+
+// 在语言包文件(bundle_zh_CN.properties)中添加
+// 指令名.参数名=参数说明文本
+customcmd.from=来源参数：指定数据源
+customcmd.target=目标参数：指定目标位置
+```
+
 ## 版本兼容性
 - 当前开发版本基于 Mindustry v151.1
 - UI实现遵循游戏现有界面风格，确保视觉一致性
