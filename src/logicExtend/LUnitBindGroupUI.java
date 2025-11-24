@@ -62,7 +62,7 @@ public class LUnitBindGroupUI {
                 
                 // 只有当mode不是visiting-unit时，才显示type和count参数
                 if(!modeWithoutQuotes.equals("visiting-unit")) {
-                    t.add(" type ").left().self(label -> this.param(label).tooltip("unitBindGroup.type")); // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    t.add(" type ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.type"); }); // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
 
                     // 创建可编辑的文本字段，用于输入或显示单位类型标识
                     TextField typeField = field(t, type, str -> type = str).get();
@@ -96,13 +96,13 @@ public class LUnitBindGroupUI {
                     }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸，调整间距为2
                     
                     // 添加count标签和文本输入框
-                    t.add(" count ").left().self(label -> this.param(label).tooltip("unitBindGroup.count")); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    t.add(" count ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.count"); }); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
                     // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
                     field(t, count, str -> count = str);
                 }
                 
                 // 总是显示mode标签和选择按钮
-                t.add(" mode ").left().self(label -> this.param(label).tooltip("unitBindGroup.mode")); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" mode ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.mode"); }); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建mode选择按钮
                 t.button(b -> {
                     // 显示时去掉引号，让UI显示更清晰
@@ -134,16 +134,16 @@ public class LUnitBindGroupUI {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                t.add(" unitVar ").left().self(label -> this.param(label).tooltip("unitBindGroup.unitVar")); // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" unitVar ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.unitVar"); }); // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示单位变量名
                 field(t, unitVar, str -> unitVar = str);
                 
-                t.add(" indexVar ").left().self(label -> this.param(label).tooltip("unitBindGroup.indexVar")); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" indexVar ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.indexVar"); }); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示索引变量名
                 field(t, indexVar, str -> indexVar = str);
                 
                 // 添加group标签和选择按钮
-                t.add(" group ").left().self(label -> this.param(label).tooltip("unitBindGroup.group")); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" group ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.group"); }); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建group选择按钮
                         t.button(b -> {
                             b.label(() -> {
