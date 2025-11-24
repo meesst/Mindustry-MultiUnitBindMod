@@ -179,8 +179,8 @@ public class LUnitBindGroupUI {
                             
                             // 创建频道列表内容表格容器 - 用于显示所有可选的频道项
                             Table channelList = new Table();
-                            channelList.defaults().size(160, 50).left(); // 设置默认左对齐和尺寸
-                            
+                            channelList.defaults().left().marginLeft(0); // 设置默认左对齐
+                        
                             // 添加频道列表项table容器
                             final Runnable[] updateChannelListRef = new Runnable[1];
                             updateChannelListRef[0] = new Runnable() {
@@ -203,7 +203,7 @@ public class LUnitBindGroupUI {
                                             UnitBindGroupStatement.this.group = "\"" + channel + "\"";
                                             rebuild(table);
                                             hide.run();
-                                        }).size(140, 40).padRight(5).left()
+                                        }).size(100, 40).padRight(5).left()
                                          .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup);
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
@@ -237,8 +237,8 @@ public class LUnitBindGroupUI {
                             TextField newChannelField = field(addSection, newChannelBuilder.toString(), str -> {
                                 newChannelBuilder.setLength(0);
                                 newChannelBuilder.append(str);
-                            }).color(t.color).get();
-                            newChannelField.setSize(100, 40);
+                            })size(100, 40).color(t.color).left().get();
+                           
                             
                             addSection.button(btn -> {
                                 btn.label(() -> "Add");
@@ -261,10 +261,9 @@ public class LUnitBindGroupUI {
                             // 创建ScrollPane来支持滚动 - 使频道列表可以垂直滚动
                             ScrollPane scrollPane = new ScrollPane(channelList);
                             scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
-                            
+                            scrollPane.defaults().left().marginLeft(0); // 设置默认左对齐
                             // 组装主内容
                             // 1. 添加滚动的频道列表并设置大小(width=240f, height=220f)
-                            mainContent.row();
                             mainContent.add(scrollPane).padTop(5).width(260f).height(215f).left();
                             mainContent.row();
                             // 2. 添加新频道输入区域，设置顶部边距和左对齐
