@@ -40,10 +40,11 @@ public class LUnitBindGroupUI {
         public String group = "stand-alone";
 
         /** 构建指令的UI界面 */
-        @Override
-        public void build(Table table) {
-            rebuild(table);
-        }
+    @Override
+    public void build(Table table) {
+        // 直接调用rebuild方法构建UI
+        rebuild(table);
+    }
         
         private void rebuild(Table table) {
             table.clearChildren();
@@ -55,6 +56,10 @@ public class LUnitBindGroupUI {
                 tempMode = tempMode.substring(1, tempMode.length() - 1);
             }
             final String modeWithoutQuotes = tempMode;
+            
+            // 为整个语句添加tooltip - 使用外层table的第一个单元格
+            Cell<?> firstCell = table.add("unitBindGroup").style(Styles.outlineLabel);
+            tooltip(firstCell, "lst.unitBindGroup");
             
             // 第一排：根据mode决定显示哪些参数（使用嵌套Table）
             table.table(t -> {
