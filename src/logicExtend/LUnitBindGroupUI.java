@@ -292,6 +292,12 @@ public class LUnitBindGroupUI {
         public LCategory category() {
             return LCategory.unit; // 指令归类为单位操作类别
         }
+        
+        /** 返回指令名称，用于tooltip和本地化 */
+        @Override
+        public String name() {
+            return "unitBindGroup"; // 返回小写格式的指令名称，用于与bundle_zh_CN.properties中的"lst.stringmerge"键名匹配
+        }
                
         /** 注册自定义逻辑指令 */
         public static void create() {
