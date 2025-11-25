@@ -346,8 +346,11 @@ public class LUnitBindGroupUI {
         }
     }
     
-    /** 单位绑定组指令执行器类 */
+    /** 单位绑定组指令执行器类 - 简化版本，委托给LUnitBindGroupRUN */
     public static class UnitBindGroupI implements LExecutor.LInstruction {
+        // 使用LUnitBindGroupRUN作为实际的执行器
+        private LUnitBindGroupRUN runExecutor;
+
         /** 单位类型变量 */
         public LVar type;
         /** 绑定的单位数量变量 */
@@ -369,47 +372,24 @@ public class LUnitBindGroupUI {
             this.unitVar = unitVar;
             this.indexVar = indexVar;
             this.group = group;
+            // 创建实际的执行器实例
+            this.runExecutor = new LUnitBindGroupRUN(type, count, mode, unitVar, indexVar, group);
         }
 
         /** 空构造函数 */
         public UnitBindGroupI() {
+            this.runExecutor = new LUnitBindGroupRUN();
         }
 
-        /** 执行指令的核心逻辑 */
+        /** 执行指令的核心逻辑 - 委托给LUnitBindGroupRUN */
         @Override
         public void run(LExecutor exec) {
-            // 初始化或更新绑定计数器数组
-            // binds数组用于记录每种单位类型的当前绑定索引
-            if(exec.binds == null || exec.binds.length != content.units().size) {
-                exec.binds = new int[content.units().size]; // 每种单位类型对应一个计数器
+            // 如果runExecutor为空，创建新实例
+            if(runExecutor == null) {
+                runExecutor = new LUnitBindGroupRUN(type, count, mode, unitVar, indexVar, group);
             }
-
-            //binding to `null` was previously possible, but was too powerful and exploitable
-            // 处理单位类型绑定（最常见的情况）
-            if(type.obj() instanceof UnitType type && type.logicControllable) {
-                // 获取同类型的所有单位列表
-                Seq<Unit> seq = exec.team.data().unitCache(type);
-
-                // 如果存在该类型的单位且seq不为null
-                if(seq != null && seq.size > 0) {
-                    // 确保计数器在有效范围内循环（防止索引越界）
-                    exec.binds[type.id] %= seq.size;
-                    // 绑定到当前索引对应的单位
-                    exec.unit.setconst(seq.get(exec.binds[type.id]));
-                    // 索引递增，下次执行时将绑定到下一个单位
-                    exec.binds[type.id]++;
-                } else {
-                    // 没有找到该类型的单位，清空当前绑定
-                    exec.unit.setconst(null);
-                }
-            } else if(type.obj() instanceof Unit u && (u.team == exec.team || exec.privileged) && u.type.logicControllable) {
-                // 处理直接绑定到特定单位对象的情况
-                // 条件：必须是同一队伍或拥有特权，且单位支持逻辑控制
-                exec.unit.setconst(u); // 绑定到指定的单位对象
-            } else {
-                // 其他情况：类型无效或不满足条件，清空当前绑定
-                exec.unit.setconst(null);
-            }
+            // 委托执行
+            runExecutor.run(exec);
         }
     }
 }
