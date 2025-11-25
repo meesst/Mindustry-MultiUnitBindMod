@@ -40,11 +40,10 @@ public class LUnitBindGroupUI {
         public String group = "stand-alone";
 
         /** 构建指令的UI界面 */
-    @Override
-    public void build(Table table) {
-        // 直接调用rebuild方法构建UI
-        rebuild(table);
-    }
+        @Override
+        public void build(Table table) {
+            rebuild(table);
+        }
         
         private void rebuild(Table table) {
             table.clearChildren();
@@ -56,10 +55,6 @@ public class LUnitBindGroupUI {
                 tempMode = tempMode.substring(1, tempMode.length() - 1);
             }
             final String modeWithoutQuotes = tempMode;
-            
-            // 为整个语句添加tooltip - 使用外层table的第一个单元格
-            Cell<?> firstCell = table.add("unitBindGroup").style(Styles.outlineLabel);
-            tooltip(firstCell, "lst.unitBindGroup");
             
             // 第一排：根据mode决定显示哪些参数（使用嵌套Table）
             table.table(t -> {
@@ -139,16 +134,16 @@ public class LUnitBindGroupUI {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                t.add(" unitVar ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.unitVar"); }); // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" unitVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.unitVar"); }); // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示单位变量名
                 field(t, unitVar, str -> unitVar = str);
                 
-                t.add(" indexVar ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.indexVar"); }); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" indexVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.indexVar"); }); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示索引变量名
                 field(t, indexVar, str -> indexVar = str);
                 
                 // 添加group标签和选择按钮
-                t.add(" group ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.group"); }); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" group ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.group"); }); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建group选择按钮
                         t.button(b -> {
                             b.label(() -> {
@@ -296,12 +291,6 @@ public class LUnitBindGroupUI {
         @Override
         public LCategory category() {
             return LCategory.unit; // 指令归类为单位操作类别
-        }
-        
-        /** 返回指令名称，用于tooltip和本地化 */
-        @Override
-        public String name() {
-            return "unitBindGroup"; // 返回小写格式的指令名称，用于与bundle_zh_CN.properties中的"lst.stringmerge"键名匹配
         }
                
         /** 注册自定义逻辑指令 */
