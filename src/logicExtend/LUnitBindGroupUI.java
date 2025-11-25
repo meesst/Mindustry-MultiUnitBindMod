@@ -226,14 +226,14 @@ public class LUnitBindGroupUI {
                                         // 只允许删除自定义频道，不允许删除默认频道
                                         if(!channel.equals("stand-alone")) {
                                             row.button(b -> {
-                                                b.label(() -> "Del");
-                                                b.clicked(() -> {
-                                                    UnitBindGroupStatement.channels.remove(channel);
-                                                    // 保存更新后的频道列表到设置中
-                                                    Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
-                                                    updateChannelListRef[0].run();
-                                                });
-                                            }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
+                                            b.label(() -> "Del");
+                                            b.clicked(() -> {
+                                                UnitBindGroupStatement.channels.remove(channel);
+                                                // 保存更新后的频道列表到设置中
+                                                Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
+                                                updateChannelListRef[0].run();
+                                            });
+                                        }, Styles.logict, () -> {}).self(c -> tooltip(c, "unitbindgroup.channel.del")).size(60, 40).color(t.color).padLeft(5);
                                         }
                                         
                                         channelList.add(row).left().row();
@@ -272,7 +272,7 @@ public class LUnitBindGroupUI {
                                         newChannelField.setText("");
                                     }
                                 });
-                            }, Styles.logict, () -> {}).size(60, 40).color(t.color).padLeft(5);
+                            }, Styles.logict, () -> {}).self(c -> tooltip(c, "unitbindgroup.channel.add")).size(60, 40).color(t.color).padLeft(5);
                             
                             
                             // 创建ScrollPane来支持滚动 - 使频道列表可以垂直滚动
