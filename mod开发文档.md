@@ -114,6 +114,7 @@ Mindustry-MultiUnitBindMod/
 - **键名格式**：`指令名.参数名`（例如：`radar.from`）
 - **自动构建**：param()方法内部会自动使用当前指令的名称和参数标签文本来构建多语言键
 - **实现细节**：通过`name().getText().trim()`获取指令名称，与参数标签文本结合
+- **重要注意事项**：Mindustry引擎的LCanvas.tooltip()方法会自动将键名转换为全小写并移除空格，因此在定义tooltip键名时必须使用全小写格式，不能使用驼峰命名法。例如：应使用`unitbindgroup.type`而不是`unitBindGroup.type`，否则会导致悬浮提示无法正常显示。
 
 #### 具体实现步骤
 1. **在LStatement子类中添加参数标签**
@@ -165,5 +166,6 @@ customcmd.target=目标参数：指定目标位置
 - 初始版本：创建基本项目结构和文档框架
 - v0.1.0：实现LUnitBindGroupUI核心功能，包括单位绑定组创建、管理和指令执行
 - v0.1.1：修复UI布局问题，优化频道列表显示，正确实现Table的边距设置
+- v0.1.2：修复tooltip不生效问题，将所有键名前缀从驼峰命名法`unitBindGroup`改为全小写`unitbindgroup`，并更新相关文档说明
 
 *注：本文档将在功能测试通过后持续更新，作为项目知识库使用。*

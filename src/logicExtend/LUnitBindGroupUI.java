@@ -118,13 +118,29 @@ public class LUnitBindGroupUI {
                         if(modeWithoutQuotesLocal.startsWith("\"") && modeWithoutQuotesLocal.endsWith("\"")){
                             modeWithoutQuotesLocal = modeWithoutQuotesLocal.substring(1, modeWithoutQuotesLocal.length() - 1);
                         }
-                        showSelect(b, new String[]{"Capture-unit", "visiting-unit"}, modeWithoutQuotesLocal, value -> {
-                            // 存储时添加引号
-                            mode = "\"" + value + "\"";
-                            rebuild(table); // 更新ui
-                        }, 1, cell -> cell.size(160, 50));// 下拉菜单尺寸
+                        // 自定义showSelect实现，为每个选项添加独立的悬浮提示
+                        showSelectTable(b, (selectTable, hide) -> {
+                            ButtonGroup<Button> group = new ButtonGroup<>();
+                            selectTable.defaults().size(160, 50);
+                            
+                            // 添加第一个选项
+                            selectTable.button("Capture-unit", Styles.logicTogglet, () -> {
+                                mode = """Capture-unit""";
+                                rebuild(table);
+                                hide.run();
+                            }).self(c -> tooltip(c, "unitbindgroup.mode.capture-unit")).checked("Capture-unit".equals(modeWithoutQuotesLocal)).group(group);
+                            
+                            selectTable.row();
+                            
+                            // 添加第二个选项
+                            selectTable.button("visiting-unit", Styles.logicTogglet, () -> {
+                                mode = """visiting-unit""";
+                                rebuild(table);
+                                hide.run();
+                            }).self(c -> tooltip(c, "unitbindgroup.mode.visiting-unit")).checked("visiting-unit".equals(modeWithoutQuotesLocal)).group(group);
+                        });
                     });
-                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); tooltip(t.getCells().peek(), "unitbindgroup.mode.select"); // 按钮样式和尺寸及悬浮提示
+                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
             
             // 换行到第二排
