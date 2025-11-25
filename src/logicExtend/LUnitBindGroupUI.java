@@ -346,11 +346,8 @@ public class LUnitBindGroupUI {
         }
     }
     
-    /** 单位绑定组指令执行器类 - 简化版本，委托给LUnitBindGroupRUN */
+    /** 单位绑定组指令执行器类 */
     public static class UnitBindGroupI implements LExecutor.LInstruction {
-        // 使用LUnitBindGroupRUN作为实际的执行器
-        private LUnitBindGroupRUN runExecutor;
-
         /** 单位类型变量 */
         public LVar type;
         /** 绑定的单位数量变量 */
@@ -372,24 +369,17 @@ public class LUnitBindGroupUI {
             this.unitVar = unitVar;
             this.indexVar = indexVar;
             this.group = group;
-            // 创建实际的执行器实例
-            this.runExecutor = new LUnitBindGroupRUN(type, count, mode, unitVar, indexVar, group);
         }
 
         /** 空构造函数 */
         public UnitBindGroupI() {
-            this.runExecutor = new LUnitBindGroupRUN();
         }
 
-        /** 执行指令的核心逻辑 - 委托给LUnitBindGroupRUN */
+        /** 执行指令的核心逻辑 */
         @Override
         public void run(LExecutor exec) {
-            // 如果runExecutor为空，创建新实例
-            if(runExecutor == null) {
-                runExecutor = new LUnitBindGroupRUN(type, count, mode, unitVar, indexVar, group);
-            }
-            // 委托执行
-            runExecutor.run(exec);
+            // 调用外部类LUnitBindGroupRUN中的run方法执行实际逻辑
+            LUnitBindGroupRUN.run(exec, type, count, mode, unitVar, indexVar, group);
         }
     }
 }
