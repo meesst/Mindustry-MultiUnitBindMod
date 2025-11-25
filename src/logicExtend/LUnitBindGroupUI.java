@@ -62,7 +62,7 @@ public class LUnitBindGroupUI {
                 
                 // 只有当mode不是visiting-unit时，才显示type和count参数
                 if(!modeWithoutQuotes.equals("visiting-unit")) {
-                    t.add(" type ").left().self(label -> { this.param(label); tooltip(label, "unitBindGroup.type"); }); // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    t.add(" type ").left().self(c -> tooltip(c, "unitBindGroup.type"));  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
 
                     // 创建可编辑的文本字段，用于输入或显示单位类型标识
                     TextField typeField = field(t, type, str -> type = str).get();
@@ -134,7 +134,7 @@ public class LUnitBindGroupUI {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                t.add(" unitVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.unitVar"); }); // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" unitVar ").left().self(c -> tooltip(c, "unitBindGroup.unitVar"));  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示单位变量名
                 field(t, unitVar, str -> unitVar = str);
                 
