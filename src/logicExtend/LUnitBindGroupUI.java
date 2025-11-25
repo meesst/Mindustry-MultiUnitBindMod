@@ -102,7 +102,7 @@ public class LUnitBindGroupUI {
                 }
                 
                 // 总是显示mode标签和选择按钮
-                t.add(" mode ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.mode"); }); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" mode ").left().self(c -> tooltip(c, "unitbindgroup.mode")); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建mode选择按钮
                 t.button(b -> {
                     // 显示时去掉引号，让UI显示更清晰
@@ -161,7 +161,7 @@ public class LUnitBindGroupUI {
                 field(t, indexVar, str -> indexVar = str);
                 
                 // 添加group标签和选择按钮
-                t.add(" group ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.group"); }); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" group ").left().self(c -> tooltip(c, "unitbindgroup.group")); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建group选择按钮
                         t.button(b -> {
                             b.label(() -> {
@@ -219,12 +219,12 @@ public class LUnitBindGroupUI {
                                         }
                                          
                                         row.button(channel, Styles.logicTogglet, () -> {
-                                            UnitBindGroupStatement.this.group = """ + channel + """;
+                                            UnitBindGroupStatement.this.group = "\"" + channel + "\"";
                                             rebuild(table);
                                             hide.run();
                                         }).size(160, 40).padRight(5).left()
                                          .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup)
-                                         .self(c -> tooltip(c, channel.equals("stand-alone") ? "独立单位组" : "共享单位组"));
+                                         .self(c -> tooltip(c, channel.equals("stand-alone") ? "unitbindgroup.channel.standalone" : "unitbindgroup.channel.shared"));
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
                                         if(!channel.equals("stand-alone")) {
