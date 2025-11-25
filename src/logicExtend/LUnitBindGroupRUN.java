@@ -2,7 +2,7 @@ package logicExtend;
 
 import arc.struct.Seq;
 import mindustry.gen.Unit;
-import mindustry.gen.UnitType;
+import mindustry.type.UnitType;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LVar;
 
