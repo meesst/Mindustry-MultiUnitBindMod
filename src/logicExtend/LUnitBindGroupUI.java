@@ -62,7 +62,7 @@ public class LUnitBindGroupUI {
                 
                 // 只有当mode不是visiting-unit时，才显示type和count参数
                 if(!modeWithoutQuotes.equals("visiting-unit")) {
-                    t.add(" type ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.type"); });  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    t.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
 
                     // 创建可编辑的文本字段，用于输入或显示单位类型标识
                     TextField typeField = field(t, type, str -> type = str).get();
@@ -113,32 +113,34 @@ public class LUnitBindGroupUI {
                         return mode;
                     });
                     b.clicked(() -> {
-                        // 用于比较的临时变量，去掉引号
-                        String modeWithoutQuotesLocal = mode;
-                        if(modeWithoutQuotesLocal.startsWith("\"") && modeWithoutQuotesLocal.endsWith("\"")){
-                            modeWithoutQuotesLocal = modeWithoutQuotesLocal.substring(1, modeWithoutQuotesLocal.length() - 1);
-                        }
-                        // 自定义showSelect实现，为每个选项添加独立的悬浮提示
-                        showSelectTable(b, (selectTable, hide) -> {
-                            ButtonGroup<Button> group = new ButtonGroup<>();
-                            selectTable.defaults().size(160, 50);
-                            
-                            // 添加第一个选项
-                            selectTable.button("Capture-unit", Styles.logicTogglet, () -> {
-                                mode = "Capture-unit";
-                                rebuild(table);
-                                hide.run();
-                            }).self(c -> tooltip(c, "unitbindgroup.mode.capture-unit")).checked("Capture-unit".equals(modeWithoutQuotesLocal)).group(group);
-                            
-                            selectTable.row();
-                            
-                            // 添加第二个选项
-                            selectTable.button("visiting-unit", Styles.logicTogglet, () -> {
-                                mode = "visiting-unit";
-                                rebuild(table);
-                                hide.run();
-                            }).self(c -> tooltip(c, "unitbindgroup.mode.visiting-unit")).checked("visiting-unit".equals(modeWithoutQuotesLocal)).group(group);
-                        });
+                            // 用于比较的临时变量，去掉引号
+                            final String modeWithoutQuotesLocal;
+                            if(mode.startsWith("\"") && mode.endsWith("\"")){
+                                modeWithoutQuotesLocal = mode.substring(1, mode.length() - 1);
+                            } else {
+                                modeWithoutQuotesLocal = mode;
+                            }
+                            // 自定义showSelect实现，为每个选项添加独立的悬浮提示
+                            showSelectTable(b, (selectTable, hide) -> {
+                                ButtonGroup<Button> group = new ButtonGroup<>();
+                                selectTable.defaults().size(160, 50);
+                                 
+                                // 添加第一个选项
+                                selectTable.button("Capture-unit", Styles.logicTogglet, () -> {
+                                    mode = "Capture-unit";
+                                    rebuild(table);
+                                    hide.run();
+                                }).self(c -> tooltip(c, "unitbindgroup.mode.capture-unit")).checked("Capture-unit".equals(modeWithoutQuotesLocal)).group(group);
+                                 
+                                selectTable.row();
+                                 
+                                // 添加第二个选项
+                                selectTable.button("visiting-unit", Styles.logicTogglet, () -> {
+                                    mode = "visiting-unit";
+                                    rebuild(table);
+                                    hide.run();
+                                }).self(c -> tooltip(c, "unitbindgroup.mode.visiting-unit")).checked("visiting-unit".equals(modeWithoutQuotesLocal)).group(group);
+                            });
                     });
                 }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
             }).left();
@@ -150,11 +152,11 @@ public class LUnitBindGroupUI {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                t.add(" unitVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.unitvar"); });  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" unitVar ").left().self(c -> tooltip(c, "unitbindgroup.unitvar"));  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示单位变量名
                 field(t, unitVar, str -> unitVar = str);
                 
-                t.add(" indexVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.indexvar"); }); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" indexVar ").left().self(c -> tooltip(c, "unitbindgroup.indexvar"));  // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示索引变量名
                 field(t, indexVar, str -> indexVar = str);
                 
