@@ -62,7 +62,7 @@ public class LUnitBindGroupUI {
                 
                 // 只有当mode不是visiting-unit时，才显示type和count参数
                 if(!modeWithoutQuotes.equals("visiting-unit")) {
-                    t.add(" type ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.type"); });  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    t.add(" type ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.type"); });  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
 
                     // 创建可编辑的文本字段，用于输入或显示单位类型标识
                     TextField typeField = field(t, type, str -> type = str).get();
@@ -96,13 +96,13 @@ public class LUnitBindGroupUI {
                     }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸，调整间距为2
                     
                     // 添加count标签和文本输入框
-                    t.add(" count ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.count"); }); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    t.add(" count ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.count"); }); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
                     // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
                     field(t, count, str -> count = str);
                 }
                 
                 // 总是显示mode标签和选择按钮
-                t.add(" mode ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.mode"); }); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" mode ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.mode"); }); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建mode选择按钮
                 t.button(b -> {
                     // 显示时去掉引号，让UI显示更清晰
@@ -124,7 +124,7 @@ public class LUnitBindGroupUI {
                             rebuild(table); // 更新ui
                         }, 1, cell -> cell.size(160, 50));// 下拉菜单尺寸
                     });
-                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); tooltip(t.getCells().peek(), "unitBindGroup.mode.select"); // 按钮样式和尺寸及悬浮提示
+                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); tooltip(t.getCells().peek(), "unitbindgroup.mode.select"); // 按钮样式和尺寸及悬浮提示
             }).left();
             
             // 换行到第二排
@@ -134,16 +134,16 @@ public class LUnitBindGroupUI {
             table.table(t -> {
                 t.setColor(table.color);
                 
-                t.add(" unitVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.unitVar"); });  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" unitVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.unitvar"); });  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示单位变量名
                 field(t, unitVar, str -> unitVar = str);
                 
-                t.add(" indexVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.indexVar"); }); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" indexVar ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.indexvar"); }); // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建可编辑的文本字段，用于输入或显示索引变量名
                 field(t, indexVar, str -> indexVar = str);
                 
                 // 添加group标签和选择按钮
-                t.add(" group ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitBindGroup.group"); }); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
+                t.add(" group ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.group"); }); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建group选择按钮
                         t.button(b -> {
                             b.label(() -> {
