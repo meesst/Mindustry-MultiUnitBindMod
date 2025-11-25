@@ -218,12 +218,18 @@ public class LUnitBindGroupUI {
                                             groupWithoutQuotes = groupWithoutQuotes.substring(0, groupWithoutQuotes.length() - 1);
                                         }
                                          
-                                        row.button(channel, Styles.logicTogglet, () -> {
+                                        Button channelButton = row.button(channel, Styles.logicTogglet, () -> {
                                             UnitBindGroupStatement.this.group = "\"" + channel + "\"";
                                             rebuild(table);
                                             hide.run();
                                         }).size(160, 40).padRight(5).left()
-                                         .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup);
+                                         .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup)
+                                         .get();
+                                        
+                                        // 为stand-alone选项添加悬浮提示
+                                        if(channel.equals("stand-alone")) {
+                                            tooltip(channelButton, "独立单位组不共享单位");
+                                        }
                                         
                                         // 只允许删除自定义频道，不允许删除默认频道
                                         if(!channel.equals("stand-alone")) {
