@@ -272,9 +272,9 @@ public class LUnitBindGroupRUN {
     
     //解绑方法：解绑指定单位
     public static void unbindUnit(Unit unit) {
-        // 调用单位的clearController方法重置控制器
+        // 调用单位的resetController方法重置控制器，与Mindustry源码LExecutor.java中unbind操作保持一致
         if (unit != null) {
-            unit.clearController();
+            unit.resetController();
         }
     }
     
