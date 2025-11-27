@@ -40,12 +40,9 @@ public class LUnitBindGroupRUN {
      * @param group 绑定组类型变量
      */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
-          /** 获取参数值
-        String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
-        String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
-         */
-        String modeStr = this.mode;
-        String groupStr = this.group;
+        // 获取参数值
+        String modeStr = builder.append(mode);
+        String groupStr = builder.append(group);
          
 
         // 根据mode分流处理
