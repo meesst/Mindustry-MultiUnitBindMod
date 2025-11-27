@@ -40,38 +40,33 @@ public class LUnitBindGroupRUN {
      * @param group 绑定组类型变量
      */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
-        // 获取参数值并进行详细的空值检查
-        String rawModeStr = "";
-        if (mode != null) {
-            if (mode.isobj) {
-                if (mode.objval != null) {
-                    rawModeStr = mode.objval.toString();
-                } else {
-                    rawModeStr = "[null_objval]";
-                }
-            } else {
-                rawModeStr = String.valueOf(mode.numval);
-            }
+        // 添加详细调试信息，检查mode参数状态
+        String debugInfo = "Mode参数调试信息:\n" +
+                          "mode.isobj: " + mode.isobj + "\n" +
+                          "mode.numval: " + mode.numval + "\n" +
+                          "mode.objval: " + (mode.objval != null ? mode.objval : "null") + "\n" +
+                          "mode.objval类型: " + (mode.objval != null ? mode.objval.getClass().getName() : "null") + "\n";
+        
+        // 获取参数值，确保即使objval为null也能显示合理信息
+        String modeStr = "";
+        if (mode.isobj) {
+            modeStr = mode.objval != null ? mode.objval.toString() : "[null object]";
         } else {
-            rawModeStr = "[null_mode]";
+            modeStr = String.valueOf(mode.numval);
         }
         
-        String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "[null_group]") : String.valueOf(group.numval);
+        String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
         
         // 预处理modeStr：去除引号、多余空格，并转换为小写进行比较
-        String modeStr = normalizeString(rawModeStr);
+        String originalModeStr = modeStr; // 保存原始值用于调试
+        modeStr = normalizeString(modeStr);
+        
+        debugInfo += "原始modeStr: '" + originalModeStr + "'\n" +
+                     "处理后modeStr: '" + modeStr + "'\n";
         
         // 标准化比较字符串
         String visitingUnitMode = "visiting-unit";
         String captureUnitMode = "capture-unit";
-        
-        // 添加默认值处理 - 当modeStr为空时使用默认模式
-        if (modeStr.isEmpty() || "[null_objval]".equals(modeStr) || "[null_mode]".equals(modeStr)) {
-            // 默认使用visiting-unit模式，同时在调试信息中说明
-            unitVar.setobj("空模式，使用默认visiting-unit");
-            handleVisitingUnitMode(exec, groupStr, unitVar, indexVar);
-            return;
-        }
         
         // 根据mode分流处理（使用小写比较）
         if (visitingUnitMode.equals(modeStr)) {
@@ -82,7 +77,7 @@ public class LUnitBindGroupRUN {
             handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
         } else {
             // 无效模式 - 添加详细信息帮助调试
-            unitVar.setobj("无效模式: " + modeStr + " (原始值: " + rawModeStr + ")");
+            unitVar.setobj("无效模式: " + modeStr + "\n" + debugInfo);
             indexVar.setnum(-1);
         }
     }
