@@ -43,6 +43,19 @@ public class LUnitBindGroupRUN {
         // 获取参数值 - 使用getter方法而非直接访问私有字段
         String modeStr = safeToString(mode);
         String groupStr = safeToString(group);
+        
+        // 根据mode分流处理
+        if ("visiting-unit".equals(modeStr)) {
+            // visiting-unit模式
+            handleVisitingUnitMode(exec, groupStr, unitVar, indexVar);
+        } else if ("Capture-unit".equals(modeStr)) {
+            // Capture-unit模式
+            handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
+        } else {
+            // 无效模式
+            unitVar.setobj("无效模式:" + modeStr);
+            indexVar.setnum(-1);
+        }
     }
     
     /** 安全地将LVar转换为字符串，处理所有可能的情况 */
@@ -59,21 +72,6 @@ public class LUnitBindGroupRUN {
             return String.valueOf(var.num());
         }
         return "";
-        
-
-        // 根据mode分流处理
-        if ("visiting-unit".equals(modeStr)) {
-            // visiting-unit模式
-            handleVisitingUnitMode(exec, groupStr, unitVar, indexVar);
-        } else if ("Capture-unit".equals(modeStr)) {
-            // Capture-unit模式
-            handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
-        } else {
-            // 无效模式
-            unitVar.setobj("无效模式:" + modeStr);
-            indexVar.setnum(-1);
-        }
-    }
     
     //处理visiting-unit模式
     private static void handleVisitingUnitMode(LExecutor exec, String groupStr, LVar unitVar, LVar indexVar) {
@@ -121,8 +119,8 @@ public class LUnitBindGroupRUN {
         UnitType unitType = null;
         int bindCount = 1;
         
-        if (type.isobj && type.objval instanceof UnitType) {
-            unitType = (UnitType) type.objval;
+        if (type.isobj() && type.obj() instanceof UnitType) {
+            unitType = (UnitType) type.obj();
         } else {
             unitVar.setobj("无效单位类型");
             indexVar.setnum(-1);
@@ -130,7 +128,7 @@ public class LUnitBindGroupRUN {
         }
         
         try {
-            bindCount = count.isobj ? Integer.parseInt(count.objval.toString()) : (int)count.numval;
+            bindCount = count.isobj() ? Integer.parseInt(count.obj().toString()) : (int)count.num();
             if (bindCount < 1) bindCount = 1;
         } catch (NumberFormatException | ClassCastException e) {
             bindCount = 1;
