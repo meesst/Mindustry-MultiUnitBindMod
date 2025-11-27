@@ -220,17 +220,14 @@ public class LUnitBindGroupRUN {
         
         int boundCount = 0;
         
-        // 遍历所有单位，绑定符合条件的单位
+        // 遍历所有单位，直接绑定（暂时跳过绑定规则检查，用于测试）
         for (Unit unit : allUnits) {
             if (boundCount >= count) break;
             
-            // 检查绑定规则
-            if (isUnitBindable(exec, unit)) {
-                // 预控制单位
-                preControlUnit(exec, unit);
-                pool.units.add(unit);
-                boundCount++;
-            }
+            // 预控制单位
+            preControlUnit(exec, unit);
+            pool.units.add(unit);
+            boundCount++;
         }
         
         return boundCount > 0;
