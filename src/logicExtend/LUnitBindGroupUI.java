@@ -129,7 +129,7 @@ public class LUnitBindGroupUI {
                                  
                                 // 添加第一个选项
                                 selectTable.button("Capture-unit", Styles.logicTogglet, () -> {
-                                    mode = "Capture-unit";
+                                    mode = "\"" + "Capture-unit" + "\"";
                                     rebuild(table);
                                     hide.run();
                                 }).self(c -> tooltip(c, "unitbindgroup.mode.capture-unit")).checked("Capture-unit".equals(modeWithoutQuotesLocal)).group(group);
@@ -138,7 +138,7 @@ public class LUnitBindGroupUI {
                                  
                                 // 添加第二个选项
                                 selectTable.button("visiting-unit", Styles.logicTogglet, () -> {
-                                    mode = "visiting-unit";
+                                    mode = "\"" + "visiting-unit" + "\"";
                                     rebuild(table);
                                     hide.run();
                                 }).self(c -> tooltip(c, "unitbindgroup.mode.visiting-unit")).checked("visiting-unit".equals(modeWithoutQuotesLocal)).group(group);
