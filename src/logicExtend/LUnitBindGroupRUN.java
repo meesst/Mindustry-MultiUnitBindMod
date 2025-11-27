@@ -166,8 +166,9 @@ public class LUnitBindGroupRUN {
         unitVar.setobj(unit);
         indexVar.setnum(pool.currentIndex + 1); // 索引从1开始
         
-        // 索引递增，下次执行时将返回下一个单位
+        // 索引递增，并立即确保在有效范围内循环
         pool.currentIndex++;
+        pool.currentIndex %= pool.units.size; // 立即取模，确保索引不会无限增加
     }
     
 
