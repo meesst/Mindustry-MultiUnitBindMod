@@ -41,8 +41,8 @@ public class LUnitBindGroupRUN {
      */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
         // 获取参数值
-        String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
-        String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
+        String modeStr = mode.isobj ? (mode.obj() != null ? mode.obj().toString() : "") : String.valueOf(mode.num());
+        String groupStr = group.isobj ? (group.obj() != null ? group.obj().toString() : "") : String.valueOf(group.num());
         
 
         // 根据mode分流处理
@@ -105,8 +105,8 @@ public class LUnitBindGroupRUN {
         UnitType unitType = null;
         int bindCount = 1;
         
-        if (type.isobj && type.objval instanceof UnitType) {
-            unitType = (UnitType) type.objval;
+        if (type.isobj && type.obj() instanceof UnitType) {
+            unitType = (UnitType) type.obj();
         } else {
             unitVar.setobj("无效单位类型");
             indexVar.setnum(-1);
@@ -114,7 +114,7 @@ public class LUnitBindGroupRUN {
         }
         
         try {
-            bindCount = count.isobj ? Integer.parseInt(count.objval.toString()) : (int)count.numval;
+            bindCount = count.isobj ? Integer.parseInt(count.obj().toString()) : (int)count.num();
             if (bindCount < 1) bindCount = 1;
         } catch (NumberFormatException | ClassCastException e) {
             bindCount = 1;
