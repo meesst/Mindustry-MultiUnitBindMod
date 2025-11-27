@@ -24,6 +24,14 @@ public class LUnitBindGroupUI {
     
     /** 单位绑定组指令类 */
     public static class UnitBindGroupStatement extends LStatement {
+        
+        /** 移除字符串两端的引号 */
+        private static String removeQuotes(String str) {
+            if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
+                return str.substring(1, str.length() - 1);
+            }
+            return str;
+        }
         /** 静态频道列表，用于持久化存储所有频道 */
         public static Seq<String> channels = null;
         /** 目标单位类型标识，默认绑定到多足单位类型 */
@@ -50,11 +58,7 @@ public class LUnitBindGroupUI {
             table.left();
             
             // 获取不带引号的mode值用于条件判断
-            String tempMode = mode;
-            if(tempMode.startsWith("\"") && tempMode.endsWith("\"")){
-                tempMode = tempMode.substring(1, tempMode.length() - 1);
-            }
-            final String modeWithoutQuotes = tempMode;
+            final String modeWithoutQuotes = removeQuotes(mode);
             
             // 第一排：根据mode决定显示哪些参数（使用嵌套Table）
             table.table(t -> {
@@ -97,8 +101,16 @@ public class LUnitBindGroupUI {
                     
                     // 添加count标签和文本输入框
                     t.add(" count ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.count"); }); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
-                    // 创建可编辑的文本字段，用于输入或显示绑定的单位数量
-                    field(t, count, str -> count = str);
+                    // 创建可编辑的文本字段，用于输入或显示绑定的单位数量，确保count值不小于1
+                    field(t, count, str -> {
+                        try {
+                            int value = Integer.parseInt(str);
+                            count = value < 1 ? "1" : str;
+                        } catch (NumberFormatException e) {
+                            // 如果输入不是数字，设置为默认值1
+                            count = "1";
+                        }
+                    });
                 }
                 
                 // 总是显示mode标签和选择按钮
@@ -106,20 +118,10 @@ public class LUnitBindGroupUI {
                 // 创建mode选择按钮
                 t.button(b -> {
                     // 显示时去掉引号，让UI显示更清晰
-                    b.label(() -> {
-                        if(mode.startsWith("\"") && mode.endsWith("\"")){
-                            return mode.substring(1, mode.length() - 1);
-                        }
-                        return mode;
-                    });
+                            b.label(() -> removeQuotes(mode));
                     b.clicked(() -> {
                             // 用于比较的临时变量，去掉引号
-                            final String modeWithoutQuotesLocal;
-                            if(mode.startsWith("\"") && mode.endsWith("\"")){
-                                modeWithoutQuotesLocal = mode.substring(1, mode.length() - 1);
-                            } else {
-                                modeWithoutQuotesLocal = mode;
-                            }
+                            final String modeWithoutQuotesLocal = removeQuotes(mode);
                             // 自定义showSelect实现，为每个选项添加独立的悬浮提示
                             showSelectTable(b, (selectTable, hide) -> {
                                 ButtonGroup<Button> group = new ButtonGroup<>();
@@ -164,17 +166,7 @@ public class LUnitBindGroupUI {
                 t.add(" group ").left().self(c -> tooltip(c, "unitbindgroup.group")); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
                 // 创建group选择按钮
                         t.button(b -> {
-                            b.label(() -> {
-                                // 显示时去掉引号
-                                String displayGroup = group;
-                                if(group.startsWith("\"")) {
-                                    displayGroup = group.substring(1);
-                                }
-                                if(displayGroup.endsWith("\"")) {
-                                    displayGroup = displayGroup.substring(0, displayGroup.length() - 1);
-                                }
-                                return displayGroup;
-                            });
+                            b.label(() -> removeQuotes(group));
                     b.clicked(() -> {
                         // 确保静态频道列表初始化
                         if(UnitBindGroupStatement.channels == null){
@@ -210,13 +202,7 @@ public class LUnitBindGroupUI {
                                         Table row = new Table();
                                         row.left().marginLeft(0); // 设置行左对齐并添加0像素左边距
                                         // 获取不带引号的group值用于比较
-                                        String groupWithoutQuotes = UnitBindGroupStatement.this.group;
-                                        if(groupWithoutQuotes.startsWith("\"")) {
-                                            groupWithoutQuotes = groupWithoutQuotes.substring(1);
-                                        }
-                                        if(groupWithoutQuotes.endsWith("\"")) {
-                                            groupWithoutQuotes = groupWithoutQuotes.substring(0, groupWithoutQuotes.length() - 1);
-                                        }
+                                        String groupWithoutQuotes = removeQuotes(UnitBindGroupStatement.this.group);
                                          
                                         row.button(channel, Styles.logicTogglet, () -> {
                                             UnitBindGroupStatement.this.group = "\"" + channel + "\"";
@@ -232,6 +218,8 @@ public class LUnitBindGroupUI {
                                             b.label(() -> "Del");
                                             b.clicked(() -> {
                                                 UnitBindGroupStatement.channels.remove(channel);
+                                                // 调用RUN类中的删除方法
+                                                LUnitBindGroupRUN.deleteUnitPool(channel);
                                                 // 保存更新后的频道列表到设置中
                                                 Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
                                                 updateChannelListRef[0].run();
@@ -267,6 +255,8 @@ public class LUnitBindGroupUI {
                                     if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
                                         newChannel = "unit-" + newChannel;
                                         UnitBindGroupStatement.channels.add(newChannel);
+                                        // 调用RUN类中的添加方法
+                                        LUnitBindGroupRUN.addUnitPool(newChannel);
                                         // 保存更新后的频道列表到设置中
                                         Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
                                         updateChannelList.run();
@@ -343,6 +333,15 @@ public class LUnitBindGroupUI {
         public void write(StringBuilder builder){
             // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + mode + 空格 + unitVar + 空格 + indexVar + 空格 + group
             builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(mode).append(" ").append(unitVar).append(" ").append(indexVar).append(" ").append(group);
+            
+            // 只有在Capture-unit模式下才调用重置方法
+            if ("Capture-unit".equals(mode)) {
+                // 获取不带引号的group值
+                String groupWithoutQuotes = removeQuotes(group);
+                
+                // 调用RUN类中的重置方法
+                LUnitBindGroupRUN.resetUnitPool(groupWithoutQuotes);
+            }
         }
     }
     
