@@ -40,10 +40,26 @@ public class LUnitBindGroupRUN {
      * @param group 绑定组类型变量
      */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
-        // 获取参数值
-        String modeStr = builder.append(mode);
-        String groupStr = builder.append(group);
-         
+        // 获取参数值 - 使用getter方法而非直接访问私有字段
+        String modeStr = safeToString(mode);
+        String groupStr = safeToString(group);
+    }
+    
+    /** 安全地将LVar转换为字符串，处理所有可能的情况 */
+    private static String safeToString(LVar var) {
+        if (var == null) {
+            return "";
+        }
+        
+        // 使用LVar的getter方法获取值
+        Object obj = var.obj();
+        if (obj != null) {
+            return obj.toString();
+        } else if (!var.isobj) {
+            return String.valueOf(var.num());
+        }
+        return "";
+        
 
         // 根据mode分流处理
         if ("visiting-unit".equals(modeStr)) {
@@ -54,7 +70,7 @@ public class LUnitBindGroupRUN {
             handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
         } else {
             // 无效模式
-            unitVar.setobj("无效模式: " + modeStr);
+            unitVar.setobj("无效模式:" + modeStr);
             indexVar.setnum(-1);
         }
     }
