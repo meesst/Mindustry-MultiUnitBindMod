@@ -155,6 +155,14 @@ public class LUnitBindGroupRUN {
     
    //索引处理逻辑
     private static void handleIndexLogic(LExecutor exec, UnitPool pool, LVar unitVar, LVar indexVar) {
+        // 确保单位池不为空且有单位
+        if (pool.units.size <= 0) {
+            unitVar.setobj("单位池为空");
+            indexVar.setnum(-1);
+            pool.currentIndex = 0; // 重置索引
+            return;
+        }
+        
         // 确保计数器在有效范围内循环（防止索引越界）
         pool.currentIndex %= pool.units.size;
         if (pool.currentIndex < 0) pool.currentIndex += pool.units.size;
@@ -166,9 +174,13 @@ public class LUnitBindGroupRUN {
         unitVar.setobj(unit);
         indexVar.setnum(pool.currentIndex + 1); // 索引从1开始
         
-        // 索引递增，并立即确保在有效范围内循环
+        // 索引递增，下次执行时将返回下一个单位
         pool.currentIndex++;
-        pool.currentIndex %= pool.units.size; // 立即取模，确保索引不会无限增加
+        
+        // 确保索引在单位池大小范围内，防止无限增长
+        if (pool.currentIndex >= pool.units.size) {
+            pool.currentIndex = 0;
+        }
     }
     
 
