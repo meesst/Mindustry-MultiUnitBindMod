@@ -40,76 +40,26 @@ public class LUnitBindGroupRUN {
      * @param group 绑定组类型变量
      */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
-        // 增强的mode值处理逻辑
-        String modeStr = "capture-unit"; // 默认模式
-        
-        // 详细检查mode变量的状态
-        if (mode != null) {
-            if (mode.isobj) {
-                // 处理对象类型
-                if (mode.objval != null) {
-                    modeStr = mode.objval.toString();
-                } else {
-                    // 关键修复：objval为null时，尝试从变量名推断
-                    if (mode.name != null) {
-                        // 检查变量名是否包含模式标识
-                        if (mode.name.toLowerCase().contains("visiting")) {
-                            modeStr = "visiting-unit";
-                        }
-                    }
-                }
-            } else {
-                // 处理数值类型
-                modeStr = String.valueOf(mode.numval);
-            }
-        }
-        
-        // 获取group值
-        String groupStr = "stand-alone"; // 默认组
-        if (group != null && group.isobj && group.objval != null) {
-            groupStr = group.objval.toString();
-        } else if (group != null) {
-            groupStr = String.valueOf(group.numval);
-        }
-        
-        // 预处理modeStr：去除引号、多余空格，并转换为小写进行比较
-        modeStr = normalizeString(modeStr);
-        
-        // 标准化比较字符串
-        String visitingUnitMode = "visiting-unit";
-        String captureUnitMode = "capture-unit";
-        
-        // 确保modeStr是有效的模式值
-        if (!(visitingUnitMode.equals(modeStr) || captureUnitMode.equals(modeStr))) {
-            // 如果不是有效的模式值，默认使用capture-unit
-            modeStr = captureUnitMode;
-        }
-        
-        // 根据mode分流处理（使用小写比较）
-        if (visitingUnitMode.equals(modeStr)) {
+          /** 获取参数值
+        String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
+        String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
+         */
+        String modeStr = mode
+        String groupStr = group
+         
+
+        // 根据mode分流处理
+        if ("visiting-unit".equals(modeStr)) {
             // visiting-unit模式
             handleVisitingUnitMode(exec, groupStr, unitVar, indexVar);
-        } else if (captureUnitMode.equals(modeStr)) {
+        } else if ("Capture-unit".equals(modeStr)) {
             // Capture-unit模式
             handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
         } else {
-            // 无效模式 - 使用默认的capture-unit模式
-            // 为了兼容性和防止错误，不再返回无效模式，而是直接使用默认模式
-            handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
+            // 无效模式
+            unitVar.setobj("无效模式: " + modeStr);
+            indexVar.setnum(-1);
         }
-    }
-    
-    //标准化字符串：去除引号、多余空格，并转换为小写
-    private static String normalizeString(String str) {
-        if (str == null) return "";
-        
-        // 去除引号
-        if (str.startsWith("\"") && str.endsWith("\"")) {
-            str = str.substring(1, str.length() - 1);
-        }
-        
-        // 去除多余空格并转换为小写
-        return str.trim().toLowerCase();
     }
     
     //处理visiting-unit模式
