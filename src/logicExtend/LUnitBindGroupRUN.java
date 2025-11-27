@@ -44,8 +44,8 @@ public class LUnitBindGroupRUN {
         String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
         String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
          */
-        String modeStr = mode
-        String groupStr = group
+        String modeStr = mode;
+        String groupStr = group;
          
 
         // 根据mode分流处理
