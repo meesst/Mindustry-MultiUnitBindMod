@@ -44,31 +44,40 @@ public class LUnitBindGroupRUN {
         String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
         String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
         
-        // 去掉modeStr可能存在的引号，确保比较一致性
-        modeStr = removeQuotes(modeStr);
+        // 预处理modeStr：去除引号、多余空格，并转换为小写进行比较
+        modeStr = normalizeString(modeStr);
         
-        // 根据mode分流处理
-        if ("visiting-unit".equals(modeStr)) {
+        // 标准化比较字符串
+        String visitingUnitMode = "visiting-unit";
+        String captureUnitMode = "capture-unit";
+        
+        // 根据mode分流处理（使用小写比较）
+        if (visitingUnitMode.equals(modeStr)) {
             // visiting-unit模式
             handleVisitingUnitMode(exec, groupStr, unitVar, indexVar);
-        } else if ("Capture-unit".equals(modeStr)) {
+        } else if (captureUnitMode.equals(modeStr)) {
             // Capture-unit模式
             handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
         } else {
-            // 无效模式
-            unitVar.setobj("无效模式");
+            // 无效模式 - 添加详细信息帮助调试
+            unitVar.setobj("无效模式: " + modeStr);
             indexVar.setnum(-1);
         }
     }
     
     /**
-     * 移除字符串两端的引号
+     * 标准化字符串：去除引号、多余空格，并转换为小写
      */
-    private static String removeQuotes(String str) {
-        if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
-            return str.substring(1, str.length() - 1);
+    private static String normalizeString(String str) {
+        if (str == null) return "";
+        
+        // 去除引号
+        if (str.startsWith("\"") && str.endsWith("\"")) {
+            str = str.substring(1, str.length() - 1);
         }
-        return str;
+        
+        // 去除多余空格并转换为小写
+        return str.trim().toLowerCase();
     }
     
     //处理visiting-unit模式
