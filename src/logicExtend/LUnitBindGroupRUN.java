@@ -205,13 +205,16 @@ public class LUnitBindGroupRUN {
     
      //绑定方法：绑定指定类型（type），指定数量（count）到指定组索引（group）的单位池里
     public static boolean bindUnits(LExecutor exec, UnitPool pool, UnitType type, int count) {
-        // 清空现有单位池
-        pool.units.clear();
+        
+        // 检查单位类型是否可被逻辑控制
+        if (!type.logicControllable) {
+            return false;
+        }
         
         // 获取同类型的所有单位
         Seq<Unit> allUnits = exec.team.data().unitCache(type);
         
-        if (allUnits == null || allUnits.isEmpty()) {
+        if (allUnits == null || !allUnits.any()) {
             return false;
         }
         
