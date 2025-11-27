@@ -44,6 +44,9 @@ public class LUnitBindGroupRUN {
         String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
         String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
         
+        // 去掉modeStr可能存在的引号，确保比较一致性
+        modeStr = removeQuotes(modeStr);
+        
         // 根据mode分流处理
         if ("visiting-unit".equals(modeStr)) {
             // visiting-unit模式
@@ -56,6 +59,16 @@ public class LUnitBindGroupRUN {
             unitVar.setobj("无效模式");
             indexVar.setnum(-1);
         }
+    }
+    
+    /**
+     * 移除字符串两端的引号
+     */
+    private static String removeQuotes(String str) {
+        if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
+            return str.substring(1, str.length() - 1);
+        }
+        return str;
     }
     
     //处理visiting-unit模式
