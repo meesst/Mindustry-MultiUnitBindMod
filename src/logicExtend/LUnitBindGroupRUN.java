@@ -68,10 +68,11 @@ public class LUnitBindGroupRUN {
         Object obj = var.obj();
         if (obj != null) {
             return obj.toString();
-        } else if (!var.isobj) {
+        } else if (!var.isobj()) {
             return String.valueOf(var.num());
         }
         return "";
+    }
     
     //处理visiting-unit模式
     private static void handleVisitingUnitMode(LExecutor exec, String groupStr, LVar unitVar, LVar indexVar) {
