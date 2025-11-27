@@ -6,8 +6,8 @@ import mindustry.gen.Unit;
 import mindustry.type.UnitType;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LVar;
-import mindustry.gen.LogicAI;
-import mindustry.entities.comp.UnitComp;
+import mindustry.ai.types.LogicAI;
+import mindustry.ai.types.CommandAI;
 
 import static mindustry.Vars.content;
 
@@ -41,8 +41,8 @@ public class LUnitBindGroupRUN {
      */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
         // 获取参数值
-        String modeStr = mode.str();
-        String groupStr = group.str();
+        String modeStr = mode.isobj ? (mode.objval != null ? mode.objval.toString() : "") : String.valueOf(mode.numval);
+        String groupStr = group.isobj ? (group.objval != null ? group.objval.toString() : "") : String.valueOf(group.numval);
         
         // 根据mode分流处理
         if ("visiting-unit".equals(modeStr)) {
@@ -53,8 +53,8 @@ public class LUnitBindGroupRUN {
             handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
         } else {
             // 无效模式
-            exec.setvar(unitVar, "无效模式");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("无效模式");
+            indexVar.setnum(-1);
         }
     }
     
@@ -65,22 +65,22 @@ public class LUnitBindGroupRUN {
         
         if (pool == null) {
             // 单位池不存在
-            exec.setvar(unitVar, "组未被使用");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("组未被使用");
+            indexVar.setnum(-1);
             return;
         }
         
         // 检查组的使用状态
         if (!pool.isUsed) {
-            exec.setvar(unitVar, "组未被使用");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("组未被使用");
+            indexVar.setnum(-1);
             return;
         }
         
         // 检查单位池是否为空
         if (pool.units.isEmpty()) {
-            exec.setvar(unitVar, "单位池为空");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("单位池为空");
+            indexVar.setnum(-1);
             return;
         }
         
@@ -95,8 +95,8 @@ public class LUnitBindGroupRUN {
         
         // 检查共享单位池是否已被使用（仅针对非stand-alone组）
         if (!"stand-alone".equals(groupStr) && pool.isUsed) {
-            exec.setvar(unitVar, "组已被使用");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("组已被使用");
+            indexVar.setnum(-1);
             return;
         }
         
@@ -104,18 +104,18 @@ public class LUnitBindGroupRUN {
         UnitType unitType = null;
         int bindCount = 1;
         
-        if (type.obj() instanceof UnitType) {
-            unitType = (UnitType) type.obj();
+        if (type.isobj && type.objval instanceof UnitType) {
+            unitType = (UnitType) type.objval;
         } else {
-            exec.setvar(unitVar, "无效单位类型");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("无效单位类型");
+            indexVar.setnum(-1);
             return;
         }
         
         try {
-            bindCount = Integer.parseInt(count.str());
+            bindCount = count.isobj ? Integer.parseInt(count.objval.toString()) : (int)count.numval;
             if (bindCount < 1) bindCount = 1;
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | ClassCastException e) {
             bindCount = 1;
         }
         
@@ -129,8 +129,8 @@ public class LUnitBindGroupRUN {
         if (!bindSuccess) {
             // 绑定失败，更新状态为未使用
             pool.isUsed = false;
-            exec.setvar(unitVar, "无符合条件单位");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("无符合条件单位");
+            indexVar.setnum(-1);
             return;
         }
         
@@ -143,8 +143,8 @@ public class LUnitBindGroupRUN {
         // 检查维护后单位池是否为空
         if (pool.units.isEmpty()) {
             pool.isUsed = false;
-            exec.setvar(unitVar, "单位池为空");
-            exec.setvar(indexVar, -1);
+            unitVar.setobj("单位池为空");
+            indexVar.setnum(-1);
             return;
         }
         
@@ -162,8 +162,8 @@ public class LUnitBindGroupRUN {
         Unit unit = pool.units.get(pool.currentIndex);
         
         // 设置返回值
-        exec.setvar(unitVar, unit);
-        exec.setvar(indexVar, pool.currentIndex + 1); // 索引从1开始
+        unitVar.setobj(unit);
+        indexVar.setnum(pool.currentIndex + 1); // 索引从1开始
         
         // 索引递增，下次执行时将返回下一个单位
         pool.currentIndex++;
@@ -251,8 +251,7 @@ public class LUnitBindGroupRUN {
         }
         
         // 检查是否受命令系统控制
-        // 这里简化处理，具体实现需要参考游戏源代码
-        if (unit.controller() instanceof mindustry.gen.CommandAI) {
+        if (unit.controller() instanceof CommandAI) {
             return false;
         }
         
@@ -264,15 +263,19 @@ public class LUnitBindGroupRUN {
     private static void preControlUnit(LExecutor exec, Unit unit) {
         // 创建LogicAI实例并设置为单位控制器
         LogicAI la = new LogicAI();
-        la.controller = exec.building;
+        if (exec.build != null) {
+            la.controller = exec.build;
+        }
         unit.controller(la);
     }
     
     
     //解绑方法：解绑指定单位
     public static void unbindUnit(Unit unit) {
-        // 调用unit.resetController()方法重置控制器
-        unit.resetController();
+        // 调用单位的clearController方法重置控制器
+        if (unit != null) {
+            unit.clearController();
+        }
     }
     
 
@@ -328,7 +331,8 @@ public class LUnitBindGroupRUN {
             
             // 2. 控制方判断
             if (!(unit.controller() instanceof LogicAI) || 
-                ((LogicAI)unit.controller()).controller != exec.building) {
+                exec.build == null || 
+                ((LogicAI)unit.controller()).controller != exec.build) {
                 toRemove.add(unit);
                 continue;
             }
