@@ -3,42 +3,31 @@ package logicExtend;
 import arc.struct.Seq;
 import arc.struct.ObjectMap;
 import mindustry.gen.Unit;
+import mindustry.gen.Building;
 import mindustry.type.UnitType;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LVar;
 import mindustry.ai.types.LogicAI;
-import mindustry.ai.types.CommandAI;
-
-import static mindustry.Vars.content;
 
 //单位绑定组指令执行器实现类
-//提供单位绑定的核心运行逻辑
 public class LUnitBindGroupRUN {
-     //单位池数据结构，包含单位列表和使用状态
+    //单位池数据结构
     public static class UnitPool {
         public Seq<Unit> units = new Seq<>();
         public boolean isUsed = false;
         public int currentIndex = 0;
         public UnitType type;
         public String groupId;
+        public Building controller; // 控制者属性
     }
     
-    //共享单位池存储，key为groupId
+    //共享单位池存储
     private static final ObjectMap<String, UnitPool> sharedPools = new ObjectMap<>();
     
-    //独立单位池存储，key为exec的唯一标识
+    //独立单位池存储
     private static final ObjectMap<Integer, ObjectMap<String, UnitPool>> standalonePools = new ObjectMap<>();
 
-    /**
-     * 执行单位绑定的核心逻辑
-     * @param exec 逻辑执行器
-     * @param type 单位类型变量
-     * @param count 绑定数量变量
-     * @param mode 绑定模式变量
-     * @param unitVar 单位变量引用
-     * @param indexVar 索引变量引用
-     * @param group 绑定组类型变量
-     */
+    /** 执行单位绑定的核心逻辑 */
     public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
         // 获取参数值
         String modeStr = mode.isobj ? (mode.obj() != null ? mode.obj().toString() : "") : String.valueOf(mode.num());
@@ -86,7 +75,7 @@ public class LUnitBindGroupRUN {
         }
         
         // 执行索引处理逻辑
-        handleIndexLogic(exec, pool, unitVar, indexVar);
+        handleIndexLogic(pool, unitVar, indexVar);
     }
     
     //处理Capture-unit模式
@@ -96,9 +85,12 @@ public class LUnitBindGroupRUN {
         
         // 检查共享单位池是否已被使用（仅针对非stand-alone组）
         if (!"stand-alone".equals(groupStr) && pool.isUsed) {
-            unitVar.setobj("组已被使用");
-            indexVar.setnum(-1);
-            return;
+            // 检查控制者是否是当前逻辑处理器
+            if (pool.controller != exec.build) {
+                unitVar.setobj("组已被使用");
+                indexVar.setnum(-1);
+                return;
+            }
         }
         
         // 获取单位类型和数量
@@ -124,22 +116,8 @@ public class LUnitBindGroupRUN {
         pool.type = unitType;
         pool.groupId = groupStr;
         
-        // 调用绑定方法绑定单位到池中
-        boolean bindSuccess = bindUnits(exec, pool, unitType, bindCount);
-        
-        if (!bindSuccess) {
-            // 绑定失败，更新状态为未使用
-            pool.isUsed = false;
-            unitVar.setobj("无符合条件单位");
-            indexVar.setnum(-1);
-            return;
-        }
-        
-        // 绑定成功，更新状态为已使用
-        pool.isUsed = true;
-        
         // 单位池维护
-        maintainUnitPool(exec, pool);
+        maintainUnitPool(exec, pool, unitType, bindCount);
         
         // 检查维护后单位池是否为空
         if (pool.units.isEmpty()) {
@@ -150,19 +128,11 @@ public class LUnitBindGroupRUN {
         }
         
         // 执行索引处理逻辑
-        handleIndexLogic(exec, pool, unitVar, indexVar);
+        handleIndexLogic(pool, unitVar, indexVar);
     }
     
    //索引处理逻辑
-    private static void handleIndexLogic(LExecutor exec, UnitPool pool, LVar unitVar, LVar indexVar) {
-        // 确保单位池不为空且有单位
-        if (pool.units.size <= 0) {
-            unitVar.setobj("单位池为空");
-            indexVar.setnum(-1);
-            pool.currentIndex = 0; // 重置索引
-            return;
-        }
-        
+    private static void handleIndexLogic(UnitPool pool, LVar unitVar, LVar indexVar) {
         // 确保计数器在有效范围内循环（防止索引越界）
         pool.currentIndex %= pool.units.size;
         if (pool.currentIndex < 0) pool.currentIndex += pool.units.size;
@@ -176,11 +146,6 @@ public class LUnitBindGroupRUN {
         
         // 索引递增，下次执行时将返回下一个单位
         pool.currentIndex++;
-        
-        // 确保索引在单位池大小范围内，防止无限增长
-        if (pool.currentIndex >= pool.units.size) {
-            pool.currentIndex = 0;
-        }
     }
     
 
@@ -227,20 +192,23 @@ public class LUnitBindGroupRUN {
         // 获取同类型的所有单位
         Seq<Unit> allUnits = exec.team.data().unitCache(type);
         
-        if (allUnits == null || !allUnits.any()) {
+        if (allUnits == null || allUnits.isEmpty()) {
             return false;
         }
         
         int boundCount = 0;
         
-        // 遍历所有单位，直接绑定（暂时跳过绑定规则检查，用于测试）
+        // 遍历所有单位，按照绑定规则绑定
         for (Unit unit : allUnits) {
             if (boundCount >= count) break;
             
-            // 预控制单位
-            preControlUnit(exec, unit);
-            pool.units.add(unit);
-            boundCount++;
+            // 检查单位是否可绑定
+            if (isUnitBindable(exec, unit)) {
+                // 预控制单位
+                preControlUnit(exec, unit);
+                pool.units.add(unit);
+                boundCount++;
+            }
         }
         
         return boundCount > 0;
@@ -275,12 +243,24 @@ public class LUnitBindGroupRUN {
     
     //预控制单位（将单位的控制方设置为当前逻辑处理器）
     private static void preControlUnit(LExecutor exec, Unit unit) {
-        // 创建LogicAI实例并设置为单位控制器
-        LogicAI la = new LogicAI();
-        if (exec.build != null) {
-            la.controller = exec.build;
+        // 检查单位是否有效且可被逻辑控制
+        if (unit.isValid() && unit.controller().isLogicControllable()) {
+            LogicAI la;
+            if (unit.controller() instanceof LogicAI) {
+                la = (LogicAI) unit.controller();
+            } else {
+                la = new LogicAI();
+                unit.controller(la);
+                // 清除旧状态
+                unit.mineTile = null;
+                unit.clearBuilding();
+            }
+            
+            // 设置控制器
+            if (exec.build != null) {
+                la.controller = exec.build;
+            }
         }
-        unit.controller(la);
     }
     
     
@@ -304,6 +284,7 @@ public class LUnitBindGroupRUN {
             // 清空单位池并设置为未使用状态
             pool.units.clear();
             pool.isUsed = false;
+            pool.controller = null;
             pool.currentIndex = 0;
         }
     }
@@ -314,6 +295,7 @@ public class LUnitBindGroupRUN {
             UnitPool newPool = new UnitPool();
             newPool.groupId = groupId;
             newPool.isUsed = false;
+            newPool.controller = null;
             sharedPools.put(groupId, newPool);
         }
     }
@@ -332,7 +314,7 @@ public class LUnitBindGroupRUN {
     }
     
     //单位池维护方法
-    public static void maintainUnitPool(LExecutor exec, UnitPool pool) {
+    public static void maintainUnitPool(LExecutor exec, UnitPool pool, UnitType type, int count) {
         // 创建一个临时列表用于存储需要移除的单位
         Seq<Unit> toRemove = new Seq<>();
         
@@ -352,7 +334,7 @@ public class LUnitBindGroupRUN {
             }
             
             // 3. 单位类型判断
-            if (pool.type != null && unit.type != pool.type) {
+            if (unit.type != type) {
                 toRemove.add(unit);
             }
         }
@@ -363,9 +345,18 @@ public class LUnitBindGroupRUN {
             unbindUnit(unit);
         }
         
-        // 如果单位池为空，更新使用状态
+        // 检查池中单位数量是否满足count要求，如果不足则补充
+        if (pool.units.size < count) {
+            bindUnits(exec, pool, type, count - pool.units.size);
+        }
+        
+        // 更新单位池使用状态和控制者
         if (pool.units.isEmpty()) {
             pool.isUsed = false;
+            pool.controller = null;
+        } else {
+            pool.isUsed = true;
+            pool.controller = exec.build;
         }
     }
 }

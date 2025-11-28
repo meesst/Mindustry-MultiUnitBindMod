@@ -36,21 +36,17 @@ run方法是单位绑定系统的主执行方法，根据不同的模式执行�
   │           │     │     ├─► 已被使用：unitVar="组已被使用"，indexVar=-1，返回
   │           │     │     └─► 未被使用：使用该共享单位池
   │           │
-  │           ├─► 调用绑定方法绑定单位到池中
-  │           │     ├─► 绑定成功（至少有一个单位）：
-  │           │     │     ├─► 更新指定组的使用状态为已使用
-  │           │     │     └─► 继续
-  │           │     └─► 绑定失败（无符合条件单位）：
-  │           │           ├─► 更新指定组的使用状态为未使用
-  │           │           └─► unitVar="无符合条件单位"，indexVar=-1，返回
-  │           │
   │           └─► 单位池维护
-  │                 ├─► 维护单位池，确保池中单位满足type和绑定规则条件
+  │                 ├─► 检查池中单位数量是否满足count要求
+  │                 │     └─► 不满足：调用绑定方法补充单位
+  │                 ├─► 维护单位池，单位的存活和控制方的判断
   │                 └─► 检查维护后单位池是否为空
   │                       ├─► 单位池为空：
   │                       │     ├─► 更新指定组的使用状态为未使用
   │                       │     └─► unitVar="单位池为空"，indexVar=-1，返回
-  │                       └─► 单位池非空：继续
+  │                       └─► 单位池非空：
+  │                             ├─► 更新指定组的使用状态为已使用
+  │                             └─► 继续
   │
   ├─► 2. 索引处理逻辑（适用于所有单位池，包括独立池和共享池）
   │     ├─► 获取单位池当前索引
@@ -78,12 +74,9 @@ run方法是单位绑定系统的主执行方法，根据不同的模式执行�
 - **单位池管理**：
   - 独立单位池：每个逻辑块独有，直接获取
   - 共享单位池：多逻辑块共享，由UI玩家手动创建和管理，只需检查是否已被使用
-- **单位绑定**：根据绑定规则绑定满足条件的单位
 - **单位池维护**：
-  - 维护单位池，确保池中单位满足type和绑定规则条件
-  - 检查维护后单位池是否为空
-  - 若为空，更新组使用状态为未使用，并返回错误
-- **状态管理**：根据绑定和维护结果动态更新单位池的使用状态
+  - 参考单位池维护方法
+- **状态管理**：仅根据单位池维护结果动态更新单位池的使用状态和控制者
 
 ### 3. 索引处理逻辑（适用于所有单位池）
 ```
@@ -108,12 +101,11 @@ currentIndex++;
   - 已使用状态：表示该单位池已被某个逻辑块绑定了单位并正在使用
   - 未使用状态：表示该单位池没有被绑定单位或已被重置
 - **状态转换条件**：
-  - 从未使用→已使用：在Capture-unit模式下，成功绑定至少一个单位后
+  - 从未使用→已使用：在Capture-unit模式下，单位池维护后非空
   - 从已使用→未使用：
-    1. 在Capture-unit模式下，绑定失败（无符合条件单位）
-    2. 在Capture-unit模式下，单位池维护后为空
-    3. 通过UI手动调用重置方法
-    4. 通过UI手动调用删除方法
+    1. 在Capture-unit模式下，单位池维护后为空
+    2. 通过UI手动调用重置方法
+    3. 通过UI手动调用删除方法
 - **模式差异**：
   - visiting-unit模式：仅检查和使用已有状态，不改变单位池的使用状态
   - Capture-unit模式：根据绑定和维护结果动态更新单位池的使用状态
@@ -127,23 +119,28 @@ currentIndex++;
 - 正常情况下indexVar返回的索引值从1开始递增
 
 # 绑定方法：绑定指定类型（type），指定数量（count）到指定组索引（group）的单位池里。
+> 注：绑定方法现在作为单位池维护的一部分被调用，当池中单位数量不满足count要求时自动执行。
+## 绑定规则：
+   1. 获取单位对象：
+     - 参考`D:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\logic\LExecutor.java`第137-175行的UnitBindI方法
+   2. 单位对象必须未被其他逻辑处理器控制
+     - 参考`D:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\UnitComp.java`第281-285行的controlled方法，单位有效但是返回0的情况
 1. 使用绑定规则绑定指定类型和指定数量单位到单位池
 2. 预控制单位（将单位的控制方设置为当前逻辑处理器）
-- 实现原理：通过创建LogicAI实例并设置为单位控制器，参考`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\logic\LExecutor.java`文件中第288-297行的`checkLogicAI`方法
-- 设置流程：创建新的LogicAI对象，将其controller属性设置为当前逻辑处理器的building，然后调用unit.controller(LogicAI实例)方法
-- 具体实现：`unit.controller(la)`（第297行）将LogicAI设置为单位的控制器，同时清除单位的旧状态
-## 绑定规则：绑定满足以下条件的单位
-1. 单位必须是有效的（即未死亡且已添加到游戏世界中）
-   - 参考源代码：`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\HealthComp.java` 第16行的 `isValid()` 方法
-2. 单位未受到任何有效控制（即sensor指令中controlled分支返回值为0）
-   - 参考源代码：`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\UnitComp.java` 第281行的 `sense(LAccess sensor)` 方法中的 `controlled` 分支
-   - 不受逻辑处理器控制（不是LogicAI类型）
-   - 不受玩家控制（不是Player类型）
-   - 不受命令系统控制或没有活动命令（不是CommandAI类型或CommandAI没有活动命令）
+   - 参考`D:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\logic\LExecutor.java` 第287行-306行的 `checkLogicAI` 方法
+   - 实现：调用该方法将单位控制权转移给逻辑处理器
 
-# 解绑方法：解绑指定组索引的单位池里的指定单位，参考游戏源代码中的实现：
-1. 解绑实现原理：参考`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\logic\LExecutor.java`第336行的unbind指令实现 - 调用unit.resetController()方法
-2. resetController方法详情：参考`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\UnitComp.java`第443-445行 - 调用controller(type.createController(self()))，将单位控制器重置为单位类型默认的控制器，使单位恢复为标准AI控制
+3. 绑定结果处理：
+   - 绑定成功：添加单位到对应的组索引（group）单位池里
+   - 绑定失败：返回0（不添加单位到对应的组索引（group）单位池里）
+
+# 解绑方法：解绑指定组索引（group）单位池里的所有单位或指定单位。
+基础方法：参考`D:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\logic\LExecutor.java`第336-338行的unbind方法
+1. 解绑所有单位：解绑指定组索引单位池里的所有单位
+2. 解绑指定单位：解绑指定单位（通常是单位死亡或不再满足条件时调用）
+3. 解绑后的单位处理：
+   - 重置单位控制权
+   - 从单位池中移除单位
 
 # 重置方法：重置指定组索引的单位池，调用解绑方法解绑指定组索引的单位池里面所有单位。
 
@@ -152,11 +149,39 @@ currentIndex++;
 # 删除方法：删除指定组索引的单位池，并调用解绑方法解绑单位池里面的所有单位。
 
 # 单位池维护方法：单位池维护基于以下关键条件，确保单位池中的单位满足type和绑定规则条件，并在必要时更新使用状态
-1. 单位存活判断：
+## 核心功能：
+1. 不足时调用绑定方法补充单位
+2. 清理不符合条件的单位
+3. 检查池中单位数量是否满足count要求
+4. 根据维护结果更新使用状态
+
+1. 单位数量检查与补充：
+- 检查池中单位数量是否满足count要求
+- 如果不足，调用绑定方法补充单位到池中
+
+
+2. 单位存活判断：
 - 参考源代码：`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\HealthComp.java` 第16行的 `isValid()` 方法
-   - 当单位已死亡时（isValid()=false），需要调用解绑方法从单位池中移除
-2. 控制方判断：参考`d:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\UnitComp.java`第301-302行的senseObject方法中controller分支的实现 - 如果单位无效则返回null - 如果控制器是LogicAI类型则返回log.controller（逻辑处理器） - 否则返回单位自身
-   - 当单位被其他处理器控制或不再受当前处理器控制时，需要调用解绑方法从单位池中移除
-3. 单位类型判断：
-   - 当单位类型不再匹配type参数时，需要调用解绑方法从单位池中移除
+- 判断条件：单位是否存活
+- 实现：使用解绑方法从单位池里面过滤掉无效单位
+
+3. 单位类型和控制方判断：
+ - 参考`D:\Users\zhang\MYcode\Mindustry\Mindustry-151.1\core\src\mindustry\entities\comp\UnitComp.java`第281-285行的controlled方法，返回的控制方和builder.getVar("@this")进行比较
+- 判断条件：
+  - 单位的控制方是否等于当前逻辑处理器
+- 实现：使用解绑方法从单位池里面过滤掉无效单位
+
+
+
+4. 单位池使用状态更新：
+- 维护后单位池为空：更新使用状态为未使用，设置单位池的使用对象为null
+- 维护后单位池非空：更新使用状态为已使用，设置单位池的使用对象为当前逻辑处理器
+- 仅在Capture-unit模式下进行状态更新
+
+5. 特殊情况处理：
+- 单位池完全为空：返回空结果
+- 维护后单位池为空：更新使用状态为未使用并返回空结果
+
+- 重复绑定检查：确保不会重复绑定同一单位
+- 控制权冲突：当单位被其他逻辑处理器控制时，将其从单位池中移除
 
