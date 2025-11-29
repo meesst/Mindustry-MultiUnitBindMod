@@ -10,6 +10,7 @@ import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import arc.graphics.*;
+import mindustry.gen.*;
 import mindustry.gen.Icon;
 
 public class NestedLogicStatement extends LStatement {
@@ -56,6 +57,11 @@ public class NestedLogicStatement extends LStatement {
             stmt.write(builder);
             builder.append('\n');
         }
+    }
+    
+    @Override
+    public LCategory category() {
+        return LCategory.unknown;
     }
     
     // 更新预览
@@ -124,6 +130,9 @@ public class NestedLogicStatement extends LStatement {
             // 解析参数
             return stmt;
         });
+        
+        // 添加到所有语句列表，使其在游戏界面显示
+        LogicIO.allStatements.add(NestedLogicStatement::new);
     }
     
     // 嵌套逻辑指令
