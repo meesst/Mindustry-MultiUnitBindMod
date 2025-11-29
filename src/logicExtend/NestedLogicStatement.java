@@ -9,7 +9,8 @@ import mindustry.ui.dialogs.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
-import arc.graphics.Color;
+import arc.graphics.*;
+import arc.graphics.Icon;
 
 public class NestedLogicStatement extends LStatement {
     // 存储嵌套的逻辑语句
@@ -123,9 +124,6 @@ public class NestedLogicStatement extends LStatement {
             // 解析参数
             return stmt;
         });
-        
-        // 添加到所有语句列表
-        LogicIO.allStatements.add(NestedLogicStatement::new);
     }
     
     // 嵌套逻辑指令
