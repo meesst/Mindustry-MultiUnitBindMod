@@ -191,7 +191,7 @@ public class NestedLogicStatement extends LStatement {
                 
                 rebuild[0].run();
             }).grow();
-        }).fill().maxHeight(Core.graphics.getHeight() * 0.8f);
+        }).fill().maxHeight(graphics.getHeight() * 0.8f);
         
         dialog.addCloseButton();
         dialog.show();
