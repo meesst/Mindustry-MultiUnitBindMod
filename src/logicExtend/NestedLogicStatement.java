@@ -61,7 +61,7 @@ public class NestedLogicStatement extends LStatement {
     
     @Override
     public LCategory category() {
-        return LCategory.unknown;
+        return LCategoryExt.function;
     }
     
     // 更新预览
@@ -98,6 +98,11 @@ public class NestedLogicStatement extends LStatement {
         // 添加LCanvas到对话框
         dialog.cont.pane(canvas).size(800f, 600f);
         
+        // 添加添加指令按钮
+        dialog.buttons.button("添加指令", Icon.add, () -> {
+            showAddDialog(canvas, dialog);
+        }).size(150f, 50f);
+        
         // 添加保存按钮
         dialog.buttons.button("保存", () -> {
             // 保存嵌套的逻辑语句：从canvas到nestedStatements
@@ -119,6 +124,73 @@ public class NestedLogicStatement extends LStatement {
         dialog.buttons.button("取消", dialog::hide).size(150f, 50f);
         
         // 显示对话框
+        dialog.show();
+    }
+    
+    // 显示添加指令对话框
+    private void showAddDialog(LCanvas canvas, BaseDialog parentDialog) {
+        BaseDialog dialog = new BaseDialog("添加指令");
+        dialog.cont.table(table -> {
+            String[] searchText = {""};
+            Prov[] matched = {null};
+            Runnable[] rebuild = {() -> {}};
+            
+            table.background(Tex.button);
+            
+            // 搜索框
+            table.table(s -> {
+                s.image(Icon.zoom).padRight(8);
+                var search = s.field(null, text -> {
+                    searchText[0] = text;
+                    rebuild[0].run();
+                }).growX().get();
+                search.setMessageText("搜索指令");
+                
+                // 回车键自动添加第一个匹配项
+                search.keyDown(KeyCode.enter, () -> {
+                    if(!searchText[0].isEmpty() && matched[0] != null){
+                        canvas.add((LStatement)matched[0].get());
+                        dialog.hide();
+                    }
+                });
+            }).growX().padBottom(4).row();
+            
+            // 指令列表
+            table.pane(t -> {
+                rebuild[0] = () -> {
+                    t.clear();
+                    
+                    var text = searchText[0].toLowerCase();
+                    
+                    matched[0] = null;
+                    
+                    // 遍历所有可用的语句
+                    for(Prov<LStatement> prov : LogicIO.allStatements){
+                        LStatement example = prov.get();
+                        // 过滤条件：不是无效语句、没有隐藏、权限匹配
+                        if(example instanceof LStatements.InvalidStatement || example.hidden()) continue;
+                        
+                        // 搜索匹配
+                        if(!text.isEmpty() && !example.name().toLowerCase().contains(text) && !example.typeName().toLowerCase().contains(text)) continue;
+                        
+                        if(matched[0] == null) matched[0] = prov;
+                        
+                        // 添加指令按钮
+                        t.button(example.name(), Styles.logicTogglet, () -> {
+                            canvas.add(prov.get());
+                            dialog.hide();
+                        }).size(130f, 50f).top().left();
+                        
+                        // 每行显示3个按钮
+                        if(t.getChildren().size % 3 == 0) t.row();
+                    }
+                };
+                
+                rebuild[0].run();
+            }).grow();
+        }).fill().maxHeight(Core.graphics.getHeight() * 0.8f);
+        
+        dialog.addCloseButton();
         dialog.show();
     }
     
