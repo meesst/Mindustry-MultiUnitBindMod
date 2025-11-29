@@ -8,6 +8,7 @@ import mindustry.type.UnitType;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LVar;
 import mindustry.ai.types.LogicAI;
+import mindustry.ai.types.CommandAI;
 
 //单位绑定组指令执行器实现类
 public class LUnitBindGroupRUN {
