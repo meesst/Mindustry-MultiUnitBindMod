@@ -217,9 +217,6 @@ public class LUnitBindGroupRUN {
     
     //检查单位是否可绑定
     private static boolean isUnitBindable(LExecutor exec, Unit unit) {
-        // 临时注释掉所有检查，直接返回true
-        return true;
-        /*
         // 1. 单位必须是有效的（即未死亡且已添加到游戏世界中）
         if (!unit.isValid()) {
             return false;
@@ -236,13 +233,12 @@ public class LUnitBindGroupRUN {
             return false;
         }
         
-        // 检查是否受命令系统控制
-        if (unit.controller() instanceof CommandAI) {
+        // 检查是否受命令系统控制，只有当CommandAI有命令时才判断为不可绑定
+        if (unit.controller() instanceof CommandAI command && command.hasCommand()) {
             return false;
         }
         
         return true;
-        */
     }
     
     //预控制单位（将单位的控制方设置为当前逻辑处理器）
