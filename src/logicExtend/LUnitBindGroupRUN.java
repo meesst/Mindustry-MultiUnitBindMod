@@ -316,6 +316,11 @@ public class LUnitBindGroupRUN {
     
     //单位池维护方法
     public static void maintainUnitPool(LExecutor exec, UnitPool pool, UnitType type, int count) {
+        // 检查池中单位数量是否满足count要求，如果不足则补充单位
+        if (pool.units.size < count) {
+            bindUnits(exec, pool, type, count - pool.units.size);
+        }
+        
         // 创建一个临时列表用于存储需要移除的单位
         Seq<Unit> toRemove = new Seq<>();
         
@@ -344,11 +349,6 @@ public class LUnitBindGroupRUN {
         for (Unit unit : toRemove) {
             pool.units.remove(unit);
             unbindUnit(unit);
-        }
-        
-        // 检查池中单位数量是否满足count要求，如果不足则补充
-        if (pool.units.size < count) {
-            bindUnits(exec, pool, type, count - pool.units.size);
         }
         
         // 更新单位池使用状态和控制者
