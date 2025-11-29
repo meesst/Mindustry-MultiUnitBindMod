@@ -1,0 +1,125 @@
+package logicExtend;
+
+import arc.struct.*;
+import mindustry.logic.*;
+import mindustry.logic.LCanvas.*;
+import mindustry.logic.LExecutor.*;
+import mindustry.ui.*;
+import mindustry.ui.dialogs.*;
+import arc.scene.ui.*;
+import arc.scene.ui.layout.*;
+import arc.util.*;
+import arc.graphics.Color;
+
+public class NestedLogicStatement extends LStatement {
+    // 存储嵌套的逻辑语句
+    public Seq<LStatement> nestedStatements = new Seq<>();
+    
+    @Override
+    public void build(Table table) {
+        // 添加标题
+        table.add("嵌套逻辑").left().self(this::param);
+        
+        // 添加编辑按钮
+        table.button(b -> {
+            b.image(Icon.pencilSmall);
+            b.clicked(() -> {
+                // 打开嵌套逻辑编辑对话框
+                showNestedLogicDialog();
+            });
+        }, Styles.logict, () -> {}).size(40f).color(table.color).padLeft(2);
+        
+        // 添加嵌套逻辑的预览
+        table.table(t -> {
+            updatePreview(t);
+        }).growX().padTop(5);
+    }
+    
+    @Override
+    public LInstruction build(LAssembler builder) {
+        // 创建嵌套逻辑指令
+        NestedLogicInstruction instruction = new NestedLogicInstruction();
+        
+        // 编译嵌套的逻辑语句
+        for (LStatement stmt : nestedStatements) {
+            instruction.instructions.add(stmt.build(builder));
+        }
+        
+        return instruction;
+    }
+    
+    @Override
+    public void write(StringBuilder builder) {
+        // 序列化嵌套的逻辑语句
+        for (LStatement stmt : nestedStatements) {
+            stmt.write(builder);
+            builder.append('\n');
+        }
+    }
+    
+    // 更新预览
+    private void updatePreview(Table table) {
+        table.clear();
+        table.left();
+        
+        if (nestedStatements.isEmpty()) {
+            table.add("无嵌套逻辑").color(Color.gray);
+        } else {
+            table.add("嵌套逻辑语句数量: " + nestedStatements.size);
+        }
+    }
+    
+    // 显示嵌套逻辑编辑对话框
+    private void showNestedLogicDialog() {
+        // 创建对话框
+        BaseDialog dialog = new BaseDialog("嵌套逻辑编辑");
+        
+        // 创建LCanvas
+        LCanvas canvas = new LCanvas();
+        
+        // 设置嵌套的逻辑语句
+        // TODO: 实现从nestedStatements到canvas的转换
+        
+        // 添加LCanvas到对话框
+        dialog.cont.pane(canvas).size(800f, 600f);
+        
+        // 添加保存按钮
+        dialog.buttons.button("保存", () -> {
+            // 保存嵌套的逻辑语句
+            // TODO: 实现从canvas到nestedStatements的转换
+            dialog.hide();
+        }).size(150f, 50f);
+        
+        // 添加取消按钮
+        dialog.buttons.button("取消", dialog::hide).size(150f, 50f);
+        
+        // 显示对话框
+        dialog.show();
+    }
+    
+    // 注册语句
+    public static void create() {
+        // 注册语句解析器
+        LAssembler.customParsers.put("nestedLogic", params -> {
+            NestedLogicStatement stmt = new NestedLogicStatement();
+            // 解析参数
+            return stmt;
+        });
+        
+        // 添加到所有语句列表
+        LogicIO.allStatements.add(NestedLogicStatement::new);
+    }
+    
+    // 嵌套逻辑指令
+    public static class NestedLogicInstruction implements LInstruction {
+        public Seq<LInstruction> instructions = new Seq<>();
+        
+        @Override
+        public void run(LExecutor exec) {
+            // 依次执行所有嵌套的指令
+            for (LInstruction instruction : instructions) {
+                instruction.run(exec);
+            }
+        }
+    }
+}

@@ -12,5 +12,7 @@ public class LEMain extends Mod {
         LAmmo.SetAmmoStatement.create();
         LFunction.LFunctionStatement.create();
         LUnitBindGroupUI.UnitBindGroupStatement.create();
+        // 注册嵌套逻辑语句
+        NestedLogicStatement.create();
     }
 }
