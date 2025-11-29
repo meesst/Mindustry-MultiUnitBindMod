@@ -352,7 +352,7 @@ public class LUnitBindGroupRUN {
         }
         
         // 去重逻辑：使用单位ID去除重复的单位
-        ObjectMap<Long, Unit> uniqueUnits = new ObjectMap<>();
+        ObjectMap<Integer, Unit> uniqueUnits = new ObjectMap<>();
         for (Unit unit : pool.units) {
             uniqueUnits.put(unit.id(), unit);
         }
