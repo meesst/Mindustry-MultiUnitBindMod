@@ -10,7 +10,7 @@ import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
 import arc.graphics.*;
-import arc.graphics.Icon;
+import mindustry.gen.Icon;
 
 public class NestedLogicStatement extends LStatement {
     // 存储嵌套的逻辑语句
