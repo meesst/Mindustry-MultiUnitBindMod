@@ -77,16 +77,34 @@ public class NestedLogicStatement extends LStatement {
         // 创建LCanvas
         LCanvas canvas = new LCanvas();
         
-        // 设置嵌套的逻辑语句
-        // TODO: 实现从nestedStatements到canvas的转换
+        // 设置嵌套的逻辑语句：从nestedStatements到canvas
+        if (!nestedStatements.isEmpty()) {
+            // 构建临时语句列表
+            Seq<LStatement> tempStatements = new Seq<>();
+            tempStatements.addAll(nestedStatements);
+            // 保存为字符串，直接调用静态方法
+            String asm = LAssembler.write(tempStatements);
+            // 加载到canvas
+            canvas.load(asm);
+        }
         
         // 添加LCanvas到对话框
         dialog.cont.pane(canvas).size(800f, 600f);
         
         // 添加保存按钮
         dialog.buttons.button("保存", () -> {
-            // 保存嵌套的逻辑语句
-            // TODO: 实现从canvas到nestedStatements的转换
+            // 保存嵌套的逻辑语句：从canvas到nestedStatements
+            String asm = canvas.save();
+            if (asm != null && !asm.isEmpty()) {
+                // 加载语句，直接调用静态方法，privileged设为false
+                Seq<LStatement> loadedStatements = LAssembler.read(asm, false);
+                // 更新嵌套语句
+                nestedStatements.clear();
+                nestedStatements.addAll(loadedStatements);
+            } else {
+                // 如果没有内容，清空嵌套语句
+                nestedStatements.clear();
+            }
             dialog.hide();
         }).size(150f, 50f);
         
