@@ -319,6 +319,7 @@ public class LUnitBindGroupRUN {
         if (pool.units.size < count) {
             bindUnits(exec, pool, type, count - pool.units.size);
         }
+      
         
         // 创建一个临时列表用于存储需要移除的单位
         Seq<Unit> toRemove = new Seq<>();
@@ -347,6 +348,22 @@ public class LUnitBindGroupRUN {
         // 移除不符合条件的单位
         for (Unit unit : toRemove) {
             pool.units.remove(unit);
+            unbindUnit(unit);
+        }
+        
+        // 去重逻辑：使用单位ID去除重复的单位
+        ObjectMap<Long, Unit> uniqueUnits = new ObjectMap<>();
+        for (Unit unit : pool.units) {
+            uniqueUnits.put(unit.id(), unit);
+        }
+        
+        // 用去重后的单位列表替换原列表
+        pool.units.clear();
+        pool.units.addAll(uniqueUnits.values());
+        
+        // 超出数量移除逻辑：如果单位数量超过count，移除多余的单位
+        while (pool.units.size > count) {
+            Unit unit = pool.units.pop(); // 从末尾移除
             unbindUnit(unit);
         }
         
