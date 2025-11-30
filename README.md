@@ -1,74 +1,80 @@
-# Mindustry-MultiUnitBindMod
+# Mindustry-LogicExtendMod
 
-一个为Mindustry游戏添加多单位绑定功能的逻辑扩展模组，支持单位批量控制、共享组管理和智能解绑等高级功能。
+一个为Mindustry游戏添加多种逻辑扩展功能的模组，支持字符串处理、弹药自定义、函数定义和嵌套逻辑等高级功能。
 
 ## 功能介绍
 
-### ubindgroup 指令
-该指令允许玩家同时绑定多个同类型单位，并可以控制最大绑定数量。支持两种工作模式，适用于不同的控制场景。
+### 1. 字符串合并指令 (stringmerge)
+该指令允许玩家将两个字符串合并为一个字符串，扩展了Mindustry逻辑系统的字符串处理能力。
 
 **语法:**
 ```
-ubindgroup unitType maxCount varUnit varIndex [groupName] [mode]
+stringmerge outputVar string1 string2
 ```
 
 **参数说明:**
-- `unitType`: 单位类型，用于筛选要绑定的单位。
-- `maxCount`: 最大绑定数量，限制同时绑定的单位数量
-- `varUnit`: 存储单位对象的变量名
-- `varIndex`: 存储当前单位索引的变量名
-- `groupName`（可选）: 共享组名称，用于创建或加入共享单位组
-- `mode`（可选）: 工作模式，1为正常抓取模式，2为共享组访问模式
+- `outputVar`: 存储合并结果的变量名
+- `string1`: 第一个要合并的字符串
+- `string2`: 第二个要合并的字符串
 
-### 核心功能特性
+**示例:**
+```
+stringmerge result "Hello, " "World!"
+```
 
-#### 单位绑定与控制
-- **多单位绑定**: 同时绑定多个同类型单位，实现批量控制
-- **类型筛选**: 支持特定单位类型或所有可控制单位的筛选
-- **数量限制**: 可设置最大绑定数量，防止过度占用单位资源
-- **循环访问**: 通过索引变量实现对绑定单位的循环访问和控制
+### 2. 弹药创建与设置指令
+该指令集允许玩家创建和自定义各种类型的弹药，包括基本子弹、炸弹、激光、闪电、导弹、火焰和火炮等。
 
-#### 共享组机制
-- **独立组**: 默认模式，每个控制器拥有独立的单位池
-- **共享组**: 通过指定组名，多个控制器可以共享同一单位池
-- **模式切换**: 
-  - **模式1**: 正常抓取逻辑，控制器主动抓取并锁定单位
-  - **模式2**: 共享组访问模式，无需抓取单位，直接访问共享组内单位
+#### createammo 指令
+创建一种新的弹药类型。
 
-#### 单位解绑与资源管理
-- **自动解绑**: 当参数变化或单位无效时，自动解绑相关单位
-- **内存清理**: 定期清理未使用的单位组和无效控制器
-- **资源释放**: 解绑时正确释放单位控制，使单位恢复正常状态
+**语法:**
+```
+createammo ammoType id
+```
 
-### 使用场景
-- **编队控制**: 同时控制多个同类型单位执行相同任务
-- **分工协作**: 通过共享组实现不同控制器对单位的协同管理
-- **资源优化**: 根据需求动态调整绑定单位数量和类型
-- **复杂逻辑**: 与其他逻辑指令配合，实现高级单位控制策略
+**参数说明:**
+- `ammoType`: 弹药类型，可选值包括BasicBullet、BombBullet、LaserBullet、LightningBullet、MissileBullet、FireBullet、ArtilleryBullet
+- `id`: 用于标识该弹药的唯一ID
 
-### 交互增强功能
-- **参数可视化选择**: 单位类型参数支持通过按钮打开选择面板，直观显示可控制的单位类型图标
-- **参数悬浮提示**: 每个参数都有详细的悬浮提示文本，帮助用户理解参数的作用和用法
-- **数据持久化**: 指令支持保存到逻辑芯片和从逻辑芯片加载，修复了之前的保存问题
-- **复制到剪贴板**: 支持将包含ubindgroup指令的逻辑代码复制到剪贴板
+#### setammo 指令
+修改、删除或在世界中创建弹药。
 
-## 技术实现细节
+**语法:**
+```
+setammo operation ammoProperty id value [team] [x] [y] [rotation]
+```
 
-### 核心类结构
-- `LUnitBindGroup`: 主类，包含所有单位绑定相关逻辑
-- `UnitBindGroupStatement`: 逻辑语句定义类，处理UI展示和指令构建
-- `UnitBindGroupInstruction`: 指令执行类，实现具体的绑定和控制逻辑
+**参数说明:**
+- `operation`: 操作类型，可选值包括set（修改属性）、remove（删除弹药）、create（在世界中创建弹药）
+- `ammoProperty`: 要修改的弹药属性，如damage、speed、lifetime等
+- `id`: 弹药的唯一ID
+- `value`: 要设置的属性值
+- `team`（可选）: 团队ID，用于create操作
+- `x`（可选）: X坐标，用于create操作
+- `y`（可选）: Y坐标，用于create操作
+- `rotation`（可选）: 旋转角度，用于create操作
 
-### 数据管理
-- **独立组管理**: 通过`individualGroups`映射存储每个控制器的独立单位组
-- **共享组管理**: 通过`sharedGroups`映射管理所有共享单位组
-- **参数缓存**: 使用`paramCaches`缓存指令参数，优化性能
-- **单位状态追踪**: 记录单位的控制状态，确保单位不会被重复控制
+### 3. 嵌套逻辑指令 (nestedlogic)
+该指令允许玩家在逻辑代码中嵌套其他逻辑代码，支持多层嵌套，与主逻辑共享变量作用域。
 
-### 自动清理机制
-- 定期清理未使用的单位组和无效控制器
-- 当组名变化或控制器失效时，自动清理相关资源
-- 支持共享组的引用计数，当没有控制器使用时自动移除
+**语法:**
+```
+nestedlogic "encodedNestedCode"
+```
+
+**参数说明:**
+- `encodedNestedCode`: Base64编码的嵌套逻辑代码
+
+**功能特性:**
+- 支持多层嵌套
+- 与主逻辑共享变量作用域
+- 提供可视化编辑器
+- 支持语言包
+- 添加了tooltip提示
+
+### 4. 函数指令 (function)
+该指令允许玩家定义和调用自定义函数，提高逻辑代码的复用性和可读性。
 
 ## 安装方法
 1. 编译mod生成jar文件
@@ -77,27 +83,35 @@ ubindgroup unitType maxCount varUnit varIndex [groupName] [mode]
 
 ## 使用示例
 
-### 基本用法 - 独立控制多个单位
+### 字符串合并示例
 ```
-ubindgroup @poly 10 unit i
-ucontrol unit move 500 500
-```
-
-### 高级用法 - 共享组协作
-控制器1:
-```
-ubindgroup @poly 5 unit i "defense-group" 1
+stringmerge greeting "Hello, " "Commander!"
+print greeting
 ```
 
-控制器2:
+### 弹药创建与使用示例
 ```
-ubindgroup @poly 0 unit i "defense-group" 2
-ucontrol unit patrol 300 300 700 700
+# 创建一种新的基本子弹
+createammo BasicBullet "mybullet"
+# 设置子弹属性
+setammo set damage "mybullet" 50
+setammo set speed "mybullet" 10
+# 在世界中创建子弹
+setammo create "mybullet" "player" @sharded 500 500 0
+```
+
+### 嵌套逻辑示例
+```
+# 主逻辑
+set x 10
+set y 20
+# 嵌套逻辑，与主逻辑共享变量
+nestedlogic "c2V0IHogPSAqIHggeSAKcHJpbnQgeng="
 ```
 
 ## 开发信息
 作者: meesst
-版本: 1.0
+版本: 1.0.0
 兼容性: Mindustry 151.1+
 
 ## 注意事项
@@ -105,3 +119,23 @@ ucontrol unit patrol 300 300 700 700
 - 在共享组模式下，多个控制器共享单位池，请注意协调控制逻辑
 - 使用模式2时，确保已经有控制器在模式1下创建并填充了共享组
 - 当不再需要控制单位时，建议显式解绑以释放资源
+- 嵌套逻辑指令支持多层嵌套，但请注意不要过度嵌套，以免影响性能
+- 弹药创建和设置指令需要特权权限，仅在服务器端或单机游戏中可用
+
+## 更新日志
+
+### v1.0.0
+- 初始版本
+- 添加了字符串合并指令
+- 添加了弹药创建和设置指令
+- 添加了函数指令
+- 添加了嵌套逻辑指令
+- 支持自定义类别和图标
+- 支持语言包
+- 添加了tooltip提示
+
+## 贡献
+欢迎提交Issue和Pull Request，帮助改进这个模组！
+
+## 许可证
+本项目采用MIT许可证，详见LICENSE文件。
