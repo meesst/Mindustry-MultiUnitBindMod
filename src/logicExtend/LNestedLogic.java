@@ -33,15 +33,14 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            // 使用LAssembler.assemble()编译嵌套代码
+            // 直接使用builder来编译嵌套指令，而不是创建新的LAssembler
             // 这样可以保持相同的privileged状态和变量作用域
-            try {
-                LAssembler nestedAsm = LAssembler.assemble(nestedCode, builder.privileged);
-                return new LNestedLogicInstruction(nestedAsm.instructions);
-            } catch (Exception e) {
-                // 如果编译失败，返回空指令
-                return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
-            }
+            // 首先将嵌套代码转换为嵌套指令
+            // 使用默认的privileged值false
+            Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
+            // 然后使用builder编译嵌套指令
+            LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> l.build(builder)).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+            return new LNestedLogicInstruction(nestedInstructions);
         }
 
         @Override
