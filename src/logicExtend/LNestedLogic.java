@@ -34,19 +34,25 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            // 使用当前builder编译，共享变量作用域
+            // 恢复使用LAssembler.assemble()，避免影响主逻辑的jump信息
             try {
-                // 解析嵌套代码为LStatement序列
-                Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
-                // 使用当前builder构建所有嵌套语句，共享同一个变量作用域
-                Seq<LExecutor.LInstruction> nestedInstructions = new Seq<>();
-                for (LStatement stmt : nestedStatements) {
-                    LExecutor.LInstruction instruction = stmt.build(builder);
-                    if (instruction != null) {
-                        nestedInstructions.add(instruction);
+                // 创建新的LAssembler实例编译嵌套代码
+                LAssembler nestedAsm = LAssembler.assemble(nestedCode, false);
+                
+                // 将嵌套逻辑的变量复制到主逻辑的变量作用域中，实现变量共享
+                for (var entry : nestedAsm.vars) {
+                    String varName = entry.key;
+                    // 跳过系统变量和常量，只复制用户定义的变量
+                    if (!varName.startsWith("@") && !entry.value.constant) {
+                        // 如果主逻辑中已有同名变量，保留主逻辑的变量
+                        if (!builder.vars.containsKey(varName)) {
+                            // 将嵌套逻辑的变量复制到主逻辑
+                            builder.putVar(varName);
+                        }
                     }
                 }
-                return new LNestedLogicInstruction(nestedInstructions.toArray(LExecutor.LInstruction.class));
+                
+                return new LNestedLogicInstruction(nestedAsm.instructions);
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
                 return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
