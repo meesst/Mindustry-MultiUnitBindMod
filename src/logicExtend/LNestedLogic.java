@@ -41,7 +41,7 @@ public class LNestedLogic {
             // 编译嵌套的逻辑指令
             // 直接使用builder来编译嵌套指令，而不是创建新的LAssembler
             // 这样可以保持相同的privileged状态和变量作用域
-            LInstruction[] nestedInstructions = nestedStatements.map(l -> l.build(builder)).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+            LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> l.build(builder)).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
             return new LNestedLogicInstruction(nestedInstructions);
         }
 
