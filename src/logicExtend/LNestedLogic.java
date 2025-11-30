@@ -17,7 +17,10 @@ public class LNestedLogic {
 
         @Override
         public void build(Table table) {
-            table.add("NestedLogic");
+            // 添加文本输入框，宽度500，默认值为空字符串
+            table.field("", Styles.defaultField, s -> {}) 
+               .size(500f, 40f).pad(2f)
+               .self(c -> LCanvas.tooltip(c, "lnestedlogic.field"));
             // 添加编辑按钮，使用与游戏内置按钮相似的样式
             table.button("Edit", mindustry.ui.Styles.logicTogglet, () -> {
                 // 为嵌套逻辑编辑创建一个新的LogicDialog实例
@@ -28,7 +31,8 @@ public class LNestedLogic {
                     // 保存修改后的代码
                     nestedCode = modifiedCode;
                 });
-            }).size(80f, 40f).padLeft(10f);
+            }).size(80f, 40f).padLeft(10f)
+              .self(c -> LCanvas.tooltip(c, "lnestedlogic.button"));
         }
 
         @Override
