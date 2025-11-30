@@ -55,20 +55,8 @@ public class LNestedLogic {
             LAssembler.customParsers.put("nestedlogic", params -> {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 if (params.length >= 2) {
-                    // 正确处理多层嵌套的代码
-                    // 移除引号并处理转义字符
-                    String rawCode = params[1];
-                    if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
-                        // 移除外层引号
-                        String innerCode = rawCode.substring(1, rawCode.length() - 1);
-                        // 正确处理多层嵌套的转义字符
-                        stmt.nestedCode = innerCode
-                            .replace("\\n", "\n")
-                            .replace("\\\"", "\"")
-                            .replace("\\\\", "\\");
-                    } else {
-                        stmt.nestedCode = rawCode;
-                    }
+                    // 改进反序列化逻辑，使用递归方式解析多层嵌套
+                    stmt.nestedCode = parseNestedCode(params[1]);
                 }
                 stmt.afterRead();
                 return stmt;
@@ -76,14 +64,55 @@ public class LNestedLogic {
             LogicIO.allStatements.add(LNestedLogicStatement::new);
         }
 
+        private static String parseNestedCode(String rawCode) {
+            if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
+                // 移除外层引号
+                String innerCode = rawCode.substring(1, rawCode.length() - 1);
+                // 正确处理多层嵌套的转义字符
+                StringBuilder result = new StringBuilder();
+                for (int i = 0; i < innerCode.length(); i++) {
+                    char c = innerCode.charAt(i);
+                    if (c == '\\' && i + 1 < innerCode.length()) {
+                        char next = innerCode.charAt(i + 1);
+                        switch (next) {
+                            case 'n':
+                                result.append('\n');
+                                i++;
+                                break;
+                            case '"':
+                                result.append('"');
+                                i++;
+                                break;
+                            case '\\':
+                                result.append('\\');
+                                i++;
+                                break;
+                            default:
+                                result.append(c);
+                                break;
+                        }
+                    } else {
+                        result.append(c);
+                    }
+                }
+                return result.toString();
+            } else {
+                return rawCode;
+            }
+        }
+
         @Override
         public void write(StringBuilder builder) {
             // 序列化嵌套逻辑指令
             builder.append("nestedlogic ");
-            // 写入嵌套代码，正确处理多层嵌套的特殊字符
+            // 使用递归方式处理嵌套代码
+            writeNestedCode(builder, nestedCode);
+        }
+
+        private void writeNestedCode(StringBuilder builder, String code) {
             builder.append('"');
-            // 处理嵌套代码中的特殊字符
-            for (char c : nestedCode.toCharArray()) {
+            for (int i = 0; i < code.length(); i++) {
+                char c = code.charAt(i);
                 switch (c) {
                     case '"':
                         builder.append("\\\"");
