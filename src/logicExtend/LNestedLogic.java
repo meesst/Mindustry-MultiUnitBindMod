@@ -7,6 +7,7 @@ import mindustry.logic.LAssembler;
 import mindustry.logic.LCategory;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LStatement;
+import java.util.Base64;
 
 public class LNestedLogic {
 
@@ -66,36 +67,16 @@ public class LNestedLogic {
 
         private static String parseNestedCode(String rawCode) {
             if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
-                // 移除外层引号
-                String innerCode = rawCode.substring(1, rawCode.length() - 1);
-                // 正确处理多层嵌套的转义字符
-                StringBuilder result = new StringBuilder();
-                for (int i = 0; i < innerCode.length(); i++) {
-                    char c = innerCode.charAt(i);
-                    if (c == '\\' && i + 1 < innerCode.length()) {
-                        char next = innerCode.charAt(i + 1);
-                        switch (next) {
-                            case 'n':
-                                result.append('\n');
-                                i++;
-                                break;
-                            case '"':
-                                result.append('"');
-                                i++;
-                                break;
-                            case '\\':
-                                result.append('\\');
-                                i++;
-                                break;
-                            default:
-                                result.append(c);
-                                break;
-                        }
-                    } else {
-                        result.append(c);
-                    }
+                try {
+                    // 移除外层引号
+                    String encoded = rawCode.substring(1, rawCode.length() - 1);
+                    // 使用Base64解码嵌套代码
+                    byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+                    return new String(decodedBytes);
+                } catch (IllegalArgumentException e) {
+                    // 如果解码失败，返回空字符串或原始字符串
+                    return "";
                 }
-                return result.toString();
             } else {
                 return rawCode;
             }
@@ -110,25 +91,9 @@ public class LNestedLogic {
         }
 
         private void writeNestedCode(StringBuilder builder, String code) {
-            builder.append('"');
-            for (int i = 0; i < code.length(); i++) {
-                char c = code.charAt(i);
-                switch (c) {
-                    case '"':
-                        builder.append("\\\"");
-                        break;
-                    case '\n':
-                        builder.append("\\n");
-                        break;
-                    case '\\':
-                        builder.append("\\\\");
-                        break;
-                    default:
-                        builder.append(c);
-                        break;
-                }
-            }
-            builder.append('"');
+            // 使用Base64编码嵌套代码，避免转义字符问题
+            String encoded = Base64.getEncoder().encodeToString(code.getBytes());
+            builder.append('"').append(encoded).append('"');
         }
 
         @Override
