@@ -35,14 +35,13 @@ public class LNestedLogic {
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
             // 1. 解码Base64嵌套代码
-            // 2. 使用LParser直接解析嵌套代码
+            // 2. 使用LAssembler.read()解析嵌套代码
             // 3. 使用主builder的变量表编译嵌套指令，确保变量被正确注册
             try {
                 // 直接使用嵌套代码，不需要额外解码
                 // 因为nestedCode已经是解码后的原始代码
-                // 使用LParser直接解析嵌套代码
-                mindustry.logic.LParser parser = new mindustry.logic.LParser(nestedCode, false);
-                Seq<LStatement> nestedStatements = parser.parse();
+                // 使用LAssembler.read()解析嵌套代码
+                Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
                 
                 // 编译嵌套指令，使用主builder的变量表
                 // 这确保嵌套逻辑中的变量被注册到主执行器的变量表中
