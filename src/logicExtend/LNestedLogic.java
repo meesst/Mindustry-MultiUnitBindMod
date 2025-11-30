@@ -21,17 +21,20 @@ public class LNestedLogic {
             table.field("", Styles.defaultField, s -> {}) 
                .size(500f, 40f).pad(2f)
                .self(c -> LCanvas.tooltip(c, "lnestedlogic.field"));
-            // 添加编辑按钮，使用与游戏内置按钮相似的样式
-            table.button("Edit", mindustry.ui.Styles.logicTogglet, () -> {
-                // 为嵌套逻辑编辑创建一个新的LogicDialog实例
-                // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
-                mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
-                // 显示编辑器，传入当前代码和回调函数
-                nestedDialog.show(nestedCode, null, false, modifiedCode -> {
-                    // 保存修改后的代码
-                    nestedCode = modifiedCode;
+            // 添加编辑按钮，使用指定的样式
+            table.button(b -> {
+                b.label(() -> "Edit");
+                b.clicked(() -> {
+                    // 为嵌套逻辑编辑创建一个新的LogicDialog实例
+                    // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
+                    mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                    // 显示编辑器，传入当前代码和回调函数
+                    nestedDialog.show(nestedCode, null, false, modifiedCode -> {
+                        // 保存修改后的代码
+                        nestedCode = modifiedCode;
+                    });
                 });
-            }).size(80f, 40f).padLeft(10f)
+            }, mindustry.ui.Styles.logict, () -> {}).size(160, 40).color(table.color).left().padLeft(2)
               .self(c -> LCanvas.tooltip(c, "lnestedlogic.button"));
         }
 
