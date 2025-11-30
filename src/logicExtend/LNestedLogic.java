@@ -20,13 +20,10 @@ public class LNestedLogic {
         public void build(Table table) {
             table.add("NestedLogic");
             // 添加编辑按钮，使用与游戏内置按钮相似的样式
-            table.button(b -> {
-                b.image(mindustry.ui.Styles.logicTogglet);
-                b.add("Edit");
-            }, mindustry.ui.Styles.logicTogglet, () -> {
+            table.button("Edit", mindustry.ui.Styles.logicTogglet, () -> {
                 // 打开嵌套逻辑编辑器
                 // 使用现有的LogicDialog来编辑嵌套逻辑
-                mindustry.ui.dialogs.LogicDialog dialog = mindustry.Vars.ui.logic;
+                mindustry.logic.LogicDialog dialog = mindustry.Vars.ui.logic;
                 // 保存当前的嵌套代码
                 String currentCode = LAssembler.write(nestedStatements);
                 // 显示编辑器，传入当前代码和回调函数
@@ -42,10 +39,10 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            LAssembler nestedAsm = new LAssembler();
-            nestedAsm.privileged = builder.privileged;
-            nestedAsm.instructions = nestedStatements.map(l -> l.build(nestedAsm)).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
-            return new LNestedLogicInstruction(nestedAsm.instructions);
+            // 直接使用builder来编译嵌套指令，而不是创建新的LAssembler
+            // 这样可以保持相同的privileged状态和变量作用域
+            LInstruction[] nestedInstructions = nestedStatements.map(l -> l.build(builder)).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+            return new LNestedLogicInstruction(nestedInstructions);
         }
 
         @Override
