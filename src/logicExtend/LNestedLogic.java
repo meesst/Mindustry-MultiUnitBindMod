@@ -34,38 +34,20 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            // 使用反射保存和恢复LParser的静态jump信息，避免影响主逻辑
+            // 1. 解码Base64嵌套代码
+            // 2. 使用LParser直接解析嵌套代码
+            // 3. 使用主builder的变量表编译嵌套指令，确保变量被正确注册
             try {
-                // 保存LParser的静态jump信息
-                java.lang.reflect.Field jumpsField = mindustry.logic.LParser.class.getDeclaredField("jumps");
-                jumpsField.setAccessible(true);
-                arc.struct.Seq<?> originalJumps = (arc.struct.Seq<?>) jumpsField.get(null);
-                arc.struct.Seq<?> jumpsCopy = originalJumps.copy();
+                // 直接使用嵌套代码，不需要额外解码
+                // 因为nestedCode已经是解码后的原始代码
+                // 使用LParser直接解析嵌套代码
+                mindustry.logic.LParser parser = new mindustry.logic.LParser(nestedCode, false);
+                Seq<LStatement> nestedStatements = parser.parse();
                 
-                java.lang.reflect.Field jumpLocationsField = mindustry.logic.LParser.class.getDeclaredField("jumpLocations");
-                jumpLocationsField.setAccessible(true);
-                arc.struct.ObjectIntMap<?> originalJumpLocations = (arc.struct.ObjectIntMap<?>) jumpLocationsField.get(null);
-                // ObjectIntMap没有copy()方法，使用putAll()复制
-                arc.struct.ObjectIntMap<String> jumpLocationsCopy = new arc.struct.ObjectIntMap<>();
-                jumpLocationsCopy.putAll((arc.struct.ObjectIntMap<String>) originalJumpLocations);
-                
-                // 解析嵌套代码为LStatement序列
-                arc.struct.Seq<mindustry.logic.LStatement> nestedStatements = mindustry.logic.LAssembler.read(nestedCode, false);
-                
-                // 使用当前builder构建所有嵌套语句，共享同一个变量作用域
-                arc.struct.Seq<LExecutor.LInstruction> nestedInstructions = new arc.struct.Seq<>();
-                for (mindustry.logic.LStatement stmt : nestedStatements) {
-                    LExecutor.LInstruction instruction = stmt.build(builder);
-                    if (instruction != null) {
-                        nestedInstructions.add(instruction);
-                    }
-                }
-                
-                // 恢复LParser的静态jump信息
-                jumpsField.set(null, jumpsCopy);
-                jumpLocationsField.set(null, jumpLocationsCopy);
-                
-                return new LNestedLogicInstruction(nestedInstructions.toArray(LExecutor.LInstruction.class));
+                // 编译嵌套指令，使用主builder的变量表
+                // 这确保嵌套逻辑中的变量被注册到主执行器的变量表中
+                LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> l.build(builder)).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+                return new LNestedLogicInstruction(nestedInstructions);
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
                 return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
@@ -82,8 +64,22 @@ public class LNestedLogic {
             LAssembler.customParsers.put("nestedlogic", params -> {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 if (params.length >= 2) {
-                    // 改进反序列化逻辑，使用递归方式解析多层嵌套
-                    stmt.nestedCode = parseNestedCode(params[1]);
+                    // 改进反序列化逻辑，使用Base64解码嵌套代码
+                    String rawCode = params[1];
+                    if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
+                        try {
+                            // 移除外层引号
+                            String encoded = rawCode.substring(1, rawCode.length() - 1);
+                            // 使用Base64解码嵌套代码
+                            byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+                            stmt.nestedCode = new String(decodedBytes);
+                        } catch (IllegalArgumentException e) {
+                            // 如果解码失败，返回空字符串
+                            stmt.nestedCode = "";
+                        }
+                    } else {
+                        stmt.nestedCode = rawCode;
+                    }
                 }
                 stmt.afterRead();
                 return stmt;
@@ -91,34 +87,12 @@ public class LNestedLogic {
             LogicIO.allStatements.add(LNestedLogicStatement::new);
         }
 
-        private static String parseNestedCode(String rawCode) {
-            if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
-                try {
-                    // 移除外层引号
-                    String encoded = rawCode.substring(1, rawCode.length() - 1);
-                    // 使用Base64解码嵌套代码
-                    byte[] decodedBytes = Base64.getDecoder().decode(encoded);
-                    return new String(decodedBytes);
-                } catch (IllegalArgumentException e) {
-                    // 如果解码失败，返回空字符串或原始字符串
-                    return "";
-                }
-            } else {
-                return rawCode;
-            }
-        }
-
         @Override
         public void write(StringBuilder builder) {
             // 序列化嵌套逻辑指令
             builder.append("nestedlogic ");
-            // 使用递归方式处理嵌套代码
-            writeNestedCode(builder, nestedCode);
-        }
-
-        private void writeNestedCode(StringBuilder builder, String code) {
             // 使用Base64编码嵌套代码，避免转义字符问题
-            String encoded = Base64.getEncoder().encodeToString(code.getBytes());
+            String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes());
             builder.append('"').append(encoded).append('"');
         }
 
@@ -129,7 +103,7 @@ public class LNestedLogic {
     }
 
     public static class LNestedLogicInstruction implements LExecutor.LInstruction {
-        // 编译后的嵌套逻辑指令，在build阶段使用主LAssembler编译
+        // 编译后的嵌套逻辑指令
         public LExecutor.LInstruction[] instructions;
 
         public LNestedLogicInstruction(LExecutor.LInstruction[] instructions) {
@@ -142,7 +116,9 @@ public class LNestedLogic {
 
         @Override
         public void run(LExecutor exec) {
-            // 执行嵌套逻辑指令，使用主执行器的变量作用域
+            // 执行嵌套逻辑指令
+            // 使用主执行器的变量作用域
+            // 执行嵌套指令
             for (LExecutor.LInstruction instruction : instructions) {
                 // 检查指令计数限制
                 if (exec.counter.numval >= LExecutor.maxInstructions) {
