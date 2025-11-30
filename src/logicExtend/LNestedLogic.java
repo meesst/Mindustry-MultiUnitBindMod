@@ -9,6 +9,9 @@ import mindustry.logic.LExecutor;
 import mindustry.logic.LStatement;
 import java.util.Base64;
 
+import static mindustry.logic.LCanvas.tooltip;
+import static arc.Core.*;
+
 public class LNestedLogic {
 
     public static class LNestedLogicStatement extends LStatement {
@@ -17,10 +20,13 @@ public class LNestedLogic {
 
         @Override
         public void build(Table table) {
-            // 添加文本输入框，宽度500，默认值为空字符串
-            table.field("", Styles.defaultField, s -> {}) 
+            table.setColor(table.color);
+            // 文本输入框的默认值为语言包中的lnestedlogic.field键值
+            String defaultFieldText = arc.Core.bundle.get("lnestedlogic.field");
+            // 使用field方法实现文本框，加上尺寸和tooltip
+            field(table, defaultFieldText, s -> {}) 
                .size(500f, 40f).pad(2f)
-               .self(c -> LCanvas.tooltip(c, "lnestedlogic.field"));
+               .self(c -> tooltip(c, "lnestedlogic.field"));
             // 添加编辑按钮，使用指定的样式
             table.button(b -> {
                 b.label(() -> "Edit");
@@ -35,7 +41,7 @@ public class LNestedLogic {
                     });
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(160, 40).color(table.color).left().padLeft(2)
-              .self(c -> LCanvas.tooltip(c, "lnestedlogic.button"));
+              .self(c -> tooltip(c, "lnestedlogic.button"));
         }
 
         @Override
