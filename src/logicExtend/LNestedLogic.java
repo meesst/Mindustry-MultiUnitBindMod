@@ -34,25 +34,36 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            // 恢复使用LAssembler.assemble()，避免影响主逻辑的jump信息
+            // 使用反射保存和恢复LParser的静态jump信息，避免影响主逻辑
             try {
-                // 创建新的LAssembler实例编译嵌套代码
-                LAssembler nestedAsm = LAssembler.assemble(nestedCode, false);
+                // 保存LParser的静态jump信息
+                java.lang.reflect.Field jumpsField = mindustry.logic.LParser.class.getDeclaredField("jumps");
+                jumpsField.setAccessible(true);
+                arc.struct.Seq<?> originalJumps = (arc.struct.Seq<?>) jumpsField.get(null);
+                arc.struct.Seq<?> jumpsCopy = originalJumps.copy();
                 
-                // 将嵌套逻辑的变量复制到主逻辑的变量作用域中，实现变量共享
-                for (var entry : nestedAsm.vars) {
-                    String varName = entry.key;
-                    // 跳过系统变量和常量，只复制用户定义的变量
-                    if (!varName.startsWith("@") && !entry.value.constant) {
-                        // 如果主逻辑中已有同名变量，保留主逻辑的变量
-                        if (!builder.vars.containsKey(varName)) {
-                            // 将嵌套逻辑的变量复制到主逻辑
-                            builder.putVar(varName);
-                        }
+                java.lang.reflect.Field jumpLocationsField = mindustry.logic.LParser.class.getDeclaredField("jumpLocations");
+                jumpLocationsField.setAccessible(true);
+                arc.struct.ObjectIntMap<?> originalJumpLocations = (arc.struct.ObjectIntMap<?>) jumpLocationsField.get(null);
+                arc.struct.ObjectIntMap<?> jumpLocationsCopy = originalJumpLocations.copy();
+                
+                // 解析嵌套代码为LStatement序列
+                arc.struct.Seq<mindustry.logic.LStatement> nestedStatements = mindustry.logic.LAssembler.read(nestedCode, false);
+                
+                // 使用当前builder构建所有嵌套语句，共享同一个变量作用域
+                arc.struct.Seq<LExecutor.LInstruction> nestedInstructions = new arc.struct.Seq<>();
+                for (mindustry.logic.LStatement stmt : nestedStatements) {
+                    LExecutor.LInstruction instruction = stmt.build(builder);
+                    if (instruction != null) {
+                        nestedInstructions.add(instruction);
                     }
                 }
                 
-                return new LNestedLogicInstruction(nestedAsm.instructions);
+                // 恢复LParser的静态jump信息
+                jumpsField.set(null, jumpsCopy);
+                jumpLocationsField.set(null, jumpLocationsCopy);
+                
+                return new LNestedLogicInstruction(nestedInstructions.toArray(LExecutor.LInstruction.class));
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
                 return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
@@ -116,7 +127,7 @@ public class LNestedLogic {
     }
 
     public static class LNestedLogicInstruction implements LExecutor.LInstruction {
-        // 编译后的嵌套逻辑指令
+        // 编译后的嵌套逻辑指令，在build阶段使用主LAssembler编译
         public LExecutor.LInstruction[] instructions;
 
         public LNestedLogicInstruction(LExecutor.LInstruction[] instructions) {
@@ -129,9 +140,7 @@ public class LNestedLogic {
 
         @Override
         public void run(LExecutor exec) {
-            // 执行嵌套逻辑指令
-            // 使用主执行器的变量作用域
-            // 执行嵌套指令
+            // 执行嵌套逻辑指令，使用主执行器的变量作用域
             for (LExecutor.LInstruction instruction : instructions) {
                 // 检查指令计数限制
                 if (exec.counter.numval >= LExecutor.maxInstructions) {
