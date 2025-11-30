@@ -45,7 +45,9 @@ public class LNestedLogic {
                 java.lang.reflect.Field jumpLocationsField = mindustry.logic.LParser.class.getDeclaredField("jumpLocations");
                 jumpLocationsField.setAccessible(true);
                 arc.struct.ObjectIntMap<?> originalJumpLocations = (arc.struct.ObjectIntMap<?>) jumpLocationsField.get(null);
-                arc.struct.ObjectIntMap<?> jumpLocationsCopy = originalJumpLocations.copy();
+                // ObjectIntMap没有copy()方法，使用putAll()复制
+                arc.struct.ObjectIntMap<String> jumpLocationsCopy = new arc.struct.ObjectIntMap<>();
+                jumpLocationsCopy.putAll((arc.struct.ObjectIntMap<String>) originalJumpLocations);
                 
                 // 解析嵌套代码为LStatement序列
                 arc.struct.Seq<mindustry.logic.LStatement> nestedStatements = mindustry.logic.LAssembler.read(nestedCode, false);
