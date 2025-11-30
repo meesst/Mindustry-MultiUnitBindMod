@@ -3,7 +3,7 @@
   "name": "multi-unit-bind",
   "author": "meesst",
   "main": "logicExtend.LEMain",
-  "description": "A mod that adds multi-unit binding functionality\n一个添加了多单位绑定功能的模组，允许同时控制多个同类型单位",
+  "description": "一个添加了更多逻辑指令的模组",
   "version": "1.0.0",
   "minGameVersion": 151.1,
   "java": true
