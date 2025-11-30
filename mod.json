@@ -1,9 +1,9 @@
 {
-  "displayName": "MultiUnitBind - 多单位绑定",
-  "name": "multi-unit-bind",
+  "displayName": "LogicExtendMod - 逻辑指令扩展",
+  "name": "logic-extend-mod",
   "author": "meesst",
   "main": "logicExtend.LEMain",
-  "description": "一个添加了更多逻辑指令的模组",
+    "description": "A mod that adds more logic instructions.\n一个添加了更多逻辑指令的模组",
   "version": "1.0.0",
   "minGameVersion": 151.1,
   "java": true

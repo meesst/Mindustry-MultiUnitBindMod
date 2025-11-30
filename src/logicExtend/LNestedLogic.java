@@ -17,14 +17,16 @@ public class LNestedLogic {
     public static class LNestedLogicStatement extends LStatement {
         // 存储嵌套的逻辑代码
         public String nestedCode = "";
+        // 文本输入框的默认值为语言包中的lnestedlogic.field键值
+        public String defaultFieldText = arc.Core.bundle.get("lnestedlogic.field");
 
         @Override
         public void build(Table table) {
             table.setColor(table.color);
-            // 文本输入框的默认值为语言包中的lnestedlogic.field键值
-            String defaultFieldText = arc.Core.bundle.get("lnestedlogic.field");
-            // 使用field方法实现文本框，加上尺寸和tooltip
-            field(table, defaultFieldText, s -> {}) 
+            // 使用field方法实现文本框
+             field(table, defaultFieldText, str -> {
+                        defaultFieldText = "\"" + defaultFieldText + "\"";
+                    })
                .size(500f, 40f).pad(2f)
                .self(c -> tooltip(c, "lnestedlogic.field"));
             // 添加编辑按钮，使用指定的样式
@@ -40,7 +42,7 @@ public class LNestedLogic {
                         nestedCode = modifiedCode;
                     });
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(160, 40).color(table.color).left().padLeft(2)
+            }, mindustry.ui.Styles.logict, () -> {}).size(60, 40).color(table.color).left().padLeft(2)
               .self(c -> tooltip(c, "lnestedlogic.button"));
         }
 
