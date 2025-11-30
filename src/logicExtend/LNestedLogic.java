@@ -19,11 +19,11 @@ public class LNestedLogic {
             table.add("NestedLogic");
             // 添加编辑按钮，使用与游戏内置按钮相似的样式
             table.button("Edit", mindustry.ui.Styles.logicTogglet, () -> {
-                // 打开嵌套逻辑编辑器
-                // 使用现有的LogicDialog来编辑嵌套逻辑
-                mindustry.logic.LogicDialog dialog = mindustry.Vars.ui.logic;
+                // 为嵌套逻辑编辑创建一个新的LogicDialog实例
+                // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
+                mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
                 // 显示编辑器，传入当前代码和回调函数
-                dialog.show(nestedCode, null, false, modifiedCode -> {
+                nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                     // 保存修改后的代码
                     nestedCode = modifiedCode;
                 });
