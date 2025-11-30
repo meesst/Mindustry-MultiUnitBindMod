@@ -34,12 +34,19 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            // 使用LAssembler.assemble()编译嵌套代码
-            // 确保不影响主层级LStatement对象的elem属性
+            // 使用当前builder编译，共享变量作用域
             try {
-                // 创建新的LAssembler实例编译嵌套代码
-                LAssembler nestedAsm = LAssembler.assemble(nestedCode, false);
-                return new LNestedLogicInstruction(nestedAsm.instructions);
+                // 解析嵌套代码为LStatement序列
+                Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
+                // 使用当前builder构建所有嵌套语句，共享同一个变量作用域
+                Seq<LExecutor.LInstruction> nestedInstructions = new Seq<>();
+                for (LStatement stmt : nestedStatements) {
+                    LExecutor.LInstruction instruction = stmt.build(builder);
+                    if (instruction != null) {
+                        nestedInstructions.add(instruction);
+                    }
+                }
+                return new LNestedLogicInstruction(nestedInstructions.toArray(LExecutor.LInstruction.class));
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
                 return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
