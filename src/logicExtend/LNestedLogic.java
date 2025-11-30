@@ -58,19 +58,14 @@ public class LNestedLogic {
                 // 使用LAssembler.read()解析嵌套代码
                 Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
                 
+                // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
+                nestedStatements.each(l -> l.elem = null);
+                
                 // 编译嵌套指令，使用主builder的变量表
                 // 这确保嵌套逻辑中的变量被注册到主执行器的变量表中
                 LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
-                    // 确保嵌套逻辑的LStatement对象不会影响主层级的elem属性
-                    // 保存原始elem属性
-                    mindustry.logic.LCanvas.StatementElem originalElem = l.elem;
-                    // 临时将elem属性设置为null，避免影响主层级UI
-                    l.elem = null;
                     // 编译指令
-                    LExecutor.LInstruction instruction = l.build(builder);
-                    // 恢复原始elem属性
-                    l.elem = originalElem;
-                    return instruction;
+                    return l.build(builder);
                 }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
                 return new LNestedLogicInstruction(nestedInstructions);
             } catch (Exception e) {
