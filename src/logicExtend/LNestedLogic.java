@@ -53,7 +53,16 @@ public class LNestedLogic {
             LAssembler.customParsers.put("nestedlogic", params -> {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 if (params.length >= 2) {
-                    stmt.nestedCode = params[1];
+                    // 正确处理嵌套代码的字符串表示
+                    // 移除引号并处理转义字符
+                    String rawCode = params[1];
+                    if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
+                        stmt.nestedCode = rawCode.substring(1, rawCode.length() - 1)
+                            .replace("\\n", "\n")
+                            .replace("\\\"", "\"");
+                    } else {
+                        stmt.nestedCode = rawCode;
+                    }
                 }
                 stmt.afterRead();
                 return stmt;
@@ -65,8 +74,26 @@ public class LNestedLogic {
         public void write(StringBuilder builder) {
             // 序列化嵌套逻辑指令
             builder.append("nestedlogic ");
-            // 写入嵌套代码
-            builder.append('"').append(nestedCode.replace("\"", "\\\"").replace("\n", "\\n")).append('"');
+            // 写入嵌套代码，正确处理换行符和引号
+            builder.append('"');
+            // 处理嵌套代码中的特殊字符
+            for (char c : nestedCode.toCharArray()) {
+                switch (c) {
+                    case '"':
+                        builder.append("\\\"");
+                        break;
+                    case '\n':
+                        builder.append("\\n");
+                        break;
+                    case '\\':
+                        builder.append("\\\\");
+                        break;
+                    default:
+                        builder.append(c);
+                        break;
+                }
+            }
+            builder.append('"');
         }
 
         @Override
