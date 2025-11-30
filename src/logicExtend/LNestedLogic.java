@@ -25,7 +25,7 @@ public class LNestedLogic {
             table.setColor(table.color);
             // 使用field方法实现文本框
              field(table, defaultFieldText, str -> {
-                        defaultFieldText = "\"" + defaultFieldText + "\"";
+                        defaultFieldText = "\"" + str + "\"";
                     })
                .size(500f, 40f).pad(2f)
                .self(c -> tooltip(c, "lnestedlogic.field"));
@@ -78,9 +78,14 @@ public class LNestedLogic {
             LAssembler.customParsers.put("nestedlogic", params -> {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 if (params.length >= 2) {
+                    // 先读取defaultFieldText
+                    stmt.defaultFieldText = params[1];
+                }
+                if (params.length >= 3) {
+                    // 再读取嵌套代码
                     // 改进反序列化逻辑，使用Base64解码嵌套代码
-                    String rawCode = params[1];
-                    if (rawCode.startsWith("\"") && rawCode.endsWith("\"")) {
+                    String rawCode = params[2];
+                    if (rawCode.startsWith("\"")) {
                         try {
                             // 移除外层引号
                             String encoded = rawCode.substring(1, rawCode.length() - 1);
@@ -105,9 +110,12 @@ public class LNestedLogic {
         public void write(StringBuilder builder) {
             // 序列化嵌套逻辑指令
             builder.append("nestedlogic ");
+            // 先序列化defaultFieldText
+            builder.append(defaultFieldText);
+            // 再序列化嵌套代码
             // 使用Base64编码嵌套代码，避免转义字符问题
             String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes());
-            builder.append('"').append(encoded).append('"');
+            builder.append(" \"").append(encoded).append('"');
         }
 
         @Override
