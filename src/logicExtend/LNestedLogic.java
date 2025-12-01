@@ -33,6 +33,8 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
+                    // 保存当前的canvas实例
+                    mindustry.logic.LCanvas oldCanvas = mindustry.logic.LCanvas.canvas;
                     // 为嵌套逻辑编辑创建一个新的LogicDialog实例
                     // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
                     mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
@@ -40,6 +42,12 @@ public class LNestedLogic {
                     nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                         // 保存修改后的代码
                         nestedCode = modifiedCode;
+                        // 恢复原来的canvas实例
+                        mindustry.logic.LCanvas.canvas = oldCanvas;
+                    });
+                    // 当对话框隐藏时恢复canvas实例（确保无论如何都会恢复）
+                    nestedDialog.hidden(() -> {
+                        mindustry.logic.LCanvas.canvas = oldCanvas;
                     });
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(60, 40).color(table.color).left().padLeft(2)
