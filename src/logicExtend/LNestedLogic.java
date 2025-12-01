@@ -174,11 +174,13 @@ public class LNestedLogic {
                     canvas.statements.updateJumpHeights = true;
                     canvas.statements.invalidate();
                     
-                    // 延迟执行第二次刷新，确保状态完全恢复
-                    arc.Core.app.postDelayed(() -> {
-                        canvas.statements.updateJumpHeights = true;
-                        canvas.statements.invalidate();
-                    }, 100);
+                    // 使用Timer.schedule实现延迟执行，确保状态完全恢复
+                    arc.util.Timer.schedule(() -> {
+                        arc.Core.app.post(() -> {
+                            canvas.statements.updateJumpHeights = true;
+                            canvas.statements.invalidate();
+                        });
+                    }, 0.1f);
                 } catch (Exception e) {
                     // 如果刷新失败，记录日志但继续执行
                     e.printStackTrace();
