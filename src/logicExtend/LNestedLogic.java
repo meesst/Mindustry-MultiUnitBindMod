@@ -178,7 +178,7 @@ public class LNestedLogic {
         @Override
         public void run(LExecutor exec) {
             // 保存当前计数器值
-            float originalCounter = exec.counter.numval;
+            double originalCounter = exec.counter.numval;
             
             // 执行嵌套逻辑指令
             // 使用主执行器的变量作用域
