@@ -84,7 +84,7 @@ public class LNestedLogic {
             // 编译嵌套的逻辑指令
             // 1. 解码Base64嵌套代码
             // 2. 使用LAssembler.read()解析嵌套代码
-            // 3. 使用主builder的变量表编译嵌套指令，确保变量被正确注册
+            // 3. 创建新的LAssembler实例编译嵌套指令，确保jump指令索引相对于嵌套指令序列
             try {
                 // 直接使用嵌套代码，不需要额外解码
                 // 因为nestedCode已经是解码后的原始代码
@@ -94,11 +94,16 @@ public class LNestedLogic {
                 // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
                 nestedStatements.each(l -> l.elem = null);
                 
-                // 编译嵌套指令，使用主builder的变量表
-                // 这确保嵌套逻辑中的变量被注册到主执行器的变量表中
+                // 为嵌套指令创建新的LAssembler实例，确保jump指令索引相对于嵌套指令序列
+                LAssembler nestedBuilder = new LAssembler();
+                // 复制主builder的变量表，确保变量被正确注册
+                nestedBuilder.vars.putAll(builder.vars);
+                nestedBuilder.privileged = builder.privileged;
+                
+                // 编译嵌套指令，使用嵌套builder
                 LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
-                    // 编译指令
-                    return l.build(builder);
+                    // 编译指令 - 使用嵌套builder
+                    return l.build(nestedBuilder);
                 }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
                 return new LNestedLogicInstruction(nestedInstructions);
             } catch (Exception e) {
