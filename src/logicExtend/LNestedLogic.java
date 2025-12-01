@@ -33,31 +33,39 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
-                    // 使用反射保存当前的静态canvas实例
-                    final java.lang.reflect.Field[] canvasField = {null};
-                    final mindustry.logic.LCanvas[] originalCanvas = {null};
+                    // 使用数组包装非final变量，绕过lambda表达式限制
+                    final java.lang.reflect.Field[] canvasFieldWrapper = new java.lang.reflect.Field[1];
+                    final mindustry.logic.LCanvas[] originalCanvasWrapper = new mindustry.logic.LCanvas[1];
+                    
+                    // 保存原始canvas引用
                     try {
-                        canvasField[0] = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                        canvasField[0].setAccessible(true);
-                        originalCanvas[0] = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                        java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                        canvasField.setAccessible(true);
+                        mindustry.logic.LCanvas originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                        canvasFieldWrapper[0] = canvasField;
+                        originalCanvasWrapper[0] = originalCanvas;
                     } catch (Exception e) {
-                        // 如果反射失败，使用默认行为
+                        // 如果反射失败，记录日志但继续执行
+                        e.printStackTrace();
                     }
                     
                     // 为嵌套逻辑编辑创建一个新的LogicDialog实例
-                    // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
                     mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
                     // 显示编辑器，传入当前代码和回调函数
                     nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                         // 保存修改后的代码
                         nestedCode = modifiedCode;
                         
-                        // 使用反射恢复之前保存的静态canvas实例
-                        if (canvasField[0] != null && originalCanvas[0] != null) {
+                        // 恢复原始canvas引用
+                        if (canvasFieldWrapper[0] != null && originalCanvasWrapper[0] != null) {
                             try {
-                                canvasField[0].set(null, originalCanvas[0]);
+                                canvasFieldWrapper[0].set(null, originalCanvasWrapper[0]);
+                                
+                                // 刷新主页面canvas，确保跳转线恢复正常
+                                refreshMainCanvas(originalCanvasWrapper[0]);
                             } catch (Exception e) {
-                                // 如果反射失败，忽略
+                                // 如果反射失败，记录日志但继续执行
+                                e.printStackTrace();
                             }
                         }
                     });
@@ -147,6 +155,35 @@ public class LNestedLogic {
         @Override
         public void afterRead() {
             // 不需要额外处理，直接使用nestedCode
+        }
+        
+        /**
+         * 刷新主页面canvas，确保跳转线恢复正常
+         * @param canvas 需要刷新的canvas实例
+         */
+        private void refreshMainCanvas(mindustry.logic.LCanvas canvas) {
+            if (canvas == null) return;
+            
+            // 使用Arc的post方法，确保在UI线程中执行
+            arc.Core.app.post(() -> {
+                try {
+                    // 触发canvas重建，刷新所有UI元素
+                    canvas.rebuild();
+                    
+                    // 强制更新跳转线高度
+                    canvas.statements.updateJumpHeights = true;
+                    canvas.statements.invalidate();
+                    
+                    // 延迟执行第二次刷新，确保状态完全恢复
+                    arc.Core.app.postDelayed(() -> {
+                        canvas.statements.updateJumpHeights = true;
+                        canvas.statements.invalidate();
+                    }, 100);
+                } catch (Exception e) {
+                    // 如果刷新失败，记录日志但继续执行
+                    e.printStackTrace();
+                }
+            });
         }
     }
 
