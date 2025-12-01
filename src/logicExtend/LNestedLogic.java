@@ -7,6 +7,7 @@ import mindustry.logic.LAssembler;
 import mindustry.logic.LCategory;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LStatement;
+import mindustry.logic.LVar;
 import java.util.Base64;
 
 import static mindustry.logic.LCanvas.tooltip;
@@ -97,8 +98,15 @@ public class LNestedLogic {
                 // 创建新的LAssembler实例，用于编译嵌套指令
                 LAssembler nestedBuilder = new LAssembler();
                 
-                // 复制主builder的privileged状态
-                nestedBuilder.privileged = builder.privileged;
+                // 复制主builder的privileged状态（使用反射访问私有字段）
+                try {
+                    java.lang.reflect.Field privilegedField = LAssembler.class.getDeclaredField("privileged");
+                    privilegedField.setAccessible(true);
+                    boolean isPrivileged = privilegedField.getBoolean(builder);
+                    privilegedField.setBoolean(nestedBuilder, isPrivileged);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 
                 // 复制主builder的变量表到嵌套builder
                 for(var entry : builder.vars.entries()) {
