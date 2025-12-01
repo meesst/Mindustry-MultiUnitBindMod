@@ -34,21 +34,44 @@ public class LNestedLogic {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
                     // 保存当前的canvas实例
-                    mindustry.logic.LCanvas oldCanvas = mindustry.logic.LCanvas.canvas;
+                    mindustry.logic.LCanvas oldCanvas = null;
+                    try {
+                        // 使用反射访问包级私有变量
+                        java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                        canvasField.setAccessible(true);
+                        oldCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    
                     // 为嵌套逻辑编辑创建一个新的LogicDialog实例
                     // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
                     mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                    
+                    // 创建恢复canvas的lambda
+                    Runnable restoreCanvas = () -> {
+                        if (oldCanvas != null) {
+                            try {
+                                // 使用反射恢复canvas实例
+                                java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                                canvasField.setAccessible(true);
+                                canvasField.set(null, oldCanvas);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    };
+                    
                     // 显示编辑器，传入当前代码和回调函数
                     nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                         // 保存修改后的代码
                         nestedCode = modifiedCode;
                         // 恢复原来的canvas实例
-                        mindustry.logic.LCanvas.canvas = oldCanvas;
+                        restoreCanvas.run();
                     });
+                    
                     // 当对话框隐藏时恢复canvas实例（确保无论如何都会恢复）
-                    nestedDialog.hidden(() -> {
-                        mindustry.logic.LCanvas.canvas = oldCanvas;
-                    });
+                    nestedDialog.hidden(restoreCanvas);
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(60, 40).color(table.color).left().padLeft(2)
               .self(c -> tooltip(c, "lnestedlogic.button"));
