@@ -34,7 +34,7 @@ public class LNestedLogic {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
                     // 保存当前的canvas实例
-                    mindustry.logic.LCanvas oldCanvas = null;
+                    final mindustry.logic.LCanvas oldCanvas;
                     try {
                         // 使用反射访问包级私有变量
                         java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
@@ -42,6 +42,7 @@ public class LNestedLogic {
                         oldCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
                     } catch (Exception e) {
                         e.printStackTrace();
+                        oldCanvas = null;
                     }
                     
                     // 为嵌套逻辑编辑创建一个新的LogicDialog实例
