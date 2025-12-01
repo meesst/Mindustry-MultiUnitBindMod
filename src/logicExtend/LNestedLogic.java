@@ -34,12 +34,12 @@ public class LNestedLogic {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
                     // 使用反射保存当前的静态canvas实例
-                    java.lang.reflect.Field canvasField = null;
-                    mindustry.logic.LCanvas originalCanvas = null;
+                    final java.lang.reflect.Field[] canvasField = {null};
+                    final mindustry.logic.LCanvas[] originalCanvas = {null};
                     try {
-                        canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                        canvasField.setAccessible(true);
-                        originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                        canvasField[0] = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                        canvasField[0].setAccessible(true);
+                        originalCanvas[0] = (mindustry.logic.LCanvas) canvasField[0].get(null);
                     } catch (Exception e) {
                         // 如果反射失败，使用默认行为
                     }
@@ -53,9 +53,9 @@ public class LNestedLogic {
                         nestedCode = modifiedCode;
                         
                         // 使用反射恢复之前保存的静态canvas实例
-                        if (canvasField != null && originalCanvas != null) {
+                        if (canvasField[0] != null && originalCanvas[0] != null) {
                             try {
-                                canvasField.set(null, originalCanvas);
+                                canvasField[0].set(null, originalCanvas[0]);
                             } catch (Exception e) {
                                 // 如果反射失败，忽略
                             }
