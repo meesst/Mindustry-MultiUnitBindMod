@@ -33,11 +33,33 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
-                    // 使用ui.logic来显示嵌套逻辑编辑页面，避免创建新的LCanvas实例
-                    // 这样就不会修改LCanvas.canvas静态变量，从而避免影响主页面的jump指令UI
-                    mindustry.Vars.ui.logic.show(nestedCode, null, false, modifiedCode -> {
+                    // 使用反射保存当前的静态canvas实例
+                    java.lang.reflect.Field canvasField = null;
+                    mindustry.logic.LCanvas originalCanvas = null;
+                    try {
+                        canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                        canvasField.setAccessible(true);
+                        originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                    } catch (Exception e) {
+                        // 如果反射失败，使用默认行为
+                    }
+                    
+                    // 为嵌套逻辑编辑创建一个新的LogicDialog实例
+                    // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
+                    mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                    // 显示编辑器，传入当前代码和回调函数
+                    nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                         // 保存修改后的代码
                         nestedCode = modifiedCode;
+                        
+                        // 使用反射恢复之前保存的静态canvas实例
+                        if (canvasField != null && originalCanvas != null) {
+                            try {
+                                canvasField.set(null, originalCanvas);
+                            } catch (Exception e) {
+                                // 如果反射失败，忽略
+                            }
+                        }
                     });
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(60, 40).color(table.color).left().padLeft(2)
