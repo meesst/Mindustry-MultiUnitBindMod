@@ -35,15 +35,16 @@ public class LNestedLogic {
                 b.clicked(() -> {
                     // 保存当前的canvas实例
                     final mindustry.logic.LCanvas oldCanvas;
+                    mindustry.logic.LCanvas tempCanvas = null;
                     try {
                         // 使用反射访问包级私有变量
                         java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
                         canvasField.setAccessible(true);
-                        oldCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                        tempCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
                     } catch (Exception e) {
                         e.printStackTrace();
-                        oldCanvas = null;
                     }
+                    oldCanvas = tempCanvas;
                     
                     // 为嵌套逻辑编辑创建一个新的LogicDialog实例
                     // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
