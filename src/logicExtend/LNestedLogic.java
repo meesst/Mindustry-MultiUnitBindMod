@@ -84,7 +84,7 @@ public class LNestedLogic {
             // 编译嵌套的逻辑指令
             // 1. 解码Base64嵌套代码
             // 2. 使用LAssembler.read()解析嵌套代码
-            // 3. 创建新的LAssembler实例编译嵌套指令，确保jump指令索引相对于嵌套指令序列
+            // 3. 使用独立的builder编译嵌套指令，避免流程指令冲突
             try {
                 // 直接使用嵌套代码，不需要额外解码
                 // 因为nestedCode已经是解码后的原始代码
@@ -94,17 +94,49 @@ public class LNestedLogic {
                 // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
                 nestedStatements.each(l -> l.elem = null);
                 
-                // 为嵌套指令创建新的LAssembler实例，确保jump指令索引相对于嵌套指令序列
+                // 创建新的LAssembler实例，用于编译嵌套指令
                 LAssembler nestedBuilder = new LAssembler();
-                // 复制主builder的变量表，确保变量被正确注册
-                nestedBuilder.vars.putAll(builder.vars);
+                
+                // 复制主builder的privileged状态
                 nestedBuilder.privileged = builder.privileged;
                 
-                // 编译嵌套指令，使用嵌套builder
+                // 复制主builder的变量表到嵌套builder
+                for(var entry : builder.vars.entries()) {
+                    LVar var = entry.value;
+                    if(var.constant) {
+                        // 如果是常量，复制常量值
+                        nestedBuilder.putConst(var.name, var.isobj ? var.objval : var.numval);
+                    } else {
+                        // 如果是变量，复制变量引用
+                        LVar newVar = nestedBuilder.putVar(var.name);
+                        newVar.isobj = var.isobj;
+                        newVar.objval = var.objval;
+                        newVar.numval = var.numval;
+                        newVar.constant = var.constant;
+                    }
+                }
+                
+                // 使用嵌套builder编译嵌套指令
                 LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
-                    // 编译指令 - 使用嵌套builder
+                    // 编译指令
                     return l.build(nestedBuilder);
                 }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+                
+                // 将嵌套builder中新增的变量复制回主builder
+                for(var entry : nestedBuilder.vars.entries()) {
+                    String name = entry.key;
+                    LVar nestedVar = entry.value;
+                    
+                    // 如果主builder中没有这个变量，添加它
+                    if(!builder.vars.containsKey(name)) {
+                        LVar mainVar = builder.putVar(name);
+                        mainVar.isobj = nestedVar.isobj;
+                        mainVar.objval = nestedVar.objval;
+                        mainVar.numval = nestedVar.numval;
+                        mainVar.constant = nestedVar.constant;
+                    }
+                }
+                
                 return new LNestedLogicInstruction(nestedInstructions);
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
@@ -182,9 +214,6 @@ public class LNestedLogic {
 
         @Override
         public void run(LExecutor exec) {
-            // 保存当前计数器值
-            double originalCounter = exec.counter.numval;
-            
             // 执行嵌套逻辑指令
             // 使用主执行器的变量作用域
             // 执行嵌套指令
@@ -195,9 +224,6 @@ public class LNestedLogic {
                 }
                 instruction.run(exec);
             }
-            
-            // 恢复原计数器值，仅递增1（将嵌套逻辑视为单个指令）
-            exec.counter.numval = originalCounter + 1;
         }
     }
 }
