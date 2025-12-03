@@ -223,14 +223,39 @@ public class LNestedLogic {
         @Override
         public void run(LExecutor exec) {
             // 执行嵌套逻辑指令
-            // 使用主执行器的变量作用域
+            // 保存当前的counter状态
+            double originalCounter = exec.counter.numval;
+            
             // 执行嵌套指令
-            for (LExecutor.LInstruction instruction : instructions) {
+            for (int i = 0; i < instructions.length; i++) {
                 // 检查指令计数限制
                 if (exec.counter.numval >= LExecutor.maxInstructions) {
                     break;
                 }
-                instruction.run(exec);
+                
+                // 执行当前指令
+                instructions[i].run(exec);
+                
+                // 检查counter是否被jump指令修改
+                int newIndex = (int)exec.counter.numval;
+                
+                // 如果counter被修改，并且修改后的值不是原来的值+1，说明是jump指令
+                if (newIndex != originalCounter + i + 1) {
+                    // 检查jump目标是否在嵌套指令范围内
+                    if (newIndex >= originalCounter && newIndex < originalCounter + instructions.length) {
+                        // 计算相对偏移量
+                        i = newIndex - (int)originalCounter - 1; // -1 because loop will increment i
+                    } else {
+                        // 跳转到了嵌套指令范围外，恢复原来的counter值并退出循环
+                        exec.counter.numval = originalCounter + instructions.length;
+                        break;
+                    }
+                }
+            }
+            
+            // 恢复原来的counter值，加上嵌套指令的长度
+            if (exec.counter.numval < originalCounter + instructions.length) {
+                exec.counter.numval = originalCounter + instructions.length;
             }
         }
     }
