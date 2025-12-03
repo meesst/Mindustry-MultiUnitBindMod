@@ -239,45 +239,72 @@ public class LNestedLogic {
         @Override
         public void run(LExecutor exec) {
             // 执行嵌套逻辑指令
-            // 不再使用独立的LExecutor，直接在主LExecutor上执行
-            // 但需要确保jump指令只在嵌套范围内生效
-            
-            // 1. 保存原始指令序列
-            LExecutor.LInstruction[] originalInstructions = exec.instructions;
-            
-            // 2. 保存原始counter值
-            double originalCounter = exec.counter.numval;
-            
-            try {
-                // 3. 临时替换为嵌套指令序列
-                exec.instructions = instructions;
+            if (!executed) {
+                // 第一次执行：初始化
                 
-                // 4. 重置counter到嵌套逻辑的开始
-                exec.counter.numval = 0;
+                // 1. 保存主逻辑返回地址
+                returnAddress = (int) exec.counter.numval;
                 
-                // 5. 执行嵌套逻辑，直到执行完毕或遇到限制
-                while ((int) exec.counter.numval < instructions.length && exec.counter.numval < LExecutor.maxInstructions) {
-                    // 保存当前counter值，用于检查jump指令
-                    double currentCounter = exec.counter.numval;
-                    
-                    // 执行一条指令
-                    exec.runOnce();
-                    
-                    // 检查是否是jump指令
-                    if ((int) exec.counter.numval != currentCounter + 1) {
-                        // 是jump指令，检查目标是否在嵌套范围内
-                        if ((int) exec.counter.numval < 0 || (int) exec.counter.numval >= instructions.length) {
-                            // 跳转到了嵌套范围外，终止执行
-                            break;
-                        }
-                    }
+                // 2. 创建嵌套LExecutor实例
+                nestedExecutor = new LExecutor();
+                
+                // 3. 设置嵌套LExecutor的指令序列
+                nestedExecutor.instructions = instructions;
+                
+                // 4. 关键：直接使用主逻辑的vars数组，不创建独立的变量存储
+                // 这样嵌套逻辑的所有变量操作都会直接修改主逻辑的变量
+                nestedExecutor.vars = exec.vars;
+                
+                // 5. 不共享nameMap，而是强制重新构建
+                // 这样确保nameMap与最新的vars数组同步
+                nestedExecutor.nameMap = null;
+                
+                // 6. 初始化嵌套LExecutor的内置变量
+                nestedExecutor.counter = new LVar("@counter");
+                nestedExecutor.counter.isobj = false;
+                nestedExecutor.counter.numval = 0;
+                
+                // 7. 复制其他必要的字段
+                nestedExecutor.unit = exec.unit;
+                nestedExecutor.thisv = exec.thisv;
+                nestedExecutor.ipt = exec.ipt;
+                nestedExecutor.privileged = exec.privileged;
+                nestedExecutor.build = exec.build;
+                nestedExecutor.team = exec.team;
+                nestedExecutor.links = exec.links;
+                nestedExecutor.linkIds = exec.linkIds;
+                nestedExecutor.graphicsBuffer = exec.graphicsBuffer;
+                nestedExecutor.textBuffer = exec.textBuffer;
+                
+                // 8. 执行嵌套逻辑的第一条指令
+                nestedExecutor.runOnce();
+                
+                // 9. 标记为已开始执行
+                executed = true;
+                
+                // 10. 暂停主逻辑，下一帧继续执行此指令
+                exec.counter.numval = returnAddress - 1;
+            } else {
+                // 后续执行：继续执行嵌套逻辑
+                
+                // 1. 检查指令计数限制
+                if (nestedExecutor.counter.numval >= LExecutor.maxInstructions) {
+                    // 嵌套逻辑执行超时，返回主逻辑
+                    exec.counter.numval = returnAddress;
+                    return;
                 }
-            } finally {
-                // 6. 恢复原始指令序列
-                exec.instructions = originalInstructions;
                 
-                // 7. 恢复原始counter值
-                exec.counter.numval = originalCounter;
+                // 2. 检查嵌套逻辑是否执行完毕
+                if ((int) nestedExecutor.counter.numval < nestedExecutor.instructions.length) {
+                    // 继续执行嵌套逻辑
+                    nestedExecutor.runOnce();
+                    
+                    // 暂停主逻辑，下一帧继续执行此指令
+                    exec.counter.numval = returnAddress - 1;
+                } else {
+                    // 嵌套逻辑执行完毕，恢复主逻辑执行
+                    exec.counter.numval = returnAddress;
+                }
             }
         }
     }
