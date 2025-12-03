@@ -304,6 +304,12 @@ public class LNestedLogic {
                     exec.counter.numval = returnAddress - 1;
                 } else {
                     // 嵌套逻辑执行完毕，恢复主逻辑执行
+                    
+                    // 关键：将主逻辑的nameMap设置为null，强制重新构建
+                    // 这样主逻辑在下次访问变量时，会包含嵌套逻辑创建的所有新变量
+                    setNameMap(exec, null);
+                    
+                    // 恢复主逻辑执行
                     exec.counter.numval = returnAddress;
                 }
             }
