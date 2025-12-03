@@ -257,7 +257,8 @@ public class LNestedLogic {
                 
                 // 5. 不共享nameMap，而是强制重新构建
                 // 这样确保nameMap与最新的vars数组同步
-                nestedExecutor.nameMap = null;
+                // 使用反射设置nameMap为null，强制重新构建
+                setNameMap(nestedExecutor, null);
                 
                 // 6. 初始化嵌套LExecutor的内置变量
                 nestedExecutor.counter = new LVar("@counter");
