@@ -145,10 +145,13 @@ public class LNestedLogic {
                     }
                 }
                 
-                return new LNestedLogicInstruction(nestedInstructions);
+                // 获取当前builder的指令数量，作为嵌套指令的起始位置
+                int startIndex = builder.instructions != null ? builder.instructions.length : 0;
+                
+                return new LNestedLogicInstruction(nestedInstructions, startIndex);
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
-                return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
+                return new LNestedLogicInstruction(new LExecutor.LInstruction[0], 0);
             }
         }
 
@@ -211,13 +214,17 @@ public class LNestedLogic {
     public static class LNestedLogicInstruction implements LExecutor.LInstruction {
         // 编译后的嵌套逻辑指令
         public LExecutor.LInstruction[] instructions;
+        // 嵌套指令的起始位置
+        public int startIndex;
 
-        public LNestedLogicInstruction(LExecutor.LInstruction[] instructions) {
+        public LNestedLogicInstruction(LExecutor.LInstruction[] instructions, int startIndex) {
             this.instructions = instructions;
+            this.startIndex = startIndex;
         }
 
         public LNestedLogicInstruction() {
             this.instructions = new LExecutor.LInstruction[0];
+            this.startIndex = 0;
         }
 
         @Override
@@ -233,8 +240,11 @@ public class LNestedLogic {
                     break;
                 }
                 
+                // 获取当前指令
+                LExecutor.LInstruction instruction = instructions[i];
+                
                 // 执行当前指令
-                instructions[i].run(exec);
+                instruction.run(exec);
                 
                 // 检查counter是否被jump指令修改
                 int newIndex = (int)exec.counter.numval;
@@ -242,9 +252,10 @@ public class LNestedLogic {
                 // 如果counter被修改，并且修改后的值不是原来的值+1，说明是jump指令
                 if (newIndex != originalCounter + i + 1) {
                     // 检查jump目标是否在嵌套指令范围内
-                    if (newIndex >= originalCounter && newIndex < originalCounter + instructions.length) {
-                        // 计算相对偏移量
-                        i = newIndex - (int)originalCounter - 1; // -1 because loop will increment i
+                    if (newIndex >= 0 && newIndex < instructions.length) {
+                        // 计算相对偏移量，将新索引转换为相对于原始计数器的位置
+                        i = newIndex - 1; // -1 because loop will increment i
+                        exec.counter.numval = originalCounter + i + 1; // 更新计数器为正确的值
                     } else {
                         // 跳转到了嵌套指令范围外，恢复原来的counter值并退出循环
                         exec.counter.numval = originalCounter + instructions.length;
