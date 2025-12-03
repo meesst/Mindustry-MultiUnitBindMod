@@ -34,47 +34,14 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> "Edit");
                 b.clicked(() -> {
-                    // 保存当前的canvas实例
-                    final mindustry.logic.LCanvas oldCanvas;
-                    mindustry.logic.LCanvas tempCanvas = null;
-                    try {
-                        // 使用反射访问包级私有变量
-                        java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                        canvasField.setAccessible(true);
-                        tempCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    oldCanvas = tempCanvas;
-                    
                     // 为嵌套逻辑编辑创建一个新的LogicDialog实例
-                    // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
                     mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
-                    
-                    // 创建恢复canvas的lambda
-                    Runnable restoreCanvas = () -> {
-                        if (oldCanvas != null) {
-                            try {
-                                // 使用反射恢复canvas实例
-                                java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                                canvasField.setAccessible(true);
-                                canvasField.set(null, oldCanvas);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    };
                     
                     // 显示编辑器，传入当前代码和回调函数
                     nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                         // 保存修改后的代码
                         nestedCode = modifiedCode;
-                        // 恢复原来的canvas实例
-                        restoreCanvas.run();
                     });
-                    
-                    // 当对话框隐藏时恢复canvas实例（确保无论如何都会恢复）
-                    nestedDialog.hidden(restoreCanvas);
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(60, 40).color(table.color).left().padLeft(2)
               .self(c -> tooltip(c, "lnestedlogic.button"));
@@ -83,12 +50,11 @@ public class LNestedLogic {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 编译嵌套的逻辑指令
-            // 1. 解码Base64嵌套代码
-            // 2. 使用LAssembler.read()解析嵌套代码
-            // 3. 使用独立的builder编译嵌套指令，避免流程指令冲突
+            // 1. 解析嵌套代码为语句序列
+            // 2. 创建新的LAssembler编译嵌套指令
+            // 3. 复制主builder的关键变量
+            // 4. 编译嵌套语句为指令
             try {
-                // 直接使用嵌套代码，不需要额外解码
-                // 因为nestedCode已经是解码后的原始代码
                 // 使用LAssembler.read()解析嵌套代码
                 Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
                 
@@ -98,60 +64,20 @@ public class LNestedLogic {
                 // 创建新的LAssembler实例，用于编译嵌套指令
                 LAssembler nestedBuilder = new LAssembler();
                 
-                // 复制主builder的privileged状态（使用反射访问私有字段）
-                try {
-                    java.lang.reflect.Field privilegedField = LAssembler.class.getDeclaredField("privileged");
-                    privilegedField.setAccessible(true);
-                    boolean isPrivileged = privilegedField.getBoolean(builder);
-                    privilegedField.setBoolean(nestedBuilder, isPrivileged);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                // 设置privileged状态
+                nestedBuilder.privileged = builder.privileged;
                 
-                // 复制主builder的变量表到嵌套builder
-                for(var entry : builder.vars.entries()) {
-                    LVar var = entry.value;
-                    if(var.constant) {
-                        // 如果是常量，复制常量值
-                        nestedBuilder.putConst(var.name, var.isobj ? var.objval : var.numval);
-                    } else {
-                        // 如果是变量，复制变量引用
-                        LVar newVar = nestedBuilder.putVar(var.name);
-                        newVar.isobj = var.isobj;
-                        newVar.objval = var.objval;
-                        newVar.numval = var.numval;
-                        newVar.constant = var.constant;
-                    }
-                }
-                
-                // 使用嵌套builder编译嵌套指令
+                // 编译嵌套语句为指令
                 LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
                     // 编译指令
                     return l.build(nestedBuilder);
                 }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
                 
-                // 将嵌套builder中新增的变量复制回主builder
-                for(var entry : nestedBuilder.vars.entries()) {
-                    String name = entry.key;
-                    LVar nestedVar = entry.value;
-                    
-                    // 如果主builder中没有这个变量，添加它
-                    if(!builder.vars.containsKey(name)) {
-                        LVar mainVar = builder.putVar(name);
-                        mainVar.isobj = nestedVar.isobj;
-                        mainVar.objval = nestedVar.objval;
-                        mainVar.numval = nestedVar.numval;
-                        mainVar.constant = nestedVar.constant;
-                    }
-                }
-                
-                // 获取当前builder的指令数量，作为嵌套指令的起始位置
-                int startIndex = builder.instructions != null ? builder.instructions.length : 0;
-                
-                return new LNestedLogicInstruction(nestedInstructions, startIndex);
+                // 返回嵌套逻辑指令，不包含startIndex
+                return new LNestedLogicInstruction(nestedInstructions);
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
-                return new LNestedLogicInstruction(new LExecutor.LInstruction[0], 0);
+                return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
             }
         }
 
@@ -214,59 +140,87 @@ public class LNestedLogic {
     public static class LNestedLogicInstruction implements LExecutor.LInstruction {
         // 编译后的嵌套逻辑指令
         public LExecutor.LInstruction[] instructions;
-        // 嵌套指令的起始位置
-        public int startIndex;
+        // 执行状态标记
+        public boolean executed = false;
+        // 嵌套LExecutor实例
+        public LExecutor nestedExecutor;
+        // 主逻辑返回地址
+        public int returnAddress;
 
-        public LNestedLogicInstruction(LExecutor.LInstruction[] instructions, int startIndex) {
+        public LNestedLogicInstruction(LExecutor.LInstruction[] instructions) {
             this.instructions = instructions;
-            this.startIndex = startIndex;
         }
 
         public LNestedLogicInstruction() {
             this.instructions = new LExecutor.LInstruction[0];
-            this.startIndex = 0;
         }
 
         @Override
         public void run(LExecutor exec) {
             // 执行嵌套逻辑指令
-            // 保存当前的counter状态
-            double originalCounter = exec.counter.numval;
-            
-            // 执行嵌套指令
-            for (int i = 0; i < instructions.length; i++) {
-                // 检查指令计数限制
-                if (exec.counter.numval >= LExecutor.maxInstructions) {
-                    break;
+            if (!executed) {
+                // 第一次执行：初始化
+                
+                // 1. 保存主逻辑返回地址
+                returnAddress = (int) exec.counter.numval;
+                
+                // 2. 创建嵌套LExecutor实例
+                nestedExecutor = new LExecutor();
+                
+                // 3. 设置嵌套LExecutor的指令序列
+                nestedExecutor.instructions = instructions;
+                
+                // 4. 共享变量：直接使用主exec的vars和nameMap
+                nestedExecutor.vars = exec.vars;
+                nestedExecutor.nameMap = exec.nameMap;
+                
+                // 5. 初始化嵌套LExecutor的内置变量
+                nestedExecutor.counter = new LVar("@counter");
+                nestedExecutor.counter.isobj = false;
+                nestedExecutor.counter.numval = 0;
+                
+                nestedExecutor.unit = exec.unit;
+                nestedExecutor.thisv = exec.thisv;
+                nestedExecutor.ipt = exec.ipt;
+                
+                nestedExecutor.privileged = exec.privileged;
+                nestedExecutor.build = exec.build;
+                nestedExecutor.team = exec.team;
+                nestedExecutor.links = exec.links;
+                nestedExecutor.linkIds = exec.linkIds;
+                
+                nestedExecutor.graphicsBuffer = exec.graphicsBuffer;
+                nestedExecutor.textBuffer = exec.textBuffer;
+                
+                // 6. 执行嵌套逻辑的第一条指令
+                nestedExecutor.runOnce();
+                
+                // 7. 标记为已开始执行
+                executed = true;
+                
+                // 8. 暂停主逻辑，下一帧继续执行此指令
+                exec.counter.numval = returnAddress - 1;
+            } else {
+                // 后续执行：继续执行嵌套逻辑
+                
+                // 1. 检查指令计数限制
+                if (nestedExecutor.counter.numval >= LExecutor.maxInstructions) {
+                    // 嵌套逻辑执行超时，返回主逻辑
+                    exec.counter.numval = returnAddress;
+                    return;
                 }
                 
-                // 获取当前指令
-                LExecutor.LInstruction instruction = instructions[i];
-                
-                // 执行当前指令
-                instruction.run(exec);
-                
-                // 检查counter是否被jump指令修改
-                int newIndex = (int)exec.counter.numval;
-                
-                // 如果counter被修改，并且修改后的值不是原来的值+1，说明是jump指令
-                if (newIndex != originalCounter + i + 1) {
-                    // 检查jump目标是否在嵌套指令范围内
-                    if (newIndex >= 0 && newIndex < instructions.length) {
-                        // 计算相对偏移量，将新索引转换为相对于原始计数器的位置
-                        i = newIndex - 1; // -1 because loop will increment i
-                        exec.counter.numval = originalCounter + i + 1; // 更新计数器为正确的值
-                    } else {
-                        // 跳转到了嵌套指令范围外，恢复原来的counter值并退出循环
-                        exec.counter.numval = originalCounter + instructions.length;
-                        break;
-                    }
+                // 2. 检查嵌套逻辑是否执行完毕
+                if ((int) nestedExecutor.counter.numval < nestedExecutor.instructions.length) {
+                    // 继续执行嵌套逻辑
+                    nestedExecutor.runOnce();
+                    
+                    // 暂停主逻辑，下一帧继续执行此指令
+                    exec.counter.numval = returnAddress - 1;
+                } else {
+                    // 嵌套逻辑执行完毕，恢复主逻辑执行
+                    exec.counter.numval = returnAddress;
                 }
-            }
-            
-            // 恢复原来的counter值，加上嵌套指令的长度
-            if (exec.counter.numval < originalCounter + instructions.length) {
-                exec.counter.numval = originalCounter + instructions.length;
             }
         }
     }
