@@ -14,6 +14,50 @@ import static mindustry.logic.LCanvas.tooltip;
 import static arc.Core.*;
 
 public class LNestedLogic {
+    
+    // 反射辅助方法：访问LAssembler.privileged私有字段
+    private static boolean getPrivileged(LAssembler builder) {
+        try {
+            java.lang.reflect.Field privilegedField = LAssembler.class.getDeclaredField("privileged");
+            privilegedField.setAccessible(true);
+            return privilegedField.getBoolean(builder);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    private static void setPrivileged(LAssembler builder, boolean value) {
+        try {
+            java.lang.reflect.Field privilegedField = LAssembler.class.getDeclaredField("privileged");
+            privilegedField.setAccessible(true);
+            privilegedField.setBoolean(builder, value);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    // 反射辅助方法：访问LExecutor.nameMap受保护字段
+    private static arc.struct.ObjectIntMap<String> getNameMap(LExecutor exec) {
+        try {
+            java.lang.reflect.Field nameMapField = LExecutor.class.getDeclaredField("nameMap");
+            nameMapField.setAccessible(true);
+            return (arc.struct.ObjectIntMap<String>) nameMapField.get(exec);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    private static void setNameMap(LExecutor exec, arc.struct.ObjectIntMap<String> nameMap) {
+        try {
+            java.lang.reflect.Field nameMapField = LExecutor.class.getDeclaredField("nameMap");
+            nameMapField.setAccessible(true);
+            nameMapField.set(exec, nameMap);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public static class LNestedLogicStatement extends LStatement {
         // 存储嵌套的逻辑代码
@@ -64,8 +108,9 @@ public class LNestedLogic {
                 // 创建新的LAssembler实例，用于编译嵌套指令
                 LAssembler nestedBuilder = new LAssembler();
                 
-                // 设置privileged状态
-                nestedBuilder.privileged = builder.privileged;
+                // 设置privileged状态（使用反射）
+                boolean isPrivileged = getPrivileged(builder);
+                setPrivileged(nestedBuilder, isPrivileged);
                 
                 // 编译嵌套语句为指令
                 LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
@@ -77,6 +122,7 @@ public class LNestedLogic {
                 return new LNestedLogicInstruction(nestedInstructions);
             } catch (Exception e) {
                 // 如果编译失败，返回空指令
+                e.printStackTrace();
                 return new LNestedLogicInstruction(new LExecutor.LInstruction[0]);
             }
         }
@@ -170,9 +216,11 @@ public class LNestedLogic {
                 // 3. 设置嵌套LExecutor的指令序列
                 nestedExecutor.instructions = instructions;
                 
-                // 4. 共享变量：直接使用主exec的vars和nameMap
+                // 4. 共享变量：直接使用主exec的vars，并使用反射设置nameMap
                 nestedExecutor.vars = exec.vars;
-                nestedExecutor.nameMap = exec.nameMap;
+                // 使用反射获取并设置nameMap
+                ObjectIntMap<String> mainNameMap = getNameMap(exec);
+                setNameMap(nestedExecutor, mainNameMap);
                 
                 // 5. 初始化嵌套LExecutor的内置变量
                 nestedExecutor.counter = new LVar("@counter");
