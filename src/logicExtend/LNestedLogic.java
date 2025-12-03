@@ -97,8 +97,9 @@ public class LNestedLogic {
             // 编译嵌套的逻辑指令
             // 1. 解析嵌套代码为语句序列
             // 2. 创建新的LAssembler编译嵌套指令
-            // 3. 复制主builder的关键变量
+            // 3. 复制主builder的变量表到嵌套builder
             // 4. 编译嵌套语句为指令
+            // 5. 将嵌套builder中新增的变量复制回主builder
             try {
                 // 使用LAssembler.read()解析嵌套代码
                 Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
@@ -113,11 +114,44 @@ public class LNestedLogic {
                 boolean isPrivileged = getPrivileged(builder);
                 setPrivileged(nestedBuilder, isPrivileged);
                 
+                // 复制主builder的变量表到嵌套builder
+                // 这样嵌套逻辑可以访问主逻辑中已有的变量
+                for(var entry : builder.vars.entries()) {
+                    LVar var = entry.value;
+                    if(var.constant) {
+                        // 如果是常量，复制常量值
+                        nestedBuilder.putConst(var.name, var.isobj ? var.objval : var.numval);
+                    } else {
+                        // 如果是变量，复制变量引用
+                        LVar newVar = nestedBuilder.putVar(var.name);
+                        newVar.isobj = var.isobj;
+                        newVar.objval = var.objval;
+                        newVar.numval = var.numval;
+                        newVar.constant = var.constant;
+                    }
+                }
+                
                 // 编译嵌套语句为指令
                 LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
                     // 编译指令
                     return l.build(nestedBuilder);
                 }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+                
+                // 将嵌套builder中新增的变量复制回主builder
+                // 这样主逻辑可以访问嵌套逻辑中创建的变量
+                for(var entry : nestedBuilder.vars.entries()) {
+                    String name = entry.key;
+                    LVar nestedVar = entry.value;
+                    
+                    // 如果主builder中没有这个变量，添加它
+                    if(!builder.vars.containsKey(name)) {
+                        LVar mainVar = builder.putVar(name);
+                        mainVar.isobj = nestedVar.isobj;
+                        mainVar.objval = nestedVar.objval;
+                        mainVar.numval = nestedVar.numval;
+                        mainVar.constant = nestedVar.constant;
+                    }
+                }
                 
                 // 返回嵌套逻辑指令，不包含startIndex
                 return new LNestedLogicInstruction(nestedInstructions);
