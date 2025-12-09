@@ -79,12 +79,6 @@ public class LUnitBindGroupRUN {
         unitVar.setobj(unit);
         indexVar.setnum(pool.currentIndex + 1); // 索引从1开始
         
-        // 只在单位有效的情况下才预控制单位
-        if (unit.isValid()) {
-            // 预控制单位
-            preControlUnit(pool.controller, unit);
-        }
-        
         // 索引递增，下次执行时将返回下一个单位
         pool.currentIndex++;
     }
@@ -112,6 +106,8 @@ public class LUnitBindGroupRUN {
             
             // 检查单位是否可绑定
             if (isUnitBindable(exec, unit)) {
+                // 预控制单位
+                preControlUnit(exec, unit);
                 pool.units.add(unit);
                 boundCount++;
             }
@@ -147,7 +143,7 @@ public class LUnitBindGroupRUN {
     }
     
     //预控制单位（将单位的控制方设置为当前逻辑处理器）
-    private static void preControlUnit(Building controller, Unit unit) {
+    private static void preControlUnit(LExecutor exec, Unit unit) {
         // 检查单位是否有效且可被逻辑控制
         if (unit.isValid() && unit.controller().isLogicControllable()) {
             LogicAI la;
@@ -162,8 +158,8 @@ public class LUnitBindGroupRUN {
             }
             
             // 设置控制器
-            if (controller != null) {
-                la.controller = controller;
+            if (exec.build != null) {
+                la.controller = exec.build;
             }
         }
     }
@@ -198,7 +194,8 @@ public class LUnitBindGroupRUN {
             // 2. 控制方判断
             if (!(unit.controller() instanceof LogicAI) || 
                 exec.build == null || 
-                ((LogicAI)unit.controller()).controller != exec.build) {
+                ((LogicAI)unit.controller()).controller != exec.build ||
+                unit.isPlayer()) {
                 toRemove.add(unit);
                 continue;
             }
