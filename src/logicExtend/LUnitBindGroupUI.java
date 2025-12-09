@@ -130,7 +130,7 @@ public class LUnitBindGroupUI {
                
         /** 注册自定义逻辑指令 */
         public static void create() {
-            // 注册指令解析器
+            // 注册unitBindGroup指令解析器
             LAssembler.customParsers.put("unitBindGroup", params -> {
                 // 创建新的指令实例
                 UnitBindGroupStatement stmt = new UnitBindGroupStatement();
@@ -148,6 +148,16 @@ public class LUnitBindGroupUI {
             });
             // 将指令添加到逻辑IO的所有语句列表中，使其在逻辑编辑器中可用
             LogicIO.allStatements.add(UnitBindGroupStatement::new);
+            
+            // 注册unitAssist指令解析器
+            LAssembler.customParsers.put("unitAssist", params -> {
+                UnitAssistStatement stmt = new UnitAssistStatement();
+                if (params.length >= 2) stmt.assisterVar = params[1];
+                if (params.length >= 3) stmt.targetVar = params[2];
+                stmt.afterRead();
+                return stmt;
+            });
+            LogicIO.allStatements.add(UnitAssistStatement::new);
         }
         
         /** 序列化指令到字符串 */
@@ -186,6 +196,77 @@ public class LUnitBindGroupUI {
         public void run(LExecutor exec) {
             // 调用外部类LUnitBindGroupRUN中的run方法执行实际逻辑
             LUnitBindGroupRUN.run(exec, type, count, unitVar, indexVar);
+        }
+    }
+    
+    /** 单位协助指令类 */
+    public static class UnitAssistStatement extends LStatement {
+        /** 协助者变量名 */
+        public String assisterVar = "assister";
+        /** 目标单位变量名 */
+        public String targetVar = "target";
+
+        /** 构建指令的UI界面 */
+        @Override
+        public void build(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            // 第一排：assisterVar和targetVar参数
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                // 显示assisterVar参数
+                t.add(" assisterVar ").left().self(c -> tooltip(c, "unitassist.assistervar"));
+                field(t, assisterVar, str -> assisterVar = str);
+                
+                // 显示targetVar参数
+                t.add(" targetVar ").left().self(c -> tooltip(c, "unitassist.targetvar"));
+                field(t, targetVar, str -> targetVar = str);
+            }).left();
+        }
+
+        /** 构建指令的执行实例 */
+        @Override
+        public LExecutor.LInstruction build(LAssembler builder) {
+            return new UnitAssistI(builder.var(assisterVar), builder.var(targetVar));
+        }
+
+        /** 指定指令在逻辑编辑器中的分类 */
+        @Override
+        public LCategory category() {
+            return LCategory.unit; // 指令归类为单位操作类别
+        }
+
+        /** 序列化指令到字符串 */
+        @Override
+        public void write(StringBuilder builder) {
+            builder.append("unitAssist ").append(assisterVar).append(" ").append(targetVar);
+        }
+    }
+    
+    /** 单位协助指令执行器类 */
+    public static class UnitAssistI implements LExecutor.LInstruction {
+        /** 协助者变量 */
+        public LVar assisterVar;
+        /** 目标单位变量 */
+        public LVar targetVar;
+
+        /** 构造函数，指定协助者变量和目标单位变量 */
+        public UnitAssistI(LVar assisterVar, LVar targetVar) {
+            this.assisterVar = assisterVar;
+            this.targetVar = targetVar;
+        }
+
+        /** 空构造函数 */
+        public UnitAssistI() {
+        }
+
+        /** 执行指令的核心逻辑 */
+        @Override
+        public void run(LExecutor exec) {
+            // 调用外部类LUnitBindGroupRUN中的unitAssist方法执行实际逻辑
+            LUnitBindGroupRUN.unitAssist(exec, assisterVar, targetVar);
         }
     }
 }

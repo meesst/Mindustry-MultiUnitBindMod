@@ -235,4 +235,39 @@ public class LUnitBindGroupRUN {
             pool.controller = exec.build;
         }
     }
+    
+    /** 执行单位协助的核心逻辑 */
+    public static void unitAssist(LExecutor exec, LVar assisterVar, LVar targetVar) {
+        // 获取协助者和目标单位
+        Object assisterObj = assisterVar.isobj ? assisterVar.obj() : null;
+        Object targetObj = targetVar.isobj ? targetVar.obj() : null;
+        
+        // 检查参数类型
+        if (!(assisterObj instanceof Unit assister) || !(targetObj instanceof Unit target)) {
+            return;
+        }
+        
+        // 检查单位是否有效
+        if (!assister.isValid() || !target.isValid()) {
+            return;
+        }
+        
+        // 检查单位是否属于同一队伍
+        if (assister.team() != target.team()) {
+            return;
+        }
+        
+        // 设置协助逻辑
+        if (assister.controller() instanceof LogicAI) {
+            // 创建BuilderAI控制器，设置为只协助模式
+            mindustry.ai.types.BuilderAI builderAI = new mindustry.ai.types.BuilderAI();
+            builderAI.onlyAssist = false; // 设置为false，允许主动协助建造
+            
+            // 设置协助目标
+            builderAI.assistFollowing = target;
+            
+            // 将单位的控制器切换为BuilderAI
+            assister.controller(builderAI);
+        }
+    }
 }
