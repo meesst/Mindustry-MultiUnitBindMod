@@ -12,6 +12,52 @@ import static mindustry.logic.LCanvas.tooltip;
 //单位协助指令实现类
 public class LUnitAssist {
     
+    /** 混合AI控制器：继承自LogicAI，添加协助建造功能 */
+    public static class AssistLogicAI extends LogicAI {
+        public Unit assistTarget;
+        public BuilderAI builderAI = new BuilderAI();
+        
+        public AssistLogicAI(Unit assistTarget) {
+            this.assistTarget = assistTarget;
+            this.builderAI.assistFollowing = assistTarget;
+            this.builderAI.onlyAssist = false;
+        }
+        
+        @Override
+        public void updateUnit() {
+            // 首先执行LogicAI的updateUnit方法，处理逻辑指令
+            super.updateUnit();
+            
+            // 然后在空闲时执行协助建造逻辑
+            if (assistTarget != null && assistTarget.isValid()) {
+                // 检查单位是否在执行非空闲操作
+                boolean isActive = false;
+                
+                // 检查是否在移动
+                if (control != LUnitControl.stop || boost) {
+                    isActive = true;
+                }
+                
+                // 检查是否在射击
+                if (shoot) {
+                    isActive = true;
+                }
+                
+                // 检查是否在建造
+                if (unit.activelyBuilding()) {
+                    isActive = true;
+                }
+                
+                // 如果单位空闲，执行协助建造
+                if (!isActive) {
+                    // 执行协助建造
+                    builderAI.unit(unit);
+                    builderAI.updateMovement();
+                }
+            }
+        }
+    }
+    
     /** 单位协助指令类 */
     public static class UnitAssistStatement extends LStatement {
         /** 协助者变量名 */
@@ -112,17 +158,28 @@ public class LUnitAssist {
                 return;
             }
             
-            // 设置协助逻辑
+            // 方案二：使用混合AI控制器，继承自LogicAI，添加协助建造功能
             if (assister.controller() instanceof LogicAI) {
-                // 创建BuilderAI控制器，设置为只协助模式
-                BuilderAI builderAI = new BuilderAI();
-                builderAI.onlyAssist = false; // 设置为false，允许主动协助建造
+                // 创建混合AI控制器，保持LogicAI的功能，添加协助建造功能
+                AssistLogicAI assistLogicAI = new AssistLogicAI(target);
                 
-                // 设置协助目标
-                builderAI.assistFollowing = target;
+                // 复制原LogicAI的状态到新的混合AI控制器
+                LogicAI oldAI = (LogicAI) assister.controller();
+                assistLogicAI.control = oldAI.control;
+                assistLogicAI.moveX = oldAI.moveX;
+                assistLogicAI.moveY = oldAI.moveY;
+                assistLogicAI.moveRad = oldAI.moveRad;
+                assistLogicAI.controlTimer = oldAI.controlTimer;
+                assistLogicAI.controller = oldAI.controller;
+                assistLogicAI.plan = oldAI.plan;
+                assistLogicAI.execCache = oldAI.execCache;
+                assistLogicAI.aimControl = oldAI.aimControl;
+                assistLogicAI.boost = oldAI.boost;
+                assistLogicAI.mainTarget = oldAI.mainTarget;
+                assistLogicAI.shoot = oldAI.shoot;
                 
-                // 将单位的控制器切换为BuilderAI
-                assister.controller(builderAI);
+                // 将单位的控制器切换为混合AI控制器
+                assister.controller(assistLogicAI);
             }
         }
     }
