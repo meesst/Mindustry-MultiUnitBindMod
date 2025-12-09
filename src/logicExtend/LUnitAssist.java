@@ -136,7 +136,8 @@ public class LUnitAssist {
                 assister.plans.clear();
                 BuildPlan targetPlan = target.buildPlan();
                 if (targetPlan != null) {
-                    BuildPlan assistPlan = new BuildPlan(targetPlan);
+                    // 使用正确的BuildPlan构造函数
+                    BuildPlan assistPlan = new BuildPlan(targetPlan.x, targetPlan.y, targetPlan.rotation, targetPlan.block, targetPlan.config);
                     assister.plans.addFirst(assistPlan);
                 }
             }

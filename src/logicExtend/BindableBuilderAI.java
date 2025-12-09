@@ -1,9 +1,7 @@
 package logicExtend;
 
-import arc.struct.Groups;
 import mindustry.ai.types.BuilderAI;
-import mindustry.gen.Player;
-import mindustry.gen.Unit;
+import mindustry.gen.*;
 
 /**
  * 可绑定的建造者AI，扩展自BuilderAI
@@ -23,7 +21,7 @@ public class BindableBuilderAI extends BuilderAI {
         // 只有在onlyAssist模式下，才修改行为
         if (onlyAssist) {
             // 检查是否已经有协助目标
-            if (assistFollowing != null && assistFollowing.isValid() && assistFollowing.player != null) {
+            if (assistFollowing != null && assistFollowing.isValid()) {
                 // 已经有有效目标，不改变
                 return;
             }
