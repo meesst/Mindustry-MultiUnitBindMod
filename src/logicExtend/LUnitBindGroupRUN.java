@@ -21,14 +21,15 @@ public class LUnitBindGroupRUN {
         public Building controller; // 控制者属性
     }
     
-    // 使用执行器哈希值作为key，存储每个执行器的单位池
-    private static final ObjectMap<Integer, UnitPool> executorPools = new ObjectMap<>();
+    // 使用执行器哈希值和instanceId作为复合key，存储每个指令实例的单位池
+    private static final ObjectMap<Integer, ObjectMap<String, UnitPool>> executorPools = new ObjectMap<>();
 
     /** 执行单位绑定的核心逻辑 */
-    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar) {
+    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar, LVar instanceId) {
         // 获取单位类型和数量
         UnitType unitType = null;
         int bindCount = 1;
+        String instanceIdStr = instanceId.isobj ? (instanceId.obj() != null ? instanceId.obj().toString() : "default") : String.valueOf(instanceId.num());
         
         if (type.isobj && type.obj() instanceof UnitType) {
             unitType = (UnitType) type.obj();
@@ -46,7 +47,8 @@ public class LUnitBindGroupRUN {
         }
         
         // 获取或创建单位池
-        UnitPool pool = executorPools.get(exec.hashCode(), UnitPool::new);
+        ObjectMap<String, UnitPool> instancePools = executorPools.get(exec.hashCode(), ObjectMap::new);
+        UnitPool pool = instancePools.get(instanceIdStr, UnitPool::new);
         
         // 设置单位类型
         pool.type = unitType;

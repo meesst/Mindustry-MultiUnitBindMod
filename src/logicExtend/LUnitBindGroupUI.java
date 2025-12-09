@@ -33,6 +33,8 @@ public class LUnitBindGroupUI {
         public String unitVar = "currentUnit";
         /** 存储单位索引的变量名，默认值为unitIndex */
         public String indexVar = "unitIndex";
+        /** 指令实例的唯一标识符，用于区分不同的单位池 */
+        public String instanceId = "";
 
         /** 构建指令的UI界面 */
         @Override
@@ -119,7 +121,7 @@ public class LUnitBindGroupUI {
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
             // 将所有参数转换为LVar对象，并创建执行器实例
-            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(unitVar), builder.var(indexVar));
+            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(unitVar), builder.var(indexVar), builder.var(instanceId));
         }
 
         /** 指定指令在逻辑编辑器中的分类 */
@@ -134,6 +136,8 @@ public class LUnitBindGroupUI {
             LAssembler.customParsers.put("unitBindGroup", params -> {
                 // 创建新的指令实例
                 UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+                // 生成唯一标识符
+                stmt.instanceId = System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
                 // 如果有参数，则设置单位类型
                 if (params.length >= 2) stmt.type = params[1];
                 // 如果有第二个参数，则设置count值
@@ -147,14 +151,19 @@ public class LUnitBindGroupUI {
                 return stmt;
             });
             // 将指令添加到逻辑IO的所有语句列表中，使其在逻辑编辑器中可用
-            LogicIO.allStatements.add(UnitBindGroupStatement::new);
+            LogicIO.allStatements.add(() -> {
+                UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+                // 生成唯一标识符
+                stmt.instanceId = System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
+                return stmt;
+            });
         }
         
         /** 序列化指令到字符串 */
         @Override
         public void write(StringBuilder builder){
-            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar
-            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar);
+            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar + 空格 + instanceId
+            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar).append(" ").append(instanceId);
         }
     }
     
@@ -168,13 +177,16 @@ public class LUnitBindGroupUI {
         public LVar unitVar;
         /** 单位索引变量的变量引用 */
         public LVar indexVar;
+        /** 指令实例ID，用于区分不同的单位池 */
+        public LVar instanceId;
 
         /** 构造函数，指定目标单位类型、数量、单位变量和索引变量 */
-        public UnitBindGroupI(LVar type, LVar count, LVar unitVar, LVar indexVar) {
+        public UnitBindGroupI(LVar type, LVar count, LVar unitVar, LVar indexVar, LVar instanceId) {
             this.type = type;
             this.count = count;
             this.unitVar = unitVar;
             this.indexVar = indexVar;
+            this.instanceId = instanceId;
         }
 
         /** 空构造函数 */
@@ -185,7 +197,7 @@ public class LUnitBindGroupUI {
         @Override
         public void run(LExecutor exec) {
             // 调用外部类LUnitBindGroupRUN中的run方法执行实际逻辑
-            LUnitBindGroupRUN.run(exec, type, count, unitVar, indexVar);
+            LUnitBindGroupRUN.run(exec, type, count, unitVar, indexVar, instanceId);
         }
     }
 }
