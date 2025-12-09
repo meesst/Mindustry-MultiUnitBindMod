@@ -1,0 +1,384 @@
+package logicExtend;
+
+import arc.struct.Seq;
+import arc.scene.ui.*;
+import arc.scene.ui.layout.*;
+import arc.scene.style.TextureRegionDrawable;
+import mindustry.gen.*;
+import mindustry.logic.*;
+import mindustry.type.*;
+import mindustry.ui.Styles;
+import mindustry.ui.dialogs.*;
+import arc.scene.ui.ButtonGroup;
+import arc.scene.ui.TextField;
+import arc.scene.style.Drawable;
+import mindustry.gen.Icon;
+import arc.Core;
+
+import static mindustry.Vars.*;
+import static mindustry.logic.LCanvas.tooltip;
+import static arc.Core.*;
+
+/** 单位绑定组逻辑指令UI类 */
+public class LUnitBindGroupUI {
+    
+    /** 单位绑定组指令类 */
+    public static class UnitBindGroupStatement extends LStatement {
+        
+        /** 移除字符串两端的引号 */
+        private static String removeQuotes(String str) {
+            if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
+                return str.substring(1, str.length() - 1);
+            }
+            return str;
+        }
+        /** 静态频道列表，用于持久化存储所有频道 */
+        public static Seq<String> channels = null;
+        /** 目标单位类型标识，默认绑定到多足单位类型 */
+        public String type = "@poly";
+        /** 绑定的单位数量，默认值为1 */
+        public String count = "1";
+        /** 存储当前单位的变量名，默认值为currentUnit */
+        public String unitVar = "currentUnit";
+        /** 存储单位索引的变量名，默认值为unitIndex */
+        public String indexVar = "unitIndex";
+        /** 绑定模式，默认值为Capture-unit */
+        public String mode = "Capture-unit";
+        /** 绑定组类型，默认值为stand-alone */
+        public String group = "stand-alone";
+
+        /** 构建指令的UI界面 */
+        @Override
+        public void build(Table table) {
+            rebuild(table);
+        }
+        
+        private void rebuild(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            // 获取不带引号的mode值用于条件判断
+            final String modeWithoutQuotes = removeQuotes(mode);
+            
+            // 第一排：根据mode决定显示哪些参数（使用嵌套Table）
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                // 只有当mode不是visiting-unit时，才显示type和count参数
+                if(!modeWithoutQuotes.equals("visiting-unit")) {
+                    t.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
+
+                    // 创建可编辑的文本字段，用于输入或显示单位类型标识
+                    TextField typeField = field(t, type, str -> type = str).get();
+
+                    // 添加选择按钮，点击后显示单位类型选择界面
+                    t.button(b -> {
+                        b.image(Icon.pencilSmall); // 按钮图标
+                        // 点击事件处理：显示单位类型选择对话框
+                        b.clicked(() -> showSelectTable(b, (tableSelect, hide) -> {
+                            tableSelect.row(); // 换行
+                            // 创建表格来显示所有可选的单位类型
+                            tableSelect.table(i -> {
+                                i.left(); // 左对齐
+                                int c = 0; // 计数器，用于控制每行显示的单位数量
+                                // 遍历所有可用的单位类型
+                                for(UnitType item : content.units()){
+                                    // 过滤条件：必须已解锁、未隐藏且支持逻辑控制
+                                    if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
+                                    // 为每个符合条件的单位类型创建一个选择按钮
+                                    i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
+                                        type = "@" + item.name; // 设置选中的单位类型标识
+                                        typeField.setText(type);    // 更新UI
+                                        hide.run();            // 关闭选择对话框
+                                    }).size(40f); // 按钮大小
+
+                                    // 每6个单位类型换行
+                                    if(++c % 6 == 0) i.row();
+                                }
+                            }).colspan(3).width(240f).left(); // 表格宽度和对齐方式
+                        })); // 结束showSelectTable调用
+                    }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸，调整间距为2
+                    
+                    // 添加count标签和文本输入框
+                    t.add(" count ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.count"); }); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
+                    // 创建可编辑的文本字段，用于输入或显示绑定的单位数量，确保count值不小于1
+                    field(t, count, str -> {
+                        try {
+                            int value = Integer.parseInt(str);
+                            count = value < 1 ? "1" : str;
+                        } catch (NumberFormatException e) {
+                            // 如果输入不是数字，设置为默认值1
+                            count = "1";
+                        }
+                    });
+                }
+                
+                // 总是显示mode标签和选择按钮
+                t.add(" mode ").left().self(c -> tooltip(c, "unitbindgroup.mode")); // 显示mode标签，添加空格并添加左对齐和参数样式及悬浮提示
+                // 创建mode选择按钮
+                t.button(b -> {
+                    // 显示时去掉引号，让UI显示更清晰
+                            b.label(() -> removeQuotes(mode));
+                    b.clicked(() -> {
+                            // 用于比较的临时变量，去掉引号
+                            final String modeWithoutQuotesLocal = removeQuotes(mode);
+                            // 自定义showSelect实现，为每个选项添加独立的悬浮提示
+                            showSelectTable(b, (selectTable, hide) -> {
+                                ButtonGroup<Button> group = new ButtonGroup<>();
+                                selectTable.defaults().size(160, 50);
+                                 
+                                // 添加第一个选项
+                                selectTable.button("Capture-unit", Styles.logicTogglet, () -> {
+                                    mode = "\"" + "Capture-unit" + "\"";
+                                    rebuild(table);
+                                    hide.run();
+                                }).self(c -> tooltip(c, "unitbindgroup.mode.capture-unit")).checked("Capture-unit".equals(modeWithoutQuotesLocal)).group(group);
+                                 
+                                selectTable.row();
+                                 
+                                // 添加第二个选项
+                                selectTable.button("visiting-unit", Styles.logicTogglet, () -> {
+                                    mode = "\"" + "visiting-unit" + "\"";
+                                    rebuild(table);
+                                    hide.run();
+                                }).self(c -> tooltip(c, "unitbindgroup.mode.visiting-unit")).checked("visiting-unit".equals(modeWithoutQuotesLocal)).group(group);
+                            });
+                    });
+                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
+            }).left();
+            
+            // 换行到第二排
+            table.row();
+            
+            // 第二排：unitVar、indexVar和group参数（使用嵌套Table）
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                t.add(" unitVar ").left().self(c -> tooltip(c, "unitbindgroup.unitvar"));  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                // 创建可编辑的文本字段，用于输入或显示单位变量名
+                field(t, unitVar, str -> unitVar = str);
+                
+                t.add(" indexVar ").left().self(c -> tooltip(c, "unitbindgroup.indexvar"));  // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
+                // 创建可编辑的文本字段，用于输入或显示索引变量名
+                field(t, indexVar, str -> indexVar = str);
+                
+                // 添加group标签和选择按钮
+                t.add(" group ").left().self(c -> tooltip(c, "unitbindgroup.group")); // 显示group标签，添加空格并添加左对齐和参数样式及悬浮提示
+                // 创建group选择按钮
+                        t.button(b -> {
+                            b.label(() -> removeQuotes(group));
+                    b.clicked(() -> {
+                        // 确保静态频道列表初始化
+                        if(UnitBindGroupStatement.channels == null){
+                            // 尝试从设置中读取保存的频道列表，如果不存在则创建新的
+                            UnitBindGroupStatement.channels = Core.settings.getJson("unit-bind-channels", Seq.class, String.class, () -> {
+                                Seq<String> defaultChannels = new Seq<>();
+                                defaultChannels.add("stand-alone");
+                                return defaultChannels;
+                            });
+                        }
+                        // 使用final修饰符确保lambda表达式可以引用该变量
+                        final Seq<String> channels = UnitBindGroupStatement.channels;
+                         
+                        // 使用showSelectTable自定义实现，支持1列布局、滚动以及添加/删除频道功能
+                        showSelectTable(b, (menuTable, hide) -> {
+                            ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
+                            
+                            // 创建主内容表格容器 - 用于组织整个自定义选择界面的UI元素
+                            Table mainContent = new Table();
+                            
+                            // 创建频道列表内容表格容器 - 用于显示所有可选的频道项
+                            Table channelList = new Table();
+                            channelList.defaults().left().marginLeft(16); // 设置默认左对齐
+                            channelList.marginRight(20f); // 为滚动条留出空间
+                        
+                            // 添加频道列表项table容器
+                            final Runnable[] updateChannelListRef = new Runnable[1];
+                            updateChannelListRef[0] = new Runnable() {
+                                @Override
+                                public void run() {
+                                    channelList.clearChildren();
+                                    for(String channel : UnitBindGroupStatement.channels) {
+                                        Table row = new Table();
+                                        row.left().marginLeft(0); // 设置行左对齐并添加0像素左边距
+                                        // 获取不带引号的group值用于比较
+                                        String groupWithoutQuotes = removeQuotes(UnitBindGroupStatement.this.group);
+                                         
+                                        row.button(channel, Styles.logicTogglet, () -> {
+                                            UnitBindGroupStatement.this.group = "\"" + channel + "\"";
+                                            rebuild(table);
+                                            hide.run();
+                                        }).size(160, 40).padRight(5).left()
+                                         .checked(groupWithoutQuotes.equals(channel)).group(buttonGroup)
+                                         .self(c -> tooltip(c, channel.equals("stand-alone") ? "unitbindgroup.channel.standalone" : "unitbindgroup.channel.shared"));
+                                        
+                                        // 只允许删除自定义频道，不允许删除默认频道
+                                        if(!channel.equals("stand-alone")) {
+                                            row.button(b -> {
+                                            b.label(() -> "Del");
+                                            b.clicked(() -> {
+                                                UnitBindGroupStatement.channels.remove(channel);
+                                                // 调用RUN类中的删除方法
+                                                LUnitBindGroupRUN.deleteUnitPool(channel);
+                                                // 保存更新后的频道列表到设置中
+                                                Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
+                                                updateChannelListRef[0].run();
+                                            });
+                                        }, Styles.logict, () -> {}).self(c -> tooltip(c, "unitbindgroup.channel.del")).size(60, 40).color(t.color).padLeft(5);
+                                        }
+                                        
+                                        channelList.add(row).left().row();
+                                    }
+                                }
+                            };
+                            Runnable updateChannelList = updateChannelListRef[0];
+                            
+                            // 初始化频道列表
+                            updateChannelList.run();
+                            
+                            // 创建自定义添加新频道的部分table - 用于添加新的频道分组
+                            Table addSection = new Table();
+                            addSection.defaults().left().marginLeft(0).marginRight(20f); // 设置默认左对齐
+                            // 使用StringBuilder来存储临时的新频道名
+                            StringBuilder newChannelBuilder = new StringBuilder();
+                            // 创建可编辑的文本字段，用于输入新频道名
+                            TextField newChannelField = field(addSection, newChannelBuilder.toString(), str -> {
+                                newChannelBuilder.setLength(0);
+                                newChannelBuilder.append(str);
+                            }).size(160, 40).color(t.color).left().padRight(5).get();
+                           
+                            
+                            addSection.button(btn -> {
+                                btn.label(() -> "Add");
+                                btn.clicked(() -> {
+                                    String newChannel = newChannelBuilder.toString().trim();
+                                    if(!newChannel.isEmpty() && !UnitBindGroupStatement.channels.contains(newChannel)) {
+                                        newChannel = "unit-" + newChannel;
+                                        UnitBindGroupStatement.channels.add(newChannel);
+                                        // 调用RUN类中的添加方法
+                                        LUnitBindGroupRUN.addUnitPool(newChannel);
+                                        // 保存更新后的频道列表到设置中
+                                        Core.settings.putJson("unit-bind-channels", String.class, UnitBindGroupStatement.channels);
+                                        updateChannelList.run();
+                                        // 清空输入框
+                                        newChannelBuilder.setLength(0);
+                                        newChannelField.setText("");
+                                    }
+                                });
+                            }, Styles.logict, () -> {}).self(c -> tooltip(c, "unitbindgroup.channel.add")).size(60, 40).color(t.color).padLeft(5);
+                            
+                            
+                            // 创建ScrollPane来支持滚动 - 使频道列表可以垂直滚动
+                            ScrollPane scrollPane = new ScrollPane(channelList, Styles.smallPane); // 使用smallPane样式，滚动条更薄
+                            scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
+                            scrollPane.setOverscroll(false, false); // 禁用过度滚动效果
+                            // 组装主内容
+                            // 1. 添加滚动的频道列表并设置大小(width=260f, height=260f)
+                            mainContent.add(scrollPane).padTop(5).width(260f).height(240f).left().uniformX();// 确保内容左对齐，不被滚动条挤压
+                            mainContent.row();
+                            // 2. 添加新频道输入区域，设置顶部边距和左对齐
+                            mainContent.add(addSection).padTop(5).width(260f).height(40f).left();
+                            
+                            // 设置整个自定义选择界面的固定大小(width=250f, height=300f)
+                            menuTable.add(mainContent).width(270f).height(300f);
+                        });
+                    });
+                }, Styles.logict, () -> {}).size(160, 40).color(t.color).left().padLeft(2); // 按钮样式和尺寸
+            }).left();
+        }
+        
+    
+
+        /** 构建指令的执行实例 */
+        @Override
+        public LExecutor.LInstruction build(LAssembler builder) {
+            // 将所有参数转换为LVar对象，并创建执行器实例
+            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(mode), builder.var(unitVar), builder.var(indexVar), builder.var(group));
+        }
+
+        /** 指定指令在逻辑编辑器中的分类 */
+        @Override
+        public LCategory category() {
+            return LCategory.unit; // 指令归类为单位操作类别
+        }
+               
+        /** 注册自定义逻辑指令 */
+        public static void create() {
+            // 注册指令解析器
+            LAssembler.customParsers.put("unitBindGroup", params -> {
+                // 创建新的指令实例
+                UnitBindGroupStatement stmt = new UnitBindGroupStatement();
+                // 如果有参数，则设置单位类型
+                if (params.length >= 2) stmt.type = params[1];
+                // 如果有第二个参数，则设置count值
+                if (params.length >= 3) stmt.count = params[2];
+                // 如果有第三个参数，则设置mode值
+                if (params.length >= 4) stmt.mode = params[3];
+                // 如果有第四个参数，则设置unitVar值
+                if (params.length >= 5) stmt.unitVar = params[4];
+                // 如果有第五个参数，则设置indexVar值
+                if (params.length >= 6) stmt.indexVar = params[5];
+                // 如果有第六个参数，则设置group值
+                if (params.length >= 7) stmt.group = params[6];
+                // 读取后处理，确保指令状态正确
+                stmt.afterRead();
+                return stmt;
+            });
+            // 将指令添加到逻辑IO的所有语句列表中，使其在逻辑编辑器中可用
+            LogicIO.allStatements.add(UnitBindGroupStatement::new);
+        }
+        
+        /** 序列化指令到字符串 */
+        @Override
+        public void write(StringBuilder builder){
+            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + mode + 空格 + unitVar + 空格 + indexVar + 空格 + group
+            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(mode).append(" ").append(unitVar).append(" ").append(indexVar).append(" ").append(group);
+            
+            // 只有在Capture-unit模式下才调用重置方法
+            if ("Capture-unit".equals(mode)) {
+                // 获取不带引号的group值
+                String groupWithoutQuotes = removeQuotes(group);
+                
+                // 调用RUN类中的重置方法
+                LUnitBindGroupRUN.resetUnitPool(groupWithoutQuotes);
+            }
+        }
+    }
+    
+    /** 单位绑定组指令执行器类 */
+    public static class UnitBindGroupI implements LExecutor.LInstruction {
+        /** 单位类型变量 */
+        public LVar type;
+        /** 绑定的单位数量变量 */
+        public LVar count;
+        /** 当前单位变量的变量引用 */
+        public LVar unitVar;
+        /** 单位索引变量的变量引用 */
+        public LVar indexVar;
+        /** 绑定模式变量 */
+        public LVar mode;
+        /** 绑定组类型变量 */
+        public LVar group;
+
+        /** 构造函数，指定目标单位类型、数量、模式、单位变量和索引变量 */
+        public UnitBindGroupI(LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
+            this.type = type;
+            this.count = count;
+            this.mode = mode;
+            this.unitVar = unitVar;
+            this.indexVar = indexVar;
+            this.group = group;
+        }
+
+        /** 空构造函数 */
+        public UnitBindGroupI() {
+        }
+
+        /** 执行指令的核心逻辑 */
+        @Override
+        public void run(LExecutor exec) {
+            // 调用外部类LUnitBindGroupRUN中的run方法执行实际逻辑
+            LUnitBindGroupRUN.run(exec, type, count, mode, unitVar, indexVar, group);
+        }
+    }
+}
