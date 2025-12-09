@@ -63,11 +63,11 @@ public class LUnitBindGroupRUN {
         }
         
         // 执行索引处理逻辑
-        handleIndexLogic(pool, unitVar, indexVar);
+        handleIndexLogic(exec, pool, unitVar, indexVar);
     }
     
    //索引处理逻辑
-    private static void handleIndexLogic(UnitPool pool, LVar unitVar, LVar indexVar) {
+    private static void handleIndexLogic(LExecutor exec, UnitPool pool, LVar unitVar, LVar indexVar) {
         // 确保计数器在有效范围内循环（防止索引越界）
         pool.currentIndex %= pool.units.size;
         if (pool.currentIndex < 0) pool.currentIndex += pool.units.size;
@@ -78,6 +78,9 @@ public class LUnitBindGroupRUN {
         // 设置返回值
         unitVar.setobj(unit);
         indexVar.setnum(pool.currentIndex + 1); // 索引从1开始
+        
+        // 设置全局变量@unit
+        exec.unit.setconst(unit);
         
         // 索引递增，下次执行时将返回下一个单位
         pool.currentIndex++;
