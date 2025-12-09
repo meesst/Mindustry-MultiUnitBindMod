@@ -164,6 +164,9 @@ public class LUnitBindGroupUI {
         public void write(StringBuilder builder){
             // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar
             builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar);
+            
+            // 重置单位池，与原始逻辑保持一致
+            LUnitBindGroupRUN.resetUnitPool(instanceId);
         }
     }
     

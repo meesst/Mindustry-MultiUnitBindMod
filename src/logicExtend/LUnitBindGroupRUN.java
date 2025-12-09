@@ -174,6 +174,20 @@ public class LUnitBindGroupRUN {
         }
     }
     
+    //重置方法：重置指定instanceId的单位池
+    public static void resetUnitPool(String instanceId) {
+        // 重置逻辑：遍历所有执行器的单位池，移除指定instanceId的单位池
+        for (ObjectMap<String, UnitPool> instancePools : executorPools.values()) {
+            UnitPool pool = instancePools.remove(instanceId);
+            if (pool != null) {
+                // 解绑所有单位
+                for (Unit unit : pool.units) {
+                    unbindUnit(unit);
+                }
+            }
+        }
+    }
+    
     //单位池维护方法
     public static void maintainUnitPool(LExecutor exec, UnitPool pool, UnitType type, int count) {
         // 检查池中单位数量是否满足count要求，如果不足则补充单位
