@@ -130,14 +130,16 @@ public class LUnitAssist {
         
         /** 执行协助建造逻辑 */
         private void assistBuilding(Unit assister, LogicAI ai, Unit target) {
-            // 检查目标单位是否在建造
+            // 检查目标单位是否在建造或拆除
             if (target.activelyBuilding()) {
-                // 复制目标单位的建造计划
+                // 复制目标单位的建造计划，包括breaking状态
                 assister.plans.clear();
                 BuildPlan targetPlan = target.buildPlan();
                 if (targetPlan != null) {
-                    // 使用正确的BuildPlan构造函数
-                    BuildPlan assistPlan = new BuildPlan(targetPlan.x, targetPlan.y, targetPlan.rotation, targetPlan.block, targetPlan.config);
+                    // 使用copy()方法复制BuildPlan，确保所有状态都被复制
+                    BuildPlan assistPlan = targetPlan.copy();
+                    // 显式复制breaking状态，确保正确
+                    assistPlan.breaking = targetPlan.breaking;
                     assister.plans.addFirst(assistPlan);
                 }
             }
