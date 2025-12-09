@@ -13,5 +13,7 @@ public class LEMain extends Mod {
         LFunction.LFunctionStatement.create();
         // 注册嵌套逻辑语句
         LNestedLogic.LNestedLogicStatement.create();
+        // 注册单位绑定组指令
+        LUnitBindGroupUI.UnitBindGroupStatement.create();
     }
 }
