@@ -57,6 +57,21 @@ public class LUnitAssist {
             builder.append("unitAssist ").append(assisterVar).append(" ").append(targetVar);
         }
     }
+
+    /** 注册自定义逻辑指令 */
+    public static void create() {
+        // 注册unitAssist指令解析器
+        LAssembler.customParsers.put("unitAssist", params -> {
+            UnitAssistStatement stmt = new UnitAssistStatement();
+            if (params.length >= 2) stmt.assisterVar = params[1];
+            if (params.length >= 3) stmt.targetVar = params[2];
+            stmt.afterRead();
+            return stmt;
+        });
+        // 将指令添加到逻辑IO的所有语句列表中，使其在逻辑编辑器中可用
+        LogicIO.allStatements.add(UnitAssistStatement::new);
+    }
+
     
     /** 单位协助指令执行器类 */
     public static class UnitAssistI implements LExecutor.LInstruction {
@@ -112,17 +127,5 @@ public class LUnitAssist {
         }
     }
     
-    /** 注册自定义逻辑指令 */
-    public static void create() {
-        // 注册unitAssist指令解析器
-        LAssembler.customParsers.put("unitAssist", params -> {
-            UnitAssistStatement stmt = new UnitAssistStatement();
-            if (params.length >= 2) stmt.assisterVar = params[1];
-            if (params.length >= 3) stmt.targetVar = params[2];
-            stmt.afterRead();
-            return stmt;
-        });
-        // 将指令添加到逻辑IO的所有语句列表中，使其在逻辑编辑器中可用
-        LogicIO.allStatements.add(UnitAssistStatement::new);
-    }
+    
 }
