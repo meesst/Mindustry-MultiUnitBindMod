@@ -120,8 +120,8 @@ public class LUnitBindGroupUI {
         /** 构建指令的执行实例 */
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            // 将所有参数转换为LVar对象，并创建执行器实例
-            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(unitVar), builder.var(indexVar), builder.var(instanceId));
+            // 将必要参数转换为LVar对象，并直接传递instanceId字符串，创建执行器实例
+            return new UnitBindGroupI(builder.var(type), builder.var(count), builder.var(unitVar), builder.var(indexVar), instanceId);
         }
 
         /** 指定指令在逻辑编辑器中的分类 */
@@ -177,11 +177,11 @@ public class LUnitBindGroupUI {
         public LVar unitVar;
         /** 单位索引变量的变量引用 */
         public LVar indexVar;
-        /** 指令实例ID，用于区分不同的单位池 */
-        public LVar instanceId;
+        /** 指令实例ID，用于区分不同的单位池，直接使用字符串类型，不注册到游戏变量表 */
+        public String instanceId;
 
         /** 构造函数，指定目标单位类型、数量、单位变量和索引变量 */
-        public UnitBindGroupI(LVar type, LVar count, LVar unitVar, LVar indexVar, LVar instanceId) {
+        public UnitBindGroupI(LVar type, LVar count, LVar unitVar, LVar indexVar, String instanceId) {
             this.type = type;
             this.count = count;
             this.unitVar = unitVar;

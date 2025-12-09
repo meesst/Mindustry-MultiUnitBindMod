@@ -25,11 +25,10 @@ public class LUnitBindGroupRUN {
     private static final ObjectMap<Integer, ObjectMap<String, UnitPool>> executorPools = new ObjectMap<>();
 
     /** 执行单位绑定的核心逻辑 */
-    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar, LVar instanceId) {
+    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar, String instanceId) {
         // 获取单位类型和数量
         UnitType unitType = null;
         int bindCount = 1;
-        String instanceIdStr = instanceId.isobj ? (instanceId.obj() != null ? instanceId.obj().toString() : "default") : String.valueOf(instanceId.num());
         
         if (type.isobj && type.obj() instanceof UnitType) {
             unitType = (UnitType) type.obj();
@@ -48,7 +47,7 @@ public class LUnitBindGroupRUN {
         
         // 获取或创建单位池
         ObjectMap<String, UnitPool> instancePools = executorPools.get(exec.hashCode(), ObjectMap::new);
-        UnitPool pool = instancePools.get(instanceIdStr, UnitPool::new);
+        UnitPool pool = instancePools.get(instanceId, UnitPool::new);
         
         // 设置单位类型
         pool.type = unitType;
