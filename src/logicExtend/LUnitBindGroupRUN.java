@@ -123,8 +123,19 @@ public class LUnitBindGroupRUN {
             return false;
         }
         
-        // 2. 单位未受到玩家控制
+        // 2. 单位未受到任何有效控制
+        // 检查是否受逻辑控制
+        if (unit.controller() instanceof LogicAI) {
+            return false;
+        }
+        
+        // 检查是否受玩家控制
         if (unit.isPlayer()) {
+            return false;
+        }
+        
+        // 检查是否受命令系统控制，只有当CommandAI有命令时才判断为不可绑定
+        if (unit.controller() instanceof CommandAI command && command.hasCommand()) {
             return false;
         }
         
