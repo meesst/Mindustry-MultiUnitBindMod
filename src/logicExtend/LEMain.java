@@ -15,5 +15,7 @@ public class LEMain extends Mod {
         LNestedLogic.LNestedLogicStatement.create();
         // 注册单位绑定组指令
         LUnitBindGroupUI.UnitBindGroupStatement.create();
+        // 注册单位协助指令
+        LUnitAssist.create();
     }
 }
