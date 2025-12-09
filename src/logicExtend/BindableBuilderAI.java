@@ -1,5 +1,6 @@
 package logicExtend;
 
+import arc.struct.Groups;
 import mindustry.ai.types.BuilderAI;
 import mindustry.gen.Player;
 import mindustry.gen.Unit;
@@ -10,51 +11,35 @@ import mindustry.gen.Unit;
  */
 public class BindableBuilderAI extends BuilderAI {
     
-    /** 绑定的目标玩家ID */
-    private int boundPlayerId = -1;
-    
-    /**
-     * 设置绑定的玩家
-     * @param player 要绑定的玩家
-     */
-    public void setBoundPlayer(Player player) {
-        this.boundPlayerId = player.id;
-    }
-    
-    /**
-     * 获取绑定的玩家ID
-     * @return 绑定的玩家ID，-1表示未绑定
-     */
-    public int getBoundPlayerId() {
-        return boundPlayerId;
-    }
-    
     /**
      * 重写updateMovement方法，修改onlyAssist模式下的行为
-     * 使单位只协助绑定的玩家，而不是寻找最近的玩家
+     * 简化实现：只在首次寻找玩家时选择，之后保持不变
      */
     @Override
     public void updateMovement() {
         // 调用父类方法处理基础逻辑
         super.updateMovement();
         
-        // 只有在onlyAssist模式下且已绑定玩家时，才执行自定义逻辑
-        if (onlyAssist && boundPlayerId != -1) {
-            // 寻找绑定的玩家
-            Player boundPlayer = null;
+        // 只有在onlyAssist模式下，才修改行为
+        if (onlyAssist) {
+            // 检查是否已经有协助目标
+            if (assistFollowing != null && assistFollowing.isValid() && assistFollowing.player != null) {
+                // 已经有有效目标，不改变
+                return;
+            }
+            
+            // 寻找第一个有效玩家，而不是最近的玩家
+            Player firstPlayer = null;
             for (Player player : Groups.player) {
-                if (player.id == boundPlayerId && player.isValid()) {
-                    boundPlayer = player;
+                if (player.isBuilder() && player.team() == unit.team) {
+                    firstPlayer = player;
                     break;
                 }
             }
             
-            // 如果绑定的玩家仍然有效，更新assistFollowing为该玩家的单位
-            if (boundPlayer != null && boundPlayer.isBuilder() && boundPlayer.team() == unit.team) {
-                assistFollowing = boundPlayer.unit();
-            } else {
-                // 如果绑定的玩家无效，取消绑定
-                boundPlayerId = -1;
+            // 设置协助目标为第一个找到的玩家
+            if (firstPlayer != null) {
+                assistFollowing = firstPlayer.unit();
             }
         }
     }

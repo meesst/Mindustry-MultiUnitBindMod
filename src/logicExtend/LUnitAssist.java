@@ -6,6 +6,7 @@ import arc.util.Time;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.ai.types.LogicAI;
+import mindustry.entities.units.BuildPlan;
 
 import static mindustry.logic.LCanvas.tooltip;
 import static mindustry.logic.LExecutor.UnitControlI.checkLogicAI;
