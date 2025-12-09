@@ -162,8 +162,8 @@ public class LUnitBindGroupUI {
         /** 序列化指令到字符串 */
         @Override
         public void write(StringBuilder builder){
-            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar + 空格 + instanceId
-            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar).append(" ").append(instanceId);
+            // 格式：指令名称 + 空格 + 单位类型标识 + 空格 + count值 + 空格 + unitVar + 空格 + indexVar
+            builder.append("unitBindGroup ").append(type).append(" ").append(count).append(" ").append(unitVar).append(" ").append(indexVar);
         }
     }
     

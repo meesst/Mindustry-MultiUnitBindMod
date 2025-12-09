@@ -81,9 +81,6 @@ public class LUnitBindGroupRUN {
         unitVar.setobj(unit);
         indexVar.setnum(pool.currentIndex + 1); // 索引从1开始
         
-        // 设置全局变量@unit
-        exec.unit.setconst(unit);
-        
         // 索引递增，下次执行时将返回下一个单位
         pool.currentIndex++;
     }
