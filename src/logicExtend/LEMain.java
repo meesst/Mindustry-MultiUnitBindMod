@@ -6,6 +6,13 @@ public class LEMain extends Mod {
     public LEMain() {}
 
     @Override
+    public void init() {
+        // 初始化可绑定的协助控制器，替换默认的assist命令
+        BindableAssistController.init(this);
+        BindableAssistController.replaceAssistCommandController();
+    }
+
+    @Override
     public void loadContent() {
         LStringMerge.StringMergeStatement.create();
         LAmmo.CreateAmmoStatement.create();
