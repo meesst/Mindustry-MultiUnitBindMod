@@ -18,82 +18,14 @@ public class LUnitBindGroupRUN {
         public boolean isUsed = false;
         public int currentIndex = 0;
         public UnitType type;
-        public String groupId;
         public Building controller; // 控制者属性
     }
     
-    //共享单位池存储
-    private static final ObjectMap<String, UnitPool> sharedPools = new ObjectMap<>();
-    
-    //独立单位池存储
-    private static final ObjectMap<Integer, ObjectMap<String, UnitPool>> standalonePools = new ObjectMap<>();
+    // 使用执行器哈希值作为key，存储每个执行器的单位池
+    private static final ObjectMap<Integer, UnitPool> executorPools = new ObjectMap<>();
 
     /** 执行单位绑定的核心逻辑 */
-    public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar, LVar group) {
-        // 获取参数值
-        String modeStr = mode.isobj ? (mode.obj() != null ? mode.obj().toString() : "") : String.valueOf(mode.num());
-        String groupStr = group.isobj ? (group.obj() != null ? group.obj().toString() : "") : String.valueOf(group.num());
-        
-
-        // 根据mode分流处理
-        if ("visiting-unit".equals(modeStr)) {
-            // visiting-unit模式
-            handleVisitingUnitMode(exec, groupStr, unitVar, indexVar);
-        } else if ("Capture-unit".equals(modeStr)) {
-            // Capture-unit模式
-            handleCaptureUnitMode(exec, type, count, groupStr, unitVar, indexVar);
-        } else {
-            // 无效模式
-            unitVar.setobj("无效模式: " + modeStr);
-            indexVar.setnum(-1);
-        }
-    }
-    
-    //处理visiting-unit模式
-    private static void handleVisitingUnitMode(LExecutor exec, String groupStr, LVar unitVar, LVar indexVar) {
-        // 查找指定group的单位池
-        UnitPool pool = getUnitPool(exec, groupStr);
-        
-        if (pool == null) {
-            // 单位池不存在
-            unitVar.setobj("组未被使用");
-            indexVar.setnum(-1);
-            return;
-        }
-        
-        // 检查组的使用状态
-        if (!pool.isUsed) {
-            unitVar.setobj("组未被使用");
-            indexVar.setnum(-1);
-            return;
-        }
-        
-        // 检查单位池是否为空
-        if (pool.units.isEmpty()) {
-            unitVar.setobj("单位池为空");
-            indexVar.setnum(-1);
-            return;
-        }
-        
-        // 执行索引处理逻辑
-        handleIndexLogic(pool, unitVar, indexVar);
-    }
-    
-    //处理Capture-unit模式
-    private static void handleCaptureUnitMode(LExecutor exec, LVar type, LVar count, String groupStr, LVar unitVar, LVar indexVar) {
-        // 处理单位池创建
-        UnitPool pool = getOrCreateUnitPool(exec, groupStr);
-        
-        // 检查共享单位池是否已被使用（仅针对非stand-alone组）
-        if (!"stand-alone".equals(groupStr) && pool.isUsed) {
-            // 检查控制者是否是当前逻辑处理器
-            if (pool.controller != exec.build) {
-                unitVar.setobj("组已被使用");
-                indexVar.setnum(-1);
-                return;
-            }
-        }
-        
+    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar) {
         // 获取单位类型和数量
         UnitType unitType = null;
         int bindCount = 1;
@@ -113,9 +45,11 @@ public class LUnitBindGroupRUN {
             bindCount = 1;
         }
         
+        // 获取或创建单位池
+        UnitPool pool = executorPools.get(exec.hashCode(), UnitPool::new);
+        
         // 设置单位类型
         pool.type = unitType;
-        pool.groupId = groupStr;
         
         // 单位池维护
         maintainUnitPool(exec, pool, unitType, bindCount);
@@ -149,40 +83,7 @@ public class LUnitBindGroupRUN {
         pool.currentIndex++;
     }
     
-
-   //获取单位池
-    private static UnitPool getUnitPool(LExecutor exec, String groupStr) {
-        if ("stand-alone".equals(groupStr)) {
-            // 获取独立单位池
-            ObjectMap<String, UnitPool> execPools = standalonePools.get(exec.hashCode());
-            if (execPools != null) {
-                return execPools.get(groupStr);
-            }
-        } else {
-            // 获取共享单位池
-            return sharedPools.get(groupStr);
-        }
-        return null;
-    }
-    
-    // 获取或创建单位池
-    private static UnitPool getOrCreateUnitPool(LExecutor exec, String groupStr) {
-        if ("stand-alone".equals(groupStr)) {
-            // 处理独立单位池
-            ObjectMap<String, UnitPool> execPools = standalonePools.get(exec.hashCode(), ObjectMap::new);
-            UnitPool pool = execPools.get(groupStr, UnitPool::new);
-            execPools.put(groupStr, pool);
-            standalonePools.put(exec.hashCode(), execPools);
-            return pool;
-        } else {
-            // 处理共享单位池
-            UnitPool pool = sharedPools.get(groupStr, UnitPool::new);
-            sharedPools.put(groupStr, pool);
-            return pool;
-        }
-    }
-    
-     //绑定方法：绑定指定类型（type），指定数量（count）到指定组索引（group）的单位池里
+     //绑定方法：绑定指定类型（type），指定数量（count）到单位池里
     public static boolean bindUnits(LExecutor exec, UnitPool pool, UnitType type, int count) {
         
         // 检查单位类型是否可被逻辑控制
@@ -269,47 +170,6 @@ public class LUnitBindGroupRUN {
         // 调用单位的resetController方法重置控制器，与Mindustry源码LExecutor.java中unbind操作保持一致
         if (unit != null) {
             unit.resetController();
-        }
-    }
-    
-
-    //重置方法：重置指定组索引的单位池
-    public static void resetUnitPool(String groupId) {
-        UnitPool pool = sharedPools.get(groupId);
-        if (pool != null) {
-            // 解绑所有单位
-            for (Unit unit : pool.units) {
-                unbindUnit(unit);
-            }
-            // 清空单位池并设置为未使用状态
-            pool.units.clear();
-            pool.isUsed = false;
-            pool.controller = null;
-            pool.currentIndex = 0;
-        }
-    }
-    
-    //添加方法：通过指定组索引，创建一个单位池
-    public static void addUnitPool(String groupId) {
-        if (!sharedPools.containsKey(groupId) && !"stand-alone".equals(groupId)) {
-            UnitPool newPool = new UnitPool();
-            newPool.groupId = groupId;
-            newPool.isUsed = false;
-            newPool.controller = null;
-            sharedPools.put(groupId, newPool);
-        }
-    }
-    
-    //删除方法：删除指定组索引的单位池
-    public static void deleteUnitPool(String groupId) {
-        UnitPool pool = sharedPools.get(groupId);
-        if (pool != null && !"stand-alone".equals(groupId)) {
-            // 解绑所有单位
-            for (Unit unit : pool.units) {
-                unbindUnit(unit);
-            }
-            // 从共享池移除
-            sharedPools.remove(groupId);
         }
     }
     
