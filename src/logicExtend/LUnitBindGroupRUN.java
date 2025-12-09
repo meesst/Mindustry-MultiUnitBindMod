@@ -193,8 +193,6 @@ public class LUnitBindGroupRUN {
             
             // 2. 控制方判断
             if (!(unit.controller() instanceof LogicAI) || 
-                exec.build == null || 
-                ((LogicAI)unit.controller()).controller != exec.build ||
                 unit.isPlayer()) {
                 toRemove.add(unit);
                 continue;
