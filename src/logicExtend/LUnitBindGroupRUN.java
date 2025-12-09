@@ -21,11 +21,11 @@ public class LUnitBindGroupRUN {
         public Building controller; // 控制者属性
     }
     
-    // 使用执行器哈希值和instanceId作为复合key，存储每个指令实例的单位池
-    private static final ObjectMap<Integer, ObjectMap<String, UnitPool>> executorPools = new ObjectMap<>();
+    // 使用执行器哈希值作为key，存储每个执行器的单位池
+    private static final ObjectMap<Integer, UnitPool> executorPools = new ObjectMap<>();
 
     /** 执行单位绑定的核心逻辑 */
-    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar, String instanceId) {
+    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar) {
         // 获取单位类型和数量
         UnitType unitType = null;
         int bindCount = 1;
@@ -46,8 +46,7 @@ public class LUnitBindGroupRUN {
         }
         
         // 获取或创建单位池
-        ObjectMap<String, UnitPool> instancePools = executorPools.get(exec.hashCode(), ObjectMap::new);
-        UnitPool pool = instancePools.get(instanceId, UnitPool::new);
+        UnitPool pool = executorPools.get(exec.hashCode(), UnitPool::new);
         
         // 设置单位类型
         pool.type = unitType;
@@ -64,11 +63,11 @@ public class LUnitBindGroupRUN {
         }
         
         // 执行索引处理逻辑
-        handleIndexLogic(exec, pool, unitVar, indexVar);
+        handleIndexLogic(pool, unitVar, indexVar);
     }
     
    //索引处理逻辑
-    private static void handleIndexLogic(LExecutor exec, UnitPool pool, LVar unitVar, LVar indexVar) {
+    private static void handleIndexLogic(UnitPool pool, LVar unitVar, LVar indexVar) {
         // 确保计数器在有效范围内循环（防止索引越界）
         pool.currentIndex %= pool.units.size;
         if (pool.currentIndex < 0) pool.currentIndex += pool.units.size;
@@ -174,20 +173,6 @@ public class LUnitBindGroupRUN {
         }
     }
     
-    //重置方法：重置指定instanceId的单位池
-    public static void resetUnitPool(String instanceId) {
-        // 重置逻辑：遍历所有执行器的单位池，移除指定instanceId的单位池
-        for (ObjectMap<String, UnitPool> instancePools : executorPools.values()) {
-            UnitPool pool = instancePools.remove(instanceId);
-            if (pool != null) {
-                // 解绑所有单位
-                for (Unit unit : pool.units) {
-                    unbindUnit(unit);
-                }
-            }
-        }
-    }
-    
     //单位池维护方法
     public static void maintainUnitPool(LExecutor exec, UnitPool pool, UnitType type, int count) {
         // 检查池中单位数量是否满足count要求，如果不足则补充单位
@@ -206,8 +191,10 @@ public class LUnitBindGroupRUN {
                 continue;
             }
             
-            // 2. 控制方判断 - 只检查是否为玩家控制，是则移除
-            if (unit.isPlayer()) {
+            // 2. 控制方判断
+            if (!(unit.controller() instanceof LogicAI) || 
+                exec.build == null || 
+                ((LogicAI)unit.controller()).controller != exec.build) {
                 toRemove.add(unit);
                 continue;
             }
