@@ -16,6 +16,6 @@ public class LEMain extends Mod {
         // 注册单位绑定组指令
         LUnitBindGroupUI.UnitBindGroupStatement.create();
         // 注册单位协助指令
-        LUnitAssist.create();
+        LUnitAssist.UnitAssistStatement.create();
     }
 }
