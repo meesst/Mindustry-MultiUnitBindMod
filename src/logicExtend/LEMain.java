@@ -1,6 +1,7 @@
 package logicExtend;
 
 import mindustry.mod.Mod;
+import mindustry.ai.types.LogicAI;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
@@ -9,12 +10,25 @@ public class LEMain extends Mod {
 
     @Override
     public void init() {
-        // 移除单位物品转移CD
-        removeTransferDelay();
-        
         // 初始化可绑定的协助控制器，替换默认的assist命令
         BindableAssistController.init(this);
         BindableAssistController.replaceAssistCommandController();
+        
+        // 去除itemtake和itemdrop指令的内置CD
+        try {
+            Field field = LogicAI.class.getDeclaredField("transferDelay");
+            field.setAccessible(true);
+            
+            // 移除final修饰符
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+            
+            // 将transferDelay设置为0，完全去除CD
+            field.set(null, 0f);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -29,52 +43,5 @@ public class LEMain extends Mod {
         LUnitBindGroupUI.UnitBindGroupStatement.create();
         // 注册单位协助指令
         LUnitAssist.create();
-    }
-    
-    /** 使用反射移除单位物品转移CD */
-    private void removeTransferDelay() {
-        try {
-            // 获取LogicAI类
-            Class<?> logicAIClass = Class.forName("mindustry.ai.types.LogicAI");
-            // 获取transferDelay字段
-            Field transferDelayField = logicAIClass.getDeclaredField("transferDelay");
-            
-            // 设置字段可访问
-            transferDelayField.setAccessible(true);
-            
-            // 关闭final修饰符检查
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(transferDelayField, transferDelayField.getModifiers() & ~Modifier.FINAL);
-            
-            // 修改前的值
-            float oldValue = transferDelayField.getFloat(null);
-            System.out.println("修改前 LogicAI.transferDelay = " + oldValue);
-            
-            // 修改CD为0
-            transferDelayField.setFloat(null, 0f);
-            
-            // 修改后的值
-            float newValue = transferDelayField.getFloat(null);
-            System.out.println("修改后 LogicAI.transferDelay = " + newValue);
-            
-            // 确认修改成功
-            if (newValue == 0f) {
-                System.out.println("成功移除逻辑控制单位物品转移CD");
-            } else {
-                System.err.println("修改失败，LogicAI.transferDelay 仍为 " + newValue);
-            }
-            
-            // 额外：检查LExecutor的unitTimeouts字段，确保它不会阻止无CD效果
-            Class<?> lExecutorClass = Class.forName("mindustry.logic.LExecutor");
-            Field unitTimeoutsField = lExecutorClass.getDeclaredField("unitTimeouts");
-            unitTimeoutsField.setAccessible(true);
-            System.out.println("LExecutor.unitTimeouts 类型：" + unitTimeoutsField.getType().getName());
-            System.out.println("LExecutor.unitTimeouts 可访问：" + unitTimeoutsField.isAccessible());
-            
-        } catch (Exception e) {
-            System.err.println("移除单位物品转移CD失败：" + e.getMessage());
-            e.printStackTrace();
-        }
     }
 }
