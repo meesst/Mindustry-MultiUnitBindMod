@@ -47,10 +47,31 @@ public class LEMain extends Mod {
             modifiersField.setAccessible(true);
             modifiersField.setInt(transferDelayField, transferDelayField.getModifiers() & ~Modifier.FINAL);
             
+            // 修改前的值
+            float oldValue = transferDelayField.getFloat(null);
+            System.out.println("修改前 LogicAI.transferDelay = " + oldValue);
+            
             // 修改CD为0
             transferDelayField.setFloat(null, 0f);
             
-            System.out.println("成功移除单位物品转移CD");
+            // 修改后的值
+            float newValue = transferDelayField.getFloat(null);
+            System.out.println("修改后 LogicAI.transferDelay = " + newValue);
+            
+            // 确认修改成功
+            if (newValue == 0f) {
+                System.out.println("成功移除逻辑控制单位物品转移CD");
+            } else {
+                System.err.println("修改失败，LogicAI.transferDelay 仍为 " + newValue);
+            }
+            
+            // 额外：检查LExecutor的unitTimeouts字段，确保它不会阻止无CD效果
+            Class<?> lExecutorClass = Class.forName("mindustry.logic.LExecutor");
+            Field unitTimeoutsField = lExecutorClass.getDeclaredField("unitTimeouts");
+            unitTimeoutsField.setAccessible(true);
+            System.out.println("LExecutor.unitTimeouts 类型：" + unitTimeoutsField.getType().getName());
+            System.out.println("LExecutor.unitTimeouts 可访问：" + unitTimeoutsField.isAccessible());
+            
         } catch (Exception e) {
             System.err.println("移除单位物品转移CD失败：" + e.getMessage());
             e.printStackTrace();
