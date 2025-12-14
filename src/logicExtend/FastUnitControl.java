@@ -12,7 +12,7 @@ import mindustry.world.blocks.payloads.Payload;
 import mindustry.world.meta.BuildVisibility;
 import static mindustry.logic.LCanvas.tooltip;
 import static mindustry.Vars.*;
-import static mindustry.world.Blocks.*;
+import static mindustry.content.Blocks.*;
 
 public class FastUnitControl {
     
@@ -126,7 +126,7 @@ public class FastUnitControl {
                             // 与原版一致的逻辑，只是去除了CD检查
                             if(unit.item() != null) {
                                 //clear item when dropping to @air
-                                if(p1Var.obj() == Blocks.air) {
+                                if(p1Var.obj() == air) {
                                     //only server-side; no need to call anything, as items are synced in snapshots
                                     if(!net.client()) {
                                         unit.clearItem();
@@ -195,8 +195,8 @@ public class FastUnitControl {
                 try {
                     stmt.type = FastUnitControlType.valueOf(params[1]);
                 } catch (IllegalArgumentException e) {
-                    stmt.type = FastUnitControlType.itemtake;
-                }
+                        stmt.type = FastUnitControlType.itemTake;
+                    }
             }
             
             if (params.length >= 3) stmt.p1 = params[2];
