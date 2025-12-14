@@ -12,6 +12,7 @@ import mindustry.world.blocks.payloads.Payload;
 import mindustry.world.meta.BuildVisibility;
 import static mindustry.logic.LCanvas.tooltip;
 import static mindustry.Vars.*;
+import static mindustry.world.Blocks.*;
 
 public class FastUnitControl {
     
@@ -22,10 +23,10 @@ public class FastUnitControl {
     
     /** fastUnitControl指令的分支枚举 */
     public enum FastUnitControlType {
-        itemtake("from", "item", "amount"),
-        itemdrop("to", "amount"),
-        paytake("takeUnits", "x", "y"),
-        paydrop("x", "y");
+        itemTake("from", "item", "amount"),
+        itemDrop("to", "amount"),
+        payTake("takeUnits", "x", "y"),
+        payDrop("x", "y");
         
         public final String[] params;
         
@@ -36,7 +37,7 @@ public class FastUnitControl {
     
     /** 快速单位控制指令类 */
     public static class FastUnitControlStatement extends LStatement {
-        public FastUnitControlType type = FastUnitControlType.itemtake;
+        public FastUnitControlType type = FastUnitControlType.itemTake;
         public String p1 = "0", p2 = "0", p3 = "0";
         
         @Override
@@ -103,7 +104,7 @@ public class FastUnitControl {
                     if(unit == null) return;
                     
                     switch(type) {
-                        case itemtake:
+                        case itemTake:
                             Building from = p1Var != null ? p1Var.building() : null;
                             Item item = p2Var != null ? p2Var.obj() instanceof Item ? (Item)p2Var.obj() : null : null;
                             int amount = p3Var != null ? (int)p3Var.numi() : 1;
@@ -118,17 +119,19 @@ public class FastUnitControl {
                             }
                             break;
                             
-                        case itemdrop:
+                        case itemDrop:
                             Building to = p1Var != null ? p1Var.building() : null;
                             int dropAmount = p2Var != null ? (int)p2Var.numi() : 1;
                             
                             // 与原版一致的逻辑，只是去除了CD检查
                             if(unit.item() != null) {
-                                if(to == null) {
+                                //clear item when dropping to @air
+                                if(p1Var.obj() == Blocks.air) {
+                                    //only server-side; no need to call anything, as items are synced in snapshots
                                     if(!net.client()) {
                                         unit.clearItem();
                                     }
-                                } else if(to.team == unit.team && to.isValid()) {
+                                } else if(to != null && to.team == unit.team && to.isValid()) {
                                     int dropped = Math.min(unit.stack.amount, dropAmount);
                                     if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * tilesize/2f)) {
                                         int accepted = to.acceptStack(unit.item(), dropped, unit);
@@ -140,7 +143,7 @@ public class FastUnitControl {
                             }
                             break;
                             
-                        case paytake:
+                        case payTake:
                             boolean takeUnits = p1Var != null ? p1Var.bool() : false;
                             float x = p2Var != null ? p2Var.numf() : unit.x;
                             float y = p3Var != null ? p3Var.numf() : unit.y;
@@ -168,7 +171,7 @@ public class FastUnitControl {
                             }
                             break;
                             
-                        case paydrop:
+                        case payDrop:
                             float dropX = p1Var != null ? p1Var.numf() : unit.x;
                             float dropY = p2Var != null ? p2Var.numf() : unit.y;
                             
