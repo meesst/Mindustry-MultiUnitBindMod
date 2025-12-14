@@ -1,12 +1,17 @@
 package logicExtend;
 
 import arc.struct.ObjectMap;
-import mindustry.logic.*;
+import arc.scene.ui.*;
+import arc.scene.ui.layout.*;
+import arc.scene.style.Drawable;
 import mindustry.gen.*;
+import mindustry.logic.*;
 import mindustry.world.*;
 import mindustry.type.*;
 import mindustry.world.blocks.payloads.Payload;
 import mindustry.world.meta.BuildVisibility;
+import static mindustry.logic.LCanvas.tooltip;
+import static mindustry.Vars.*;
 
 public class FastUnitControl {
     
@@ -33,21 +38,51 @@ public class FastUnitControl {
                     return new FastItemTakeStatement(params);
             }
         });
+        
+        // 将所有指令分支添加到逻辑IO的所有语句列表中
+        LogicIO.allStatements.add(FastItemTakeStatement::new);
+        LogicIO.allStatements.add(FastItemDropStatement::new);
+        LogicIO.allStatements.add(FastPayTakeStatement::new);
+        LogicIO.allStatements.add(FastPayDropStatement::new);
     }
     
     /** 快速拿取物品指令 - 与原版一致 */
     static class FastItemTakeStatement extends LStatement {
-        String fromVar, itemVar, amountVar;
+        /** 从哪个建筑拿取 */
+        public String from = "";
+        /** 拿取什么物品 */
+        public String item = "";
+        /** 拿取多少 */
+        public String amount = "1";
         
+        /** 构造函数 */
+        public FastItemTakeStatement() {}
+        
+        /** 从参数创建 */
         public FastItemTakeStatement(String[] params) {
-            if (params.length >= 3) fromVar = params[2];
-            if (params.length >= 4) itemVar = params[3];
-            if (params.length >= 5) amountVar = params[4];
+            if (params.length >= 3) from = params[2];
+            if (params.length >= 4) item = params[3];
+            if (params.length >= 5) amount = params[4];
+            afterRead();
         }
         
         @Override
-        public void build(arc.scene.ui.layout.Table table) {
-            table.add("Fast Item Take:").left();
+        public void build(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                t.add(" from ").left().self(c -> tooltip(c, "fastunitcontrol.itemtake.from"));
+                field(t, from, str -> from = str);
+                
+                t.add(" item ").left().self(c -> tooltip(c, "fastunitcontrol.itemtake.item"));
+                field(t, item, str -> item = str);
+                
+                t.add(" amount ").left().self(c -> tooltip(c, "fastunitcontrol.itemtake.amount"));
+                field(t, amount, str -> amount = str);
+            }).left();
         }
         
         @Override
@@ -56,15 +91,18 @@ public class FastUnitControl {
         }
         
         @Override
-        public String toString() {
-            return "fastUnitControl itemtake " + (fromVar != null ? fromVar : "") + " " + (itemVar != null ? itemVar : "") + " " + (amountVar != null ? amountVar : "");
+        public void write(StringBuilder builder) {
+            builder.append("fastunitcontrol itemtake ")
+                   .append(from).append(" ")
+                   .append(item).append(" ")
+                   .append(amount);
         }
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar fromVarObj = fromVar != null ? builder.var(fromVar) : null;
-            LVar itemVarObj = itemVar != null ? builder.var(itemVar) : null;
-            LVar amountVarObj = amountVar != null ? builder.var(amountVar) : null;
+            LVar fromVar = from != null && !from.isEmpty() ? builder.var(from) : null;
+            LVar itemVar = item != null && !item.isEmpty() ? builder.var(item) : null;
+            LVar amountVar = amount != null && !amount.isEmpty() ? builder.var(amount) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
@@ -72,13 +110,13 @@ public class FastUnitControl {
                     Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    Building from = fromVarObj != null ? fromVarObj.building() : null;
-                    Item item = itemVarObj != null ? itemVarObj.obj() instanceof Item ? (Item)itemVarObj.obj() : null : null;
-                    int amount = amountVarObj != null ? (int)amountVarObj.numi() : Integer.MAX_VALUE;
+                    Building from = fromVar != null ? fromVar.building() : null;
+                    Item item = itemVar != null ? itemVar.obj() instanceof Item ? (Item)itemVar.obj() : null : null;
+                    int amount = amountVar != null ? (int)amountVar.numi() : 1;
                     
                     // 与原版一致的逻辑，只是去除了CD检查
                     if(from != null && from.team == unit.team && from.isValid() && from.items != null &&
-                       item != null && unit.within(from, logicItemTransferRange + from.block.size * mindustry.Vars.tilesize/2f)){
+                       item != null && unit.within(from, logicItemTransferRange + from.block.size * Vars.tilesize/2f)){
                         int taken = Math.min(from.items.get(item), Math.min(amount, unit.maxAccepted(item)));
                         
                         if(taken > 0) {
@@ -92,16 +130,35 @@ public class FastUnitControl {
     
     /** 快速投放物品指令 - 与原版一致 */
     static class FastItemDropStatement extends LStatement {
-        String toVar, amountVar;
+        /** 投放到哪个建筑 */
+        public String to = "";
+        /** 投放多少 */
+        public String amount = "1";
         
+        /** 构造函数 */
+        public FastItemDropStatement() {}
+        
+        /** 从参数创建 */
         public FastItemDropStatement(String[] params) {
-            if (params.length >= 3) toVar = params[2];
-            if (params.length >= 4) amountVar = params[3];
+            if (params.length >= 3) to = params[2];
+            if (params.length >= 4) amount = params[3];
+            afterRead();
         }
         
         @Override
-        public void build(arc.scene.ui.layout.Table table) {
-            table.add("Fast Item Drop:").left();
+        public void build(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                t.add(" to ").left().self(c -> tooltip(c, "fastunitcontrol.itemdrop.to"));
+                field(t, to, str -> to = str);
+                
+                t.add(" amount ").left().self(c -> tooltip(c, "fastunitcontrol.itemdrop.amount"));
+                field(t, amount, str -> amount = str);
+            }).left();
         }
         
         @Override
@@ -110,14 +167,16 @@ public class FastUnitControl {
         }
         
         @Override
-        public String toString() {
-            return "fastUnitControl itemdrop " + (toVar != null ? toVar : "") + " " + (amountVar != null ? amountVar : "");
+        public void write(StringBuilder builder) {
+            builder.append("fastunitcontrol itemdrop ")
+                   .append(to).append(" ")
+                   .append(amount);
         }
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar toVarObj = toVar != null ? builder.var(toVar) : null;
-            LVar amountVarObj = amountVar != null ? builder.var(amountVar) : null;
+            LVar toVar = to != null && !to.isEmpty() ? builder.var(to) : null;
+            LVar amountVar = amount != null && !amount.isEmpty() ? builder.var(amount) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
@@ -125,20 +184,20 @@ public class FastUnitControl {
                     Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    Building to = toVarObj != null ? toVarObj.building() : null;
-                    int amount = amountVarObj != null ? (int)amountVarObj.numi() : Integer.MAX_VALUE;
+                    Building to = toVar != null ? toVar.building() : null;
+                    int amount = amountVar != null ? (int)amountVar.numi() : 1;
                     
                     // 与原版一致的逻辑，只是去除了CD检查
                     if(unit.item() != null) {
                         // 向空气投放（清空物品）
                         if(to == null) {
                             //only server-side; no need to call anything, as items are synced in snapshots
-                            if(!mindustry.Vars.net.client()) {
+                            if(!Vars.net.client()) {
                                 unit.clearItem();
                             }
                         } else if(to.team == unit.team && to.isValid()) {
                             int dropped = Math.min(unit.stack.amount, amount);
-                            if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * mindustry.Vars.tilesize/2f)) {
+                            if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * Vars.tilesize/2f)) {
                                 int accepted = to.acceptStack(unit.item(), dropped, unit);
                                 if(accepted > 0) {
                                     Call.transferItemTo(unit, unit.item(), accepted, unit.x, unit.y, to);
@@ -153,17 +212,41 @@ public class FastUnitControl {
     
     /** 快速拿取载荷指令 - 支持指定坐标 */
     static class FastPayTakeStatement extends LStatement {
-        String takeUnitsVar, xVar, yVar;
+        /** 是否拿取单位 */
+        public String takeUnits = "false";
+        /** x坐标 */
+        public String x = "";
+        /** y坐标 */
+        public String y = "";
         
+        /** 构造函数 */
+        public FastPayTakeStatement() {}
+        
+        /** 从参数创建 */
         public FastPayTakeStatement(String[] params) {
-            if (params.length >= 3) takeUnitsVar = params[2];
-            if (params.length >= 4) xVar = params[3];
-            if (params.length >= 5) yVar = params[4];
+            if (params.length >= 3) takeUnits = params[2];
+            if (params.length >= 4) x = params[3];
+            if (params.length >= 5) y = params[4];
+            afterRead();
         }
         
         @Override
-        public void build(arc.scene.ui.layout.Table table) {
-            table.add("Fast Pay Take:").left();
+        public void build(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                t.add(" takeUnits ").left().self(c -> tooltip(c, "fastunitcontrol.paytake.takeunits"));
+                field(t, takeUnits, str -> takeUnits = str);
+                
+                t.add(" x ").left().self(c -> tooltip(c, "fastunitcontrol.paytake.x"));
+                field(t, x, str -> x = str);
+                
+                t.add(" y ").left().self(c -> tooltip(c, "fastunitcontrol.paytake.y"));
+                field(t, y, str -> y = str);
+            }).left();
         }
         
         @Override
@@ -172,15 +255,18 @@ public class FastUnitControl {
         }
         
         @Override
-        public String toString() {
-            return "fastUnitControl paytake " + (takeUnitsVar != null ? takeUnitsVar : "") + " " + (xVar != null ? xVar : "") + " " + (yVar != null ? yVar : "");
+        public void write(StringBuilder builder) {
+            builder.append("fastunitcontrol paytake ")
+                   .append(takeUnits).append(" ")
+                   .append(x).append(" ")
+                   .append(y);
         }
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar takeUnitsVarObj = takeUnitsVar != null ? builder.var(takeUnitsVar) : null;
-            LVar xVarObj = xVar != null ? builder.var(xVar) : null;
-            LVar yVarObj = yVar != null ? builder.var(yVar) : null;
+            LVar takeUnitsVar = takeUnits != null && !takeUnits.isEmpty() ? builder.var(takeUnits) : null;
+            LVar xVar = x != null && !x.isEmpty() ? builder.var(x) : null;
+            LVar yVar = y != null && !y.isEmpty() ? builder.var(y) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
@@ -188,9 +274,9 @@ public class FastUnitControl {
                     Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    boolean takeUnits = takeUnitsVarObj != null ? takeUnitsVarObj.bool() : false;
-                    float x = xVarObj != null ? xVarObj.numf() : unit.x;
-                    float y = yVarObj != null ? yVarObj.numf() : unit.y;
+                    boolean takeUnits = takeUnitsVar != null ? takeUnitsVar.bool() : false;
+                    float x = xVar != null ? xVar.numf() : unit.x;
+                    float y = yVar != null ? yVar.numf() : unit.y;
                     
                     // 检查单位是否在指定坐标范围内
                     if(unit.within(x, y, FIXED_RADIUS) && unit instanceof Payloadc pay) {
@@ -204,7 +290,7 @@ public class FastUnitControl {
                             }
                         } else {
                             // 拿取建筑
-                            Building build = mindustry.Vars.world.buildWorld(x, y);
+                            Building build = Vars.world.buildWorld(x, y);
                             
                             if(build != null && build.team == unit.team) {
                                 Payload current = build.getPayload();
@@ -223,16 +309,35 @@ public class FastUnitControl {
     
     /** 快速放下载荷指令 - 支持指定坐标 */
     static class FastPayDropStatement extends LStatement {
-        String xVar, yVar;
+        /** x坐标 */
+        public String x = "";
+        /** y坐标 */
+        public String y = "";
         
+        /** 构造函数 */
+        public FastPayDropStatement() {}
+        
+        /** 从参数创建 */
         public FastPayDropStatement(String[] params) {
-            if (params.length >= 3) xVar = params[2];
-            if (params.length >= 4) yVar = params[3];
+            if (params.length >= 3) x = params[2];
+            if (params.length >= 4) y = params[3];
+            afterRead();
         }
         
         @Override
-        public void build(arc.scene.ui.layout.Table table) {
-            table.add("Fast Pay Drop:").left();
+        public void build(Table table) {
+            table.clearChildren();
+            table.left();
+            
+            table.table(t -> {
+                t.setColor(table.color);
+                
+                t.add(" x ").left().self(c -> tooltip(c, "fastunitcontrol.paydrop.x"));
+                field(t, x, str -> x = str);
+                
+                t.add(" y ").left().self(c -> tooltip(c, "fastunitcontrol.paydrop.y"));
+                field(t, y, str -> y = str);
+            }).left();
         }
         
         @Override
@@ -241,14 +346,16 @@ public class FastUnitControl {
         }
         
         @Override
-        public String toString() {
-            return "fastUnitControl paydrop " + (xVar != null ? xVar : "") + " " + (yVar != null ? yVar : "");
+        public void write(StringBuilder builder) {
+            builder.append("fastunitcontrol paydrop ")
+                   .append(x).append(" ")
+                   .append(y);
         }
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar xVarObj = xVar != null ? builder.var(xVar) : null;
-            LVar yVarObj = yVar != null ? builder.var(yVar) : null;
+            LVar xVar = x != null && !x.isEmpty() ? builder.var(x) : null;
+            LVar yVar = y != null && !y.isEmpty() ? builder.var(y) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
@@ -256,8 +363,8 @@ public class FastUnitControl {
                     Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    float x = xVarObj != null ? xVarObj.numf() : unit.x;
-                    float y = yVarObj != null ? yVarObj.numf() : unit.y;
+                    float x = xVar != null ? xVar.numf() : unit.x;
+                    float y = yVar != null ? yVar.numf() : unit.y;
                     
                     // 检查单位是否在指定坐标范围内
                     if(unit.within(x, y, FIXED_RADIUS) && unit instanceof Payloadc pay && pay.hasPayload()) {
@@ -266,5 +373,10 @@ public class FastUnitControl {
                 }
             };
         }
+    }
+    
+    /** 创建可编辑的文本字段 */
+    private static TextField field(Table table, String value, Cons<String> consumer) {
+        return table.field(value, consumer).width(100f).get();
     }
 }
