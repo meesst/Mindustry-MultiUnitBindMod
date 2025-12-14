@@ -2,14 +2,15 @@ package logicExtend;
 
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
+import arc.util.Cons;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.world.*;
 import mindustry.type.*;
+import mindustry.ui.Styles;
 import mindustry.world.blocks.payloads.Payload;
 import mindustry.world.meta.BuildVisibility;
 import static mindustry.logic.LCanvas.tooltip;
-import static mindustry.logic.LCanvas.row;
 import static mindustry.Vars.*;
 
 public class FastUnitControl {
@@ -50,22 +51,31 @@ public class FastUnitControl {
             // 分支选择按钮
             table.button(b -> {
                 b.label(() -> type.name());
-                b.clicked(() -> showSelect(b, FastUnitControlType.values(), type, t -> {
-                    type = t;
-                    rebuild(table);
-                }, 2, cell -> cell.size(120, 50)));
+                b.clicked(() -> {
+                    // 简化的分支选择，直接使用原版showSelect方法
+                    showSelect(b, FastUnitControlType.values(), type, t -> {
+                        type = t;
+                        rebuild(table);
+                    }, 2, cell -> cell.size(120, 50));
+                });
             }, Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
-            row(table);
+            // 手动换行
+            table.row();
             
             // 根据选择的分支显示不同的参数
             int c = 0;
             for(int i = 0; i < type.params.length; i++) {
-                fields(table, type.params[i], 
-                    i == 0 ? p1 : i == 1 ? p2 : p3, 
-                    i == 0 ? v -> p1 = v : i == 1 ? v -> p2 = v : v -> p3 = v).width(100f);
+                table.add(" " + type.params[i] + " ").left().self(c -> tooltip(c, "fastunitcontrol." + type.params[i]));
                 
-                if(++c % 2 == 0) row(table);
+                // 创建可编辑的文本字段
+                TextField field = table.field(i == 0 ? p1 : i == 1 ? p2 : p3, str -> {
+                    if(i == 0) p1 = str;
+                    if(i == 1) p2 = str;
+                    if(i == 2) p3 = str;
+                }).width(100f).get();
+                
+                if(++c % 2 == 0) table.row();
             }
         }
         
@@ -107,7 +117,7 @@ public class FastUnitControl {
                             
                             // 与原版一致的逻辑，只是去除了CD检查
                             if(from != null && from.team == unit.team && from.isValid() && from.items != null &&
-                               item != null && unit.within(from, logicItemTransferRange + from.block.size * Vars.tilesize/2f)){
+                               item != null && unit.within(from, logicItemTransferRange + from.block.size * tilesize/2f)){
                                 int taken = Math.min(from.items.get(item), Math.min(amount, unit.maxAccepted(item)));
                                 if(taken > 0) {
                                     Call.takeItems(from, item, taken, unit);
@@ -122,12 +132,12 @@ public class FastUnitControl {
                             // 与原版一致的逻辑，只是去除了CD检查
                             if(unit.item() != null) {
                                 if(to == null) {
-                                    if(!Vars.net.client()) {
+                                    if(!net.client()) {
                                         unit.clearItem();
                                     }
                                 } else if(to.team == unit.team && to.isValid()) {
                                     int dropped = Math.min(unit.stack.amount, dropAmount);
-                                    if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * Vars.tilesize/2f)) {
+                                    if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * tilesize/2f)) {
                                         int accepted = to.acceptStack(unit.item(), dropped, unit);
                                         if(accepted > 0) {
                                             Call.transferItemTo(unit, unit.item(), accepted, unit.x, unit.y, to);
@@ -151,7 +161,7 @@ public class FastUnitControl {
                                         Call.pickedUnitPayload(unit, result);
                                     }
                                 } else {
-                                    Building build = Vars.world.buildWorld(x, y);
+                                    Building build = world.buildWorld(x, y);
                                     
                                     if(build != null && build.team == unit.team) {
                                         Payload current = build.getPayload();
@@ -203,11 +213,5 @@ public class FastUnitControl {
         
         // 将指令添加到逻辑IO的所有语句列表中
         LogicIO.allStatements.add(FastUnitControlStatement::new);
-    }
-    
-    /** 创建可编辑的文本字段 */
-    private static TextField fields(Table table, String param, String value, Cons<String> consumer) {
-        table.add(" " + param + " ").left().self(c -> tooltip(c, "fastunitcontrol." + param));
-        return table.field(value, consumer).width(100f).get();
     }
 }
