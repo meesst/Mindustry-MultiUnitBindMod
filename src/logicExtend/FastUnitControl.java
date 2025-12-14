@@ -1,10 +1,12 @@
 package logicExtend;
 
+import arc.struct.ObjectMap;
 import mindustry.logic.*;
 import mindustry.gen.*;
 import mindustry.world.*;
 import mindustry.type.*;
-import mindustry.Vars;
+import mindustry.world.blocks.payloads.Payload;
+import mindustry.world.meta.BuildVisibility;
 
 public class FastUnitControl {
     
@@ -60,23 +62,25 @@ public class FastUnitControl {
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar fromVar = this.fromVar != null ? builder.var(this.fromVar) : null;
-            LVar itemVar = this.itemVar != null ? builder.var(this.itemVar) : null;
-            LVar amountVar = this.amountVar != null ? builder.var(this.amountVar) : null;
+            LVar fromVarObj = fromVar != null ? builder.var(fromVar) : null;
+            LVar itemVarObj = itemVar != null ? builder.var(itemVar) : null;
+            LVar amountVarObj = amountVar != null ? builder.var(amountVar) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
                 public void run(LExecutor exec) {
-                    Unit unit = exec.unit.object instanceof Unit ? (Unit)exec.unit.object : null;
+                    Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    Building from = fromVar != null ? fromVar.object instanceof Building ? (Building)fromVar.object : null : null;
-                    Item item = itemVar != null ? itemVar.object instanceof Item ? (Item)itemVar.object : null : null;
-                    int amount = amountVar != null ? (int)amountVar.num : Integer.MAX_VALUE;
+                    Building from = fromVarObj != null ? fromVarObj.building() : null;
+                    Item item = itemVarObj != null ? itemVarObj.obj() instanceof Item ? (Item)itemVarObj.obj() : null : null;
+                    int amount = amountVarObj != null ? (int)amountVarObj.numi() : Integer.MAX_VALUE;
                     
+                    // 与原版一致的逻辑，只是去除了CD检查
                     if(from != null && from.team == unit.team && from.isValid() && from.items != null &&
-                       item != null && unit.within(from, logicItemTransferRange + from.block.size * Vars.tilesize/2f)){
+                       item != null && unit.within(from, logicItemTransferRange + from.block.size * mindustry.Vars.tilesize/2f)){
                         int taken = Math.min(from.items.get(item), Math.min(amount, unit.maxAccepted(item)));
+                        
                         if(taken > 0) {
                             Call.takeItems(from, item, taken, unit);
                         }
@@ -112,26 +116,29 @@ public class FastUnitControl {
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar toVar = this.toVar != null ? builder.var(this.toVar) : null;
-            LVar amountVar = this.amountVar != null ? builder.var(this.amountVar) : null;
+            LVar toVarObj = toVar != null ? builder.var(toVar) : null;
+            LVar amountVarObj = amountVar != null ? builder.var(amountVar) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
                 public void run(LExecutor exec) {
-                    Unit unit = exec.unit.object instanceof Unit ? (Unit)exec.unit.object : null;
+                    Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    Building to = toVar != null ? toVar.object instanceof Building ? (Building)toVar.object : null : null;
-                    int amount = amountVar != null ? (int)amountVar.num : Integer.MAX_VALUE;
+                    Building to = toVarObj != null ? toVarObj.building() : null;
+                    int amount = amountVarObj != null ? (int)amountVarObj.numi() : Integer.MAX_VALUE;
                     
+                    // 与原版一致的逻辑，只是去除了CD检查
                     if(unit.item() != null) {
+                        // 向空气投放（清空物品）
                         if(to == null) {
-                            if(!Vars.net.client()) {
+                            //only server-side; no need to call anything, as items are synced in snapshots
+                            if(!mindustry.Vars.net.client()) {
                                 unit.clearItem();
                             }
                         } else if(to.team == unit.team && to.isValid()) {
                             int dropped = Math.min(unit.stack.amount, amount);
-                            if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * Vars.tilesize/2f)) {
+                            if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * mindustry.Vars.tilesize/2f)) {
                                 int accepted = to.acceptStack(unit.item(), dropped, unit);
                                 if(accepted > 0) {
                                     Call.transferItemTo(unit, unit.item(), accepted, unit.x, unit.y, to);
@@ -171,22 +178,24 @@ public class FastUnitControl {
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar takeUnitsVar = this.takeUnitsVar != null ? builder.var(this.takeUnitsVar) : null;
-            LVar xVar = this.xVar != null ? builder.var(this.xVar) : null;
-            LVar yVar = this.yVar != null ? builder.var(this.yVar) : null;
+            LVar takeUnitsVarObj = takeUnitsVar != null ? builder.var(takeUnitsVar) : null;
+            LVar xVarObj = xVar != null ? builder.var(xVar) : null;
+            LVar yVarObj = yVar != null ? builder.var(yVar) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
                 public void run(LExecutor exec) {
-                    Unit unit = exec.unit.object instanceof Unit ? (Unit)exec.unit.object : null;
+                    Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    boolean takeUnits = takeUnitsVar != null ? takeUnitsVar.bool : false;
-                    float x = xVar != null ? xVar.num : unit.x;
-                    float y = yVar != null ? yVar.num : unit.y;
+                    boolean takeUnits = takeUnitsVarObj != null ? takeUnitsVarObj.bool() : false;
+                    float x = xVarObj != null ? xVarObj.numf() : unit.x;
+                    float y = yVarObj != null ? yVarObj.numf() : unit.y;
                     
+                    // 检查单位是否在指定坐标范围内
                     if(unit.within(x, y, FIXED_RADIUS) && unit instanceof Payloadc pay) {
                         if(takeUnits) {
+                            // 拿取单位
                             Unit result = mindustry.entities.Units.closest(unit.team, x, y, unit.type.hitSize * 2f, u -> 
                                 u.isAI() && u.isGrounded() && pay.canPickup(u) && u.within(x, y, FIXED_RADIUS));
                             
@@ -194,13 +203,14 @@ public class FastUnitControl {
                                 Call.pickedUnitPayload(unit, result);
                             }
                         } else {
-                            Building build = Vars.world.buildWorld(x, y);
+                            // 拿取建筑
+                            Building build = mindustry.Vars.world.buildWorld(x, y);
                             
                             if(build != null && build.team == unit.team) {
-                                mindustry.world.blocks.payloads.Payload current = build.getPayload();
+                                Payload current = build.getPayload();
                                 if(current != null && pay.canPickupPayload(current)) {
                                     Call.pickedBuildPayload(unit, build, false);
-                                } else if(build.block.buildVisibility != mindustry.world.meta.BuildVisibility.hidden && build.canPickup() && pay.canPickup(build)) {
+                                } else if(build.block.buildVisibility != BuildVisibility.hidden && build.canPickup() && pay.canPickup(build)) {
                                     Call.pickedBuildPayload(unit, build, true);
                                 }
                             }
@@ -237,18 +247,19 @@ public class FastUnitControl {
         
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            LVar xVar = this.xVar != null ? builder.var(this.xVar) : null;
-            LVar yVar = this.yVar != null ? builder.var(this.yVar) : null;
+            LVar xVarObj = xVar != null ? builder.var(xVar) : null;
+            LVar yVarObj = yVar != null ? builder.var(yVar) : null;
             
             return new LExecutor.LInstruction() {
                 @Override
                 public void run(LExecutor exec) {
-                    Unit unit = exec.unit.object instanceof Unit ? (Unit)exec.unit.object : null;
+                    Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
                     if(unit == null) return;
                     
-                    float x = xVar != null ? xVar.num : unit.x;
-                    float y = yVar != null ? yVar.num : unit.y;
+                    float x = xVarObj != null ? xVarObj.numf() : unit.x;
+                    float y = yVarObj != null ? yVarObj.numf() : unit.y;
                     
+                    // 检查单位是否在指定坐标范围内
                     if(unit.within(x, y, FIXED_RADIUS) && unit instanceof Payloadc pay && pay.hasPayload()) {
                         Call.payloadDropped(unit, x, y);
                     }
