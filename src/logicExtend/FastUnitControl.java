@@ -65,12 +65,12 @@ public class FastUnitControl {
         }
         
         @Override
-        public LInstruction build(LAssembler builder){
+        public LExecutor.LInstruction build(LAssembler builder){
             LVar p1Var = builder.var(p1);
             LVar p2Var = builder.var(p2);
             LVar p3Var = builder.var(p3);
             
-            return new LInstruction() {
+            return new LExecutor.LInstruction() {
                 @Override
                 public void run(LExecutor exec){
                     Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
