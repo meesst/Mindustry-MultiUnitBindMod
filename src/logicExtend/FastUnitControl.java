@@ -110,83 +110,84 @@ public class FastUnitControl {
                         ai.controlTimer = LogicAI.logicControlTimeout;
                         
                         switch(type) {
-                        case itemTake:
-                            Building from = p1Var != null ? p1Var.building() : null;
-                            Item item = p2Var != null ? p2Var.obj() instanceof Item ? (Item)p2Var.obj() : null : null;
-                            int amount = p3Var != null ? (int)p3Var.numi() : 1;
-                            
-                            // 与原版一致的逻辑，只是去除了CD检查
-                            if(from != null && from.team == unit.team && from.isValid() && from.items != null &&
-                               item != null && unit.within(from, logicItemTransferRange + from.block.size * tilesize/2f)){
-                                int taken = Math.min(from.items.get(item), Math.min(amount, unit.maxAccepted(item)));
-                                if(taken > 0) {
-                                    Call.takeItems(from, item, taken, unit);
-                                }
-                            }
-                            break;
-                            
-                        case itemDrop:
-                            Building to = p1Var != null ? p1Var.building() : null;
-                            int dropAmount = p2Var != null ? (int)p2Var.numi() : 1;
-                            
-                            // 与原版一致的逻辑，只是去除了CD检查
-                            if(unit.item() != null) {
-                                //clear item when dropping to @air
-                                if(p1Var.obj() == air) {
-                                    //only server-side; no need to call anything, as items are synced in snapshots
-                                    if(!net.client()) {
-                                        unit.clearItem();
+                            case itemTake:
+                                Building from = p1Var != null ? p1Var.building() : null;
+                                Item item = p2Var != null ? p2Var.obj() instanceof Item ? (Item)p2Var.obj() : null : null;
+                                int amount = p3Var != null ? (int)p3Var.numi() : 1;
+                                
+                                // 与原版一致的逻辑，只是去除了CD检查
+                                if(from != null && from.team == unit.team && from.isValid() && from.items != null &&
+                                   item != null && unit.within(from, logicItemTransferRange + from.block.size * tilesize/2f)){
+                                    int taken = Math.min(from.items.get(item), Math.min(amount, unit.maxAccepted(item)));
+                                    if(taken > 0) {
+                                        Call.takeItems(from, item, taken, unit);
                                     }
-                                } else if(to != null && to.team == unit.team && to.isValid()) {
-                                    int dropped = Math.min(unit.stack.amount, dropAmount);
-                                    if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * tilesize/2f)) {
-                                        int accepted = to.acceptStack(unit.item(), dropped, unit);
-                                        if(accepted > 0) {
-                                            Call.transferItemTo(unit, unit.item(), accepted, unit.x, unit.y, to);
+                                }
+                                break;
+                                
+                            case itemDrop:
+                                Building to = p1Var != null ? p1Var.building() : null;
+                                int dropAmount = p2Var != null ? (int)p2Var.numi() : 1;
+                                
+                                // 与原版一致的逻辑，只是去除了CD检查
+                                if(unit.item() != null) {
+                                    //clear item when dropping to @air
+                                    if(p1Var.obj() == air) {
+                                        //only server-side; no need to call anything, as items are synced in snapshots
+                                        if(!net.client()) {
+                                            unit.clearItem();
+                                        }
+                                    } else if(to != null && to.team == unit.team && to.isValid()) {
+                                        int dropped = Math.min(unit.stack.amount, dropAmount);
+                                        if(dropped > 0 && unit.within(to, logicItemTransferRange + to.block.size * tilesize/2f)) {
+                                            int accepted = to.acceptStack(unit.item(), dropped, unit);
+                                            if(accepted > 0) {
+                                                Call.transferItemTo(unit, unit.item(), accepted, unit.x, unit.y, to);
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            break;
-                            
-                        case payTake:
-                            boolean takeUnits = p1Var != null ? p1Var.bool() : false;
-                            float x = p2Var != null ? p2Var.numf() : unit.x;
-                            float y = p3Var != null ? p3Var.numf() : unit.y;
-                            
-                            if(unit.within(x, y, FIXED_RADIUS) && unit instanceof Payloadc pay) {
-                                if(takeUnits) {
-                                    Unit result = mindustry.entities.Units.closest(unit.team, x, y, unit.type.hitSize * 2f, u -> 
-                                        u.isAI() && u.isGrounded() && pay.canPickup(u) && u.within(x, y, FIXED_RADIUS));
-                                    
-                                    if(result != null) {
-                                        Call.pickedUnitPayload(unit, result);
-                                    }
-                                } else {
-                                    Building build = world.buildWorld(x, y);
-                                    
-                                    if(build != null && build.team == unit.team) {
-                                        Payload current = build.getPayload();
-                                        if(current != null && pay.canPickupPayload(current)) {
-                                            Call.pickedBuildPayload(unit, build, false);
-                                        } else if(build.block.buildVisibility != BuildVisibility.hidden && build.canPickup() && pay.canPickup(build)) {
-                                            Call.pickedBuildPayload(unit, build, true);
+                                break;
+                                
+                            case payTake:
+                                boolean takeUnits = p1Var != null ? p1Var.bool() : false;
+                                float x = p2Var != null ? p2Var.numf() : unit.x;
+                                float y = p3Var != null ? p3Var.numf() : unit.y;
+                                
+                                if(unit.within(x, y, FIXED_RADIUS) && unit instanceof Payloadc pay) {
+                                    if(takeUnits) {
+                                        Unit result = mindustry.entities.Units.closest(unit.team, x, y, unit.type.hitSize * 2f, u -> 
+                                            u.isAI() && u.isGrounded() && pay.canPickup(u) && u.within(x, y, FIXED_RADIUS));
+                                        
+                                        if(result != null) {
+                                            Call.pickedUnitPayload(unit, result);
+                                        }
+                                    } else {
+                                        Building build = world.buildWorld(x, y);
+                                        
+                                        if(build != null && build.team == unit.team) {
+                                            Payload current = build.getPayload();
+                                            if(current != null && pay.canPickupPayload(current)) {
+                                                Call.pickedBuildPayload(unit, build, false);
+                                            } else if(build.block.buildVisibility != BuildVisibility.hidden && build.canPickup() && pay.canPickup(build)) {
+                                                Call.pickedBuildPayload(unit, build, true);
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            break;
-                            
-                        case payDrop:
-                            float dropX = p1Var != null ? p1Var.numf() : unit.x;
-                            float dropY = p2Var != null ? p2Var.numf() : unit.y;
-                            
-                            if(unit.within(dropX, dropY, FIXED_RADIUS) && unit instanceof Payloadc pay && pay.hasPayload()) {
-                                Call.payloadDropped(unit, dropX, dropY);
-                            }
-                            break;
-                        default:
-                            break;
+                                break;
+                                
+                            case payDrop:
+                                float dropX = p1Var != null ? p1Var.numf() : unit.x;
+                                float dropY = p2Var != null ? p2Var.numf() : unit.y;
+                                
+                                if(unit.within(dropX, dropY, FIXED_RADIUS) && unit instanceof Payloadc pay && pay.hasPayload()) {
+                                    Call.payloadDropped(unit, dropX, dropY);
+                                }
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             };
