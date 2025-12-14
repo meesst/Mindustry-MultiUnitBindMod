@@ -66,13 +66,16 @@ public class FastUnitControl {
             // 根据选择的分支显示不同的参数
             int c = 0;
             for(int i = 0; i < type.params.length; i++) {
-                table.add(" " + type.params[i] + " ").left().self(cell -> tooltip(cell, "fastunitcontrol." + type.params[i]));
+                final int index = i;
+                final String param = type.params[i];
+                
+                table.add(" " + param + " ").left().self(cell -> tooltip(cell, "fastunitcontrol." + param));
                 
                 // 创建可编辑的文本字段
-                TextField field = table.field(i == 0 ? p1 : i == 1 ? p2 : p3, str -> {
-                    if(i == 0) p1 = str;
-                    if(i == 1) p2 = str;
-                    if(i == 2) p3 = str;
+                TextField field = table.field(index == 0 ? p1 : index == 1 ? p2 : p3, str -> {
+                    if(index == 0) p1 = str;
+                    if(index == 1) p2 = str;
+                    if(index == 2) p3 = str;
                 }).width(100f).get();
                 
                 if(++c % 2 == 0) table.row();
