@@ -100,13 +100,16 @@ public class FastUnitControl {
             return new LExecutor.LInstruction() {
                 @Override
                 public void run(LExecutor exec) {
-                    Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
-                    // 添加关键检查：确保单位有效、团队匹配且可逻辑控制
-                    if(unit == null || !unit.isValid() || (unit.team != exec.team && !exec.privileged) || !unit.controller().isLogicControllable()) {
-                        return;
-                    }
+                    Object unitObj = exec.unit.obj();
+                    // 调用原版的checkLogicAI方法，确保单位处于逻辑控制之下
+                    LogicAI ai = LExecutor.UnitControlI.checkLogicAI(exec, unitObj);
                     
-                    switch(type) {
+                    // 只有控制标准AI单位
+                    if(unitObj instanceof Unit unit && ai != null){
+                        // 更新控制计时器，保持逻辑控制状态
+                        ai.controlTimer = LogicAI.logicControlTimeout;
+                        
+                        switch(type) {
                         case itemTake:
                             Building from = p1Var != null ? p1Var.building() : null;
                             Item item = p2Var != null ? p2Var.obj() instanceof Item ? (Item)p2Var.obj() : null : null;
@@ -181,6 +184,8 @@ public class FastUnitControl {
                             if(unit.within(dropX, dropY, FIXED_RADIUS) && unit instanceof Payloadc pay && pay.hasPayload()) {
                                 Call.payloadDropped(unit, dropX, dropY);
                             }
+                            break;
+                        default:
                             break;
                     }
                 }
