@@ -101,7 +101,10 @@ public class FastUnitControl {
                 @Override
                 public void run(LExecutor exec) {
                     Unit unit = exec.unit.obj() instanceof Unit ? (Unit)exec.unit.obj() : null;
-                    if(unit == null) return;
+                    // 添加关键检查：确保单位有效、团队匹配且可逻辑控制
+                    if(unit == null || !unit.isValid() || (unit.team != exec.team && !exec.privileged) || !unit.controller().isLogicControllable()) {
+                        return;
+                    }
                     
                     switch(type) {
                         case itemTake:
