@@ -48,37 +48,27 @@ public class FastUnitControl {
             table.clearChildren();
             table.left();
             
+            table.add(" ");
+            
             // 分支选择按钮
             table.button(b -> {
                 b.label(() -> type.name());
-                b.clicked(() -> {
-                    // 简化的分支选择，直接使用原版showSelect方法
-                    showSelect(b, FastUnitControlType.values(), type, t -> {
-                        type = t;
-                        rebuild(table);
-                    }, 2, cell -> cell.size(120, 50));
-                });
+                b.clicked(() -> showSelect(b, FastUnitControlType.values(), type, t -> {
+                    type = t;
+                    rebuild(table);
+                }, 2, cell -> cell.size(120, 50)));
             }, Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
-            // 手动换行
-            table.row();
+            row(table);
             
             // 根据选择的分支显示不同的参数
             int c = 0;
             for(int i = 0; i < type.params.length; i++) {
                 final int index = i;
-                final String param = type.params[i];
                 
-                table.add(" " + param + " ").left().self(cell -> tooltip(cell, "fastunitcontrol." + param));
+                fields(table, type.params[i], index == 0 ? p1 : index == 1 ? p2 : p3, index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v).width(100f);
                 
-                // 创建可编辑的文本字段
-                TextField field = table.field(index == 0 ? p1 : index == 1 ? p2 : p3, str -> {
-                    if(index == 0) p1 = str;
-                    if(index == 1) p2 = str;
-                    if(index == 2) p3 = str;
-                }).width(100f).get();
-                
-                if(++c % 2 == 0) table.row();
+                if(++c % 2 == 0) row(table);
             }
         }
         
