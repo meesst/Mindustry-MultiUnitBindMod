@@ -3,6 +3,7 @@ package logicExtend;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 
+import mindustry.ai.types.LogicAI;
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.world.*;
