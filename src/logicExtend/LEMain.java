@@ -21,8 +21,8 @@ public class LEMain extends Mod {
     }
     
     /** 去除itemtake和itemdrop指令的内置CD */
+    @SuppressWarnings("unchecked")
     private void removeTransferDelay() {
-        @SuppressWarnings("unchecked")
         try {
             // 主方案：替换unitTimeouts对象
             Field unitTimeoutsField = LExecutor.class.getDeclaredField("unitTimeouts");
