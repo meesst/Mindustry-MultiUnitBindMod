@@ -2,7 +2,7 @@ package logicExtend;
 
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
-import arc.util.Cons;
+
 import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.world.*;
@@ -66,7 +66,7 @@ public class FastUnitControl {
             // 根据选择的分支显示不同的参数
             int c = 0;
             for(int i = 0; i < type.params.length; i++) {
-                table.add(" " + type.params[i] + " ").left().self(c -> tooltip(c, "fastunitcontrol." + type.params[i]));
+                table.add(" " + type.params[i] + " ").left().self(cell -> tooltip(cell, "fastunitcontrol." + type.params[i]));
                 
                 // 创建可编辑的文本字段
                 TextField field = table.field(i == 0 ? p1 : i == 1 ? p2 : p3, str -> {
