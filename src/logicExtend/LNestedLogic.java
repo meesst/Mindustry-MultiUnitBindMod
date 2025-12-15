@@ -266,9 +266,11 @@ public class LNestedLogic {
                         }
                         callContextStack.add(context);
                              
+                            // 保存当前上下文引用
+                            CallContext currentContext;
                             try {
                                 // 获取当前上下文的调用栈
-                                CallContext currentContext = getCurrentContext();
+                                currentContext = getCurrentContext();
                                 
                                 // 记录日志：当前调用栈信息
                                 log("call: 当前调用栈大小: " + currentContext.callStack.size);
