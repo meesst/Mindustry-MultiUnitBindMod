@@ -399,11 +399,12 @@ public class LNestedLogic {
                         
                         if (targetElem != null) {
                             // 获取要弹出到的变量
-                            LVar targetVar = exec.optionalVar(p1);
-                            if (targetVar == null) {
-                                // 变量不存在，创建新变量
-                                targetVar = exec.putVar(p1);
-                            }
+                        LVar targetVar = exec.optionalVar(p1);
+                        if (targetVar == null) {
+                            // 变量不存在，跳过
+                            log("pop: 目标变量 " + p1 + " 不存在");
+                            return;
+                        }
                             
                             // 设置变量值
                             if (targetElem.varValue instanceof Double) {
