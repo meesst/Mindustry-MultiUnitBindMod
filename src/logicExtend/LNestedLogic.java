@@ -9,6 +9,7 @@ import mindustry.logic.LExecutor;
 import mindustry.logic.LStatement;
 import mindustry.logic.LVar;
 import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 
 import static mindustry.logic.LCanvas.tooltip;
 import static arc.Core.*;
@@ -74,39 +75,35 @@ public class LNestedLogic {
                         saveUI();
                     }, 2, cell -> cell.size(120, 50));
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).padLeft(2);
+            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
-            // 不使用row()，所有元素在同一行
-            
-            // Variable输入框，仅在push分支可见
-            field(table, "Variable", str -> {
-                p1 = str;
-                saveUI();
-            }).size(150f, 40f).pad(2f).visible(() -> type == NestedLogicType.push);
-            
-            // Logic Name输入框，仅在call分支可见，宽度改为300
-            field(table, "Logic Name", str -> {
-                p1 = str;
-                saveUI();
-            }).size(300f, 40f).pad(2f).visible(() -> type == NestedLogicType.call);
-            
-            // Edit Logic按钮，仅在call分支可见
-            table.button(b -> {
-                b.label(() -> "Edit Logic");
-                b.clicked(() -> {
-                    // 打开嵌套逻辑编辑器
-                    mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
-                    nestedDialog.show(nestedCode, null, false, modifiedCode -> {
-                        // 保存修改后的代码
-                        nestedCode = modifiedCode;
-                        saveUI();
+            // 根据当前选项动态创建UI元素
+            if (type == NestedLogicType.push) {
+                // push分支：创建变量输入框
+                field(table, "Variable", str -> {
+                    p1 = str;
+                    saveUI();
+                }).size(150f, 40f).pad(2f);
+            } else if (type == NestedLogicType.call) {
+                // call分支：创建变量输入框 + 编辑页面按钮
+                field(table, "Logic Name", str -> {
+                    p1 = str;
+                    saveUI();
+                }).size(300f, 40f).pad(2f);
+                
+                table.button(b -> {
+                    b.label(() -> "Edit Logic");
+                    b.clicked(() -> {
+                        // 打开嵌套逻辑编辑器
+                        mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                        nestedDialog.show(nestedCode, null, false, modifiedCode -> {
+                            // 保存修改后的代码
+                            nestedCode = modifiedCode;
+                            saveUI();
+                        });
                     });
-                    // 编辑器关闭时清理资源
-                    nestedDialog.hidden(() -> {
-                        // 清理逻辑
-                    });
-                });
-            }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f).visible(() -> type == NestedLogicType.call);
+                }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f);
+            }
         }
         
         @Override
@@ -262,11 +259,11 @@ public class LNestedLogic {
             builder.append(p2);
             
             // 如果是call指令，序列化嵌套代码
-            if (type == NestedLogicType.call) {
-                // 使用Base64编码嵌套代码，避免转义字符问题
-                String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes());
-                builder.append(" \"").append(encoded).append('"');
-            }
+                if (type == NestedLogicType.call) {
+                    // 使用Base64编码嵌套代码，避免转义字符问题
+                    String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
+                    builder.append(" \"").append(encoded).append('"');
+                }
         }
 
         @Override
@@ -280,45 +277,53 @@ public class LNestedLogic {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 
                 // 处理旧格式的兼容性
-                if (params.length >= 1) {
+                if (params.length >= 2) {
                     try {
                         // 尝试解析为新格式的指令类型
-                        stmt.type = NestedLogicType.valueOf(params[0]);
+                        stmt.type = NestedLogicType.valueOf(params[1]);
                     } catch (IllegalArgumentException e) {
                         // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
                         // 新格式：第一个参数是指令类型，第二个是p1，第三个是p2，第四个是嵌套代码
                         stmt.type = NestedLogicType.call;
-                        if (params.length >= 2) {
-                            stmt.nestedCode = params[1];
+                        if (params.length >= 3) {
+                            stmt.nestedCode = params[2];
                         }
                         return stmt;
                     }
                 }
                 
-                if (params.length >= 2) {
-                    stmt.p1 = params[1];
-                }
-                
                 if (params.length >= 3) {
-                    stmt.p2 = params[2];
+                    stmt.p1 = params[2];
                 }
                 
-                if (params.length >= 4) {
-                    // 改进反序列化逻辑，使用Base64解码嵌套代码
-                    String rawCode = params[3];
-                    if (rawCode.startsWith("\"")) {
-                        try {
-                            // 移除外层引号
-                            String encoded = rawCode.substring(1, rawCode.length() - 1);
-                            // 使用Base64解码嵌套代码
-                            byte[] decodedBytes = Base64.getDecoder().decode(encoded);
-                            stmt.nestedCode = new String(decodedBytes);
-                        } catch (IllegalArgumentException e) {
-                            // 如果解码失败，返回空字符串
-                            stmt.nestedCode = "";
+                if (stmt.type == NestedLogicType.call) {
+                    // call类型：参数2是p2，参数3是嵌套代码
+                    if (params.length >= 4) {
+                        stmt.p2 = params[3];
+                    }
+                    
+                    if (params.length >= 5) {
+                        // 改进反序列化逻辑，使用Base64解码嵌套代码
+                        String rawCode = params[4];
+                        if (rawCode.startsWith("\"")) {
+                            try {
+                                // 移除外层引号
+                                String encoded = rawCode.substring(1, rawCode.length() - 1);
+                                // 使用Base64解码嵌套代码
+                                byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+                                stmt.nestedCode = new String(decodedBytes, StandardCharsets.UTF_8);
+                            } catch (IllegalArgumentException e) {
+                                // 如果解码失败，返回空字符串
+                                stmt.nestedCode = "";
+                            }
+                        } else {
+                            stmt.nestedCode = rawCode;
                         }
-                    } else {
-                        stmt.nestedCode = rawCode;
+                    }
+                } else {
+                    // push类型：参数3是p2
+                    if (params.length >= 4) {
+                        stmt.p2 = params[3];
                     }
                 }
                 stmt.afterRead();
