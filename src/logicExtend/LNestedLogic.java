@@ -195,8 +195,6 @@ public class LNestedLogic {
                                 for (int i = 0; i < nestedExec.vars.length; i++) {
                                     nestedExec.vars[i].id = i;
                                 }
-                                // 重置nameMap，确保下次optionalVar能正确找到变量
-                                nestedExec.nameMap = null;
                                 
                                 // 复制调用栈中的变量值到嵌套执行器
                                 for (CallStackElement elem : currentContext.callStack) {
