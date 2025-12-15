@@ -23,8 +23,9 @@ public class LNestedLogic {
     
     /** nestedlogic指令的分支枚举 */
     public enum NestedLogicType {
-        push("variable"),
-        call("logicName");
+        push("variable", "index"),
+        call("logicName"),
+        pop("variable", "index");
         
         public final String[] params;
         
@@ -37,6 +38,7 @@ public class LNestedLogic {
     public static class CallStackElement {
         public String varName;
         public Object varValue;
+        public int index = 0; // 栈的索引，默认0
     }
     
     /** 调用上下文 */
@@ -108,11 +110,16 @@ public class LNestedLogic {
             
             // 根据当前选项动态创建UI元素
             if (type == NestedLogicType.push) {
-                // push分支：创建变量输入框
+                // push分支：创建变量输入框和索引输入框
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
                 }).size(150f, 40f).pad(2f);
+                
+                fields(table, "Index", p2, str -> {
+                    p2 = str;
+                    saveUI();
+                }).size(80f, 40f).pad(2f);
             } else if (type == NestedLogicType.call) {
                 // call分支：创建变量输入框 + 编辑页面按钮
                 fields(table, "Logic Name", p1, str -> {
@@ -132,6 +139,17 @@ public class LNestedLogic {
                         });
                     });
                 }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f);
+            } else if (type == NestedLogicType.pop) {
+                // pop分支：创建变量输入框和索引输入框
+                fields(table, "Variable", p1, str -> {
+                    p1 = str;
+                    saveUI();
+                }).size(150f, 40f).pad(2f);
+                
+                fields(table, "Index", p2, str -> {
+                    p2 = str;
+                    saveUI();
+                }).size(80f, 40f).pad(2f);
             }
         }
         
@@ -145,7 +163,11 @@ public class LNestedLogic {
         public LExecutor.LInstruction build(LAssembler builder) {
             switch (type) {
                 case push:
-                    // push指令：将变量压入当前上下文的调用栈
+                    // 注册要压入的变量
+                    if (!p1.isEmpty()) {
+                        builder.putVar(p1);
+                    }
+                    // push指令：将变量压入当前上下文的调用栈，支持索引
                     return (LExecutor exec) -> {
                         // 获取或创建当前调用上下文
                         CallContext context = getCurrentContext();
@@ -154,14 +176,28 @@ public class LNestedLogic {
                             callContextStack.add(context);
                         }
                         
-                        // 获取要压入的变量（只处理p1参数，忽略p2参数）
+                        // 获取要压入的变量
                         LVar var = exec.optionalVar(p1);
                         if (var != null) {
-                            // 检查调用栈中是否已经存在该变量，避免重复添加
+                            // 解析索引值，默认为0
+                            int index = 0;
+                            try {
+                                if (!p2.isEmpty()) {
+                                    index = Integer.parseInt(p2);
+                                }
+                            } catch (NumberFormatException e) {
+                                index = 0;
+                            }
+                            
+                            // 检查调用栈中是否已经存在该索引，如果存在则更新其值
                             boolean alreadyExists = false;
                             for (CallStackElement existingElem : context.callStack) {
-                                if (existingElem.varName.equals(p1)) {
+                                if (existingElem.index == index) {
+                                    // 更新已有索引的值
+                                    existingElem.varName = p1;
+                                    existingElem.varValue = var.isobj ? var.objval : var.numval;
                                     alreadyExists = true;
+                                    log("push: 更新索引 " + index + " 的变量 " + p1 + " 值为 " + existingElem.varValue);
                                     break;
                                 }
                             }
@@ -170,12 +206,10 @@ public class LNestedLogic {
                                 CallStackElement elem = new CallStackElement();
                                 elem.varName = p1;
                                 elem.varValue = var.isobj ? var.objval : var.numval;
+                                elem.index = index;
                                 context.callStack.add(elem);
                                 // 记录日志
-                                log("push: 变量 " + p1 + " 被压入调用栈，值为 " + elem.varValue);
-                            } else {
-                                // 记录日志：变量已存在，跳过
-                                log("push: 变量 " + p1 + " 已存在于调用栈中，跳过");
+                                log("push: 将变量 " + p1 + " 压入索引 " + index + "，值为 " + elem.varValue);
                             }
                         } else {
                             // 记录日志
@@ -303,25 +337,25 @@ public class LNestedLogic {
                                 // 记录日志：执行嵌套逻辑后
                                 log("call: 嵌套逻辑执行完毕");
                                 
-                                // 将嵌套执行器中修改后的变量复制回主执行器
-                                log("call: 将嵌套执行器中修改后的变量复制回主执行器");
+                                // 更新调用栈中的变量值（从嵌套执行器）
                                 for (CallStackElement elem : currentContext.callStack) {
-                                    LVar mainVar = exec.optionalVar(elem.varName);
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
-                                    if (mainVar != null && nestedVar != null) {
-                                        // 将嵌套执行器中修改后的变量值复制回主执行器
-                                        mainVar.set(nestedVar);
-                                        // 只记录一次关键信息，避免大量重复日志
-                                        log("call: 变量 " + elem.varName + " 从嵌套执行器复制回主执行器，值: " + (mainVar.isobj ? mainVar.objval : mainVar.numval));
-                                        break; // 只处理一次，避免大量重复日志
-                                    } else {
-                                        log("call: 复制变量回主执行器失败 - 主执行器变量: " + (mainVar != null ? "存在" : "不存在") + ", 嵌套执行器变量: " + (nestedVar != null ? "存在" : "不存在"));
+                                    if (nestedVar != null) {
+                                        // 更新调用栈中的变量值
+                                        elem.varValue = nestedVar.isobj ? nestedVar.objval : nestedVar.numval;
+                                        log("call: 更新调用栈中变量 " + elem.varName + " 的值为 " + elem.varValue);
                                     }
                                 }
                                 
                             } finally {
                                 // 退出调用上下文
                                 callContextStack.pop();
+                                // 清空调用栈
+                                if (!callContextStack.isEmpty()) {
+                                    CallContext prevContext = callContextStack.get(callContextStack.size - 1);
+                                    prevContext.callStack.clear();
+                                    log("call: 清空调用栈");
+                                }
                                 log("call: 退出调用上下文，执行完毕");
                             }
                         };
@@ -329,6 +363,67 @@ public class LNestedLogic {
                         // 如果编译失败，返回空指令
                         return (LExecutor exec) -> {};
                     }
+                    
+                case pop:
+                    // 注册要弹出到的变量
+                    if (!p1.isEmpty()) {
+                        builder.putVar(p1);
+                    }
+                    // pop指令：从调用栈中弹出指定索引的值到指定变量
+                    return (LExecutor exec) -> {
+                        // 获取当前调用上下文
+                        CallContext context = getCurrentContext();
+                        if (context == null || context.callStack.isEmpty()) {
+                            log("pop: 调用栈为空，无法弹出值");
+                            return;
+                        }
+                        
+                        // 解析索引值，默认为0
+                        int index = 0;
+                        try {
+                            if (!p2.isEmpty()) {
+                                index = Integer.parseInt(p2);
+                            }
+                        } catch (NumberFormatException e) {
+                            index = 0;
+                        }
+                        
+                        // 查找指定索引的元素
+                        CallStackElement targetElem = null;
+                        for (CallStackElement elem : context.callStack) {
+                            if (elem.index == index) {
+                                targetElem = elem;
+                                break;
+                            }
+                        }
+                        
+                        if (targetElem != null) {
+                            // 获取要弹出到的变量
+                            LVar targetVar = exec.optionalVar(p1);
+                            if (targetVar == null) {
+                                // 变量不存在，创建新变量
+                                targetVar = exec.putVar(p1);
+                            }
+                            
+                            // 设置变量值
+                            if (targetElem.varValue instanceof Double) {
+                                targetVar.isobj = false;
+                                targetVar.numval = (Double) targetElem.varValue;
+                            } else {
+                                targetVar.isobj = true;
+                                targetVar.objval = targetElem.varValue;
+                            }
+                            
+                            // 从调用栈中移除该元素
+                            context.callStack.remove(targetElem);
+                            
+                            // 记录日志
+                            log("pop: 从索引 " + index + " 弹出值 " + targetElem.varValue + " 到变量 " + p1);
+                        } else {
+                            // 记录日志
+                            log("pop: 调用栈中不存在索引为 " + index + " 的元素");
+                        }
+                    };
                     
                 default:
                     return (LExecutor exec) -> {};
@@ -433,8 +528,10 @@ public class LNestedLogic {
                         }
                     }
                 } else {
-                    // push类型：忽略p2参数，只使用p1参数
-                    // 即使params.length >= 4，也不设置p2，避免重复压入变量
+                    // push和pop类型：支持索引参数
+                    if (params.length >= 4) {
+                        stmt.p2 = params[3];
+                    }
                 }
                 stmt.afterRead();
                 return stmt;
