@@ -49,30 +49,6 @@ public class LNestedLogic {
     }
     
     public static class LNestedLogicStatement extends LStatement {
-        
-        /** 显示分支选择对话框 */
-        private <T extends Enum<T>> void showSelect(arc.scene.ui.Button button, T[] values, T current, arc.func.Cons<T> setter, int width, arc.func.Cons<arc.scene.ui.layout.Cell<arc.scene.ui.Button>> cell) {
-            mindustry.ui.dialogs.BaseDialog dialog = new mindustry.ui.dialogs.BaseDialog("Select Branch");
-            dialog.cont.table(t -> {
-                t.margin(10f);
-                t.table(arc.scene.style.Styles.black6, t2 -> {
-                    t2.margin(20f);
-                    t2.table(t3 -> {
-                        int i = 0;
-                        for (T value : values) {
-                            arc.scene.ui.layout.Cell<arc.scene.ui.Button> b = t3.button(value.name(), arc.ui.Styles.flatt, () -> {
-                                setter.get(value);
-                                dialog.hide();
-                            }).size(200f, 60f);
-                            if (cell != null) cell.get(b);
-                            if (++i % width == 0) t3.row();
-                        }
-                    });
-                });
-            });
-            dialog.addCloseButton();
-            dialog.show();
-        }
         // 指令类型
         public NestedLogicType type = NestedLogicType.push;
         // 第一个参数
@@ -91,8 +67,8 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> type.name());
                 b.clicked(() -> {
-                    // 参考FastUnitControl.java，使用showSelect方法显示分支选择
-                    showSelect(b, NestedLogicType.values(), type, t -> {
+                    // 直接使用父类的showSelect方法
+                    super.showSelect(b, NestedLogicType.values(), type, t -> {
                         type = t;
                     }, 2, cell -> cell.size(120, 50));
                 });
