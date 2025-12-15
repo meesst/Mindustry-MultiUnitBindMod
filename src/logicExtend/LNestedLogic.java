@@ -331,18 +331,43 @@ public class LNestedLogic {
                                 // 记录日志：执行嵌套逻辑前
                                 log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
                                 
-                                // 执行嵌套指令，不影响主执行器的@counter值
+                                // 执行嵌套指令，模拟LExecutor.runOnce()的方式，考虑counter变化
                                 // 主执行器的@counter值由主执行器自己管理，只会在整个call指令执行完后递增1
-                                for (LExecutor.LInstruction inst : nestedInstructions) {
+                                int instructionCount = 0;
+                                double originalCounter = nestedExec.counter.numval;
+                                
+                                // 设置嵌套执行器的instructions，用于jump指令
+                                nestedExec.instructions = nestedInstructions;
+                                
+                                // 执行嵌套指令，直到达到最大指令数限制或counter超出范围
+                                while (instructionCount < nestedInstructions.length) {
                                     if (exec.counter.numval >= LExecutor.maxInstructions) {
                                         log("call: 达到最大指令数限制，停止执行嵌套逻辑");
                                         break;
                                     }
+                                    
+                                    // 检查counter是否在有效范围内
+                                    double counterVal = nestedExec.counter.numval;
+                                    if (counterVal < 0 || counterVal >= nestedInstructions.length) {
+                                        log("call: counter超出范围，停止执行嵌套逻辑");
+                                        break;
+                                    }
+                                    
+                                    // 执行当前指令
+                                    LExecutor.LInstruction inst = nestedInstructions[(int)counterVal];
                                     inst.run(nestedExec);
-                                    // 只检查总指令数限制，不修改主执行器的@counter值
+                                    
+                                    // 增加指令计数
+                                    instructionCount++;
                                 }
                                 
-                                log("call: 执行了 " + nestedInstructions.length + " 条嵌套指令");
+                                // 恢复嵌套执行器的counter到原始值
+                                nestedExec.counter.numval = originalCounter;
+                                
+                                // 清除嵌套执行器的instructions
+                                nestedExec.instructions = new LExecutor.LInstruction[0];
+                                
+                                log("call: 执行了 " + instructionCount + " 条嵌套指令");
                                 
                                 // 记录日志：执行嵌套逻辑后
                                 log("call: 嵌套逻辑执行完毕");
