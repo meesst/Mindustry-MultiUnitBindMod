@@ -49,6 +49,30 @@ public class LNestedLogic {
     }
     
     public static class LNestedLogicStatement extends LStatement {
+        
+        /** 显示分支选择对话框 */
+        private <T extends Enum<T>> void showSelect(arc.scene.ui.Button button, T[] values, T current, arc.func.Cons<T> setter, int width, arc.func.Cons<arc.scene.ui.layout.Cell<arc.scene.ui.Button>> cell) {
+            mindustry.ui.dialogs.BaseDialog dialog = new mindustry.ui.dialogs.BaseDialog("Select Branch");
+            dialog.cont.table(t -> {
+                t.margin(10f);
+                t.table(arc.scene.style.Styles.black6, t2 -> {
+                    t2.margin(20f);
+                    t2.table(t3 -> {
+                        int i = 0;
+                        for (T value : values) {
+                            arc.scene.ui.layout.Cell<arc.scene.ui.Button> b = t3.button(value.name(), arc.ui.Styles.flatt, () -> {
+                                setter.get(value);
+                                dialog.hide();
+                            }).size(200f, 60f);
+                            if (cell != null) cell.get(b);
+                            if (++i % width == 0) t3.row();
+                        }
+                    });
+                });
+            });
+            dialog.addCloseButton();
+            dialog.show();
+        }
         // 指令类型
         public NestedLogicType type = NestedLogicType.push;
         // 第一个参数
@@ -67,30 +91,22 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> type.name());
                 b.clicked(() -> {
-                    // 显示分支选择对话框
-                    mindustry.ui.dialogs.BaseDialog dialog = new mindustry.ui.dialogs.BaseDialog("Select Branch");
-                    dialog.cont.table(t -> {
-                        for (NestedLogicType branch : NestedLogicType.values()) {
-                            t.button(branch.name(), () -> {
-                                type = branch;
-                                dialog.hide();
-                            }).size(200f, 60f).row();
-                        }
-                    });
-                    dialog.addCloseButton();
-                    dialog.show();
+                    // 参考FastUnitControl.java，使用showSelect方法显示分支选择
+                    showSelect(b, NestedLogicType.values(), type, t -> {
+                        type = t;
+                    }, 2, cell -> cell.size(120, 50));
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
-            table.row();
+            // 不需要row()，所有元素显示在同一行
             
             // 根据选择的分支显示不同的参数输入框
             switch (type) {
                 case push:
-                    field(table, "Variable", str -> p1 = str).size(300f, 40f).pad(2f);
+                    field(table, "Variable", str -> p1 = str).size(150f, 40f).pad(2f); // 输入框长度减半
                     break;
                 case call:
-                    field(table, "Logic Name", str -> p1 = str).size(200f, 40f).pad(2f);
+                    field(table, "Logic Name", str -> p1 = str).size(150f, 40f).pad(2f);
                     table.button(b -> {
                         b.label(() -> "Edit Logic");
                         b.clicked(() -> {
@@ -105,7 +121,7 @@ public class LNestedLogic {
                                 // 清理逻辑
                             });
                         });
-                    }, mindustry.ui.Styles.logict, () -> {}).size(150f, 40f).pad(2f);
+                    }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).pad(2f);
                     break;
             }
         }
