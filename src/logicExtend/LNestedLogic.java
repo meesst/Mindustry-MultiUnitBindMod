@@ -78,37 +78,37 @@ public class LNestedLogic {
             
             table.row();
             
-            // 根据选择的分支显示不同的参数输入框
-            switch (type) {
-                case push:
-                    field(table, "Variable", str -> {
-                        p1 = str;
+            // 绘制所有可能的UI元素，根据type值决定可见性
+            
+            // Variable输入框，仅在push分支可见
+            field(table, "Variable", str -> {
+                p1 = str;
+                saveUI();
+            }).size(150f, 40f).pad(2f).visible(() -> type == NestedLogicType.push);
+            
+            // Logic Name输入框，仅在call分支可见
+            field(table, "Logic Name", str -> {
+                p1 = str;
+                saveUI();
+            }).size(150f, 40f).pad(2f).visible(() -> type == NestedLogicType.call);
+            
+            // Edit Logic按钮，仅在call分支可见
+            table.button(b -> {
+                b.label(() -> "Edit Logic");
+                b.clicked(() -> {
+                    // 打开嵌套逻辑编辑器
+                    mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                    nestedDialog.show(nestedCode, null, false, modifiedCode -> {
+                        // 保存修改后的代码
+                        nestedCode = modifiedCode;
                         saveUI();
-                    }).size(150f, 40f).pad(2f); // 输入框长度减半
-                    break;
-                case call:
-                    field(table, "Logic Name", str -> {
-                        p1 = str;
-                        saveUI();
-                    }).size(150f, 40f).pad(2f);
-                    table.button(b -> {
-                        b.label(() -> "Edit Logic");
-                        b.clicked(() -> {
-                            // 打开嵌套逻辑编辑器
-                            mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
-                            nestedDialog.show(nestedCode, null, false, modifiedCode -> {
-                                // 保存修改后的代码
-                                nestedCode = modifiedCode;
-                                saveUI();
-                            });
-                            // 编辑器关闭时清理资源
-                            nestedDialog.hidden(() -> {
-                                // 清理逻辑
-                            });
-                        });
-                    }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).pad(2f);
-                    break;
-            }
+                    });
+                    // 编辑器关闭时清理资源
+                    nestedDialog.hidden(() -> {
+                        // 清理逻辑
+                    });
+                });
+            }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).pad(2f).visible(() -> type == NestedLogicType.call);
         }
         
         @Override
