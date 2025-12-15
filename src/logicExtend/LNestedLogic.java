@@ -511,12 +511,8 @@ public class LNestedLogic {
 
         @Override
         public void afterRead() {
-            // 修复嵌套代码的解析问题
-            // 检查是否是旧格式的嵌套代码，如果是则转换为新格式
-            if (type == NestedLogicType.call && nestedCode.isEmpty() && params.length >= 3) {
-                // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
-                nestedCode = params[2];
-            }
+            // 不需要额外处理，直接使用nestedCode
+            // 嵌套代码的解析已经在customParsers中处理
         }
         
         /** Anuken, if you see this, you can replace it with your own @RegisterStatement, because this is my last resort... **/
