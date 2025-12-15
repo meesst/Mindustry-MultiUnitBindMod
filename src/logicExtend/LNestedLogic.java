@@ -10,6 +10,11 @@ import mindustry.logic.LStatement;
 import mindustry.logic.LVar;
 import java.util.Base64;
 import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static mindustry.logic.LCanvas.tooltip;
 import static arc.Core.*;
@@ -47,6 +52,30 @@ public class LNestedLogic {
     /** 获取当前调用上下文 */
     public static CallContext getCurrentContext() {
         return callContextStack.isEmpty() ? null : callContextStack.get(callContextStack.size - 1);
+    }
+    
+    /** 日志记录方法，记录信息到指定路径 */
+    public static void log(String message) {
+        try {
+            // 日志文件路径
+            String logPath = "E:\\SteamLibrary\\steamapps\\common\\Mindustry\\nestedlogic.log";
+            // 创建日志文件（如果不存在）
+            File logFile = new File(logPath);
+            logFile.getParentFile().mkdirs();
+            
+            // 获取当前时间
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String timestamp = now.format(formatter);
+            
+            // 写入日志
+            try (FileWriter writer = new FileWriter(logFile, true)) {
+                writer.write("[" + timestamp + "] " + message + "\n");
+            }
+        } catch (IOException e) {
+            // 忽略日志写入错误
+            e.printStackTrace();
+        }
     }
     
     public static class LNestedLogicStatement extends LStatement {
@@ -132,6 +161,11 @@ public class LNestedLogic {
                             elem.varName = p1;
                             elem.varValue = var.isobj ? var.objval : var.numval;
                             context.callStack.add(elem);
+                            // 记录日志
+                            log("push: 变量 " + p1 + " 被压入调用栈，值为 " + elem.varValue);
+                        } else {
+                            // 记录日志
+                            log("push: 变量 " + p1 + " 不存在，无法压入调用栈");
                         }
                     };
                     
@@ -166,6 +200,9 @@ public class LNestedLogic {
                         }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
                         
                         return (LExecutor exec) -> {
+                            // 记录日志：开始执行call指令
+                            log("call: 开始执行call指令，逻辑名称: " + p1);
+                            
                             // 进入新的调用上下文
                         CallContext context = new CallContext();
                         context.callCounter = exec.counter.numval;
@@ -173,14 +210,22 @@ public class LNestedLogic {
                         if (!callContextStack.isEmpty()) {
                             CallContext prevContext = callContextStack.get(callContextStack.size - 1);
                             context.callStack = prevContext.callStack.copy();
+                            log("call: 复制前一个上下文的调用栈，栈大小: " + context.callStack.size);
                         }
                         callContextStack.add(context);
-                            
+                             
                             try {
                                 // 获取当前上下文的调用栈
                                 CallContext currentContext = getCurrentContext();
                                 
+                                // 记录日志：当前调用栈信息
+                                log("call: 当前调用栈大小: " + currentContext.callStack.size);
+                                for (CallStackElement elem : currentContext.callStack) {
+                                    log("call: 调用栈元素 - 变量名: " + elem.varName + ", 值: " + elem.varValue);
+                                }
+                                
                                 // 创建嵌套执行器
+                                log("call: 创建嵌套执行器");
                                 LExecutor nestedExec = new LExecutor();
                                 nestedExec.build = exec.build;
                                 nestedExec.team = exec.team;
@@ -190,13 +235,21 @@ public class LNestedLogic {
                                 
                                 // 关键修复：初始化嵌套执行器的vars数组
                                 // 将nestedBuilder中的所有非恒定变量复制到嵌套执行器的vars数组中
+                                log("call: 初始化嵌套执行器的vars数组，变量数量: " + nestedBuilder.vars.size);
                                 nestedExec.vars = nestedBuilder.vars.values().toSeq().retainAll(var -> !var.constant).toArray(LVar.class);
                                 // 为每个变量设置id
                                 for (int i = 0; i < nestedExec.vars.length; i++) {
                                     nestedExec.vars[i].id = i;
                                 }
                                 
+                                // 记录日志：嵌套执行器变量列表
+                                log("call: 嵌套执行器变量数量: " + nestedExec.vars.length);
+                                for (LVar var : nestedExec.vars) {
+                                    log("call: 嵌套执行器变量 - 名称: " + var.name + ", 类型: " + (var.isobj ? "对象" : "数值") + ", 值: " + (var.isobj ? var.objval : var.numval));
+                                }
+                                
                                 // 复制调用栈中的变量值到嵌套执行器
+                                log("call: 复制调用栈中的变量值到嵌套执行器");
                                 for (CallStackElement elem : currentContext.callStack) {
                                     // 从嵌套执行器中获取变量
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
@@ -209,12 +262,19 @@ public class LNestedLogic {
                                             nestedVar.isobj = true;
                                             nestedVar.objval = elem.varValue;
                                         }
+                                        log("call: 复制变量 - 名称: " + elem.varName + ", 值: " + elem.varValue + " 到嵌套执行器");
+                                    } else {
+                                        log("call: 嵌套执行器中未找到变量 - 名称: " + elem.varName);
                                     }
                                 }
+                                
+                                // 记录日志：执行嵌套逻辑前
+                                log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
                                 
                                 // 执行嵌套指令
                                 for (LExecutor.LInstruction inst : nestedInstructions) {
                                     if (exec.counter.numval >= LExecutor.maxInstructions) {
+                                        log("call: 达到最大指令数限制，停止执行嵌套逻辑");
                                         break;
                                     }
                                     inst.run(nestedExec);
@@ -222,19 +282,31 @@ public class LNestedLogic {
                                     exec.counter.numval++;
                                 }
                                 
+                                // 记录日志：执行嵌套逻辑后
+                                log("call: 嵌套逻辑执行完毕");
+                                
                                 // 将嵌套执行器中修改后的变量复制回主执行器
+                                log("call: 将嵌套执行器中修改后的变量复制回主执行器");
                                 for (CallStackElement elem : currentContext.callStack) {
                                     LVar mainVar = exec.optionalVar(elem.varName);
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
                                     if (mainVar != null && nestedVar != null) {
+                                        // 记录复制前的值
+                                        log("call: 复制前 - 主执行器变量 " + elem.varName + " 值: " + (mainVar.isobj ? mainVar.objval : mainVar.numval));
+                                        log("call: 复制前 - 嵌套执行器变量 " + elem.varName + " 值: " + (nestedVar.isobj ? nestedVar.objval : nestedVar.numval));
                                         // 将嵌套执行器中修改后的变量值复制回主执行器
                                         mainVar.set(nestedVar);
+                                        // 记录复制后的值
+                                        log("call: 复制后 - 主执行器变量 " + elem.varName + " 值: " + (mainVar.isobj ? mainVar.objval : mainVar.numval));
+                                    } else {
+                                        log("call: 复制变量回主执行器失败 - 主执行器变量: " + (mainVar != null ? "存在" : "不存在") + ", 嵌套执行器变量: " + (nestedVar != null ? "存在" : "不存在"));
                                     }
                                 }
                                 
                             } finally {
                                 // 退出调用上下文
                                 callContextStack.pop();
+                                log("call: 退出调用上下文，执行完毕");
                             }
                         };
                     } catch (Exception e) {
