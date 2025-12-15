@@ -221,8 +221,6 @@ public class LNestedLogic {
                                         newVars[nestedExec.vars.length] = newVar;
                                         // 更新嵌套执行器的变量列表
                                         nestedExec.vars = newVars;
-                                        // 重置nameMap，以便下次optionalVar能正确找到新变量
-                                        nestedExec.nameMap = null;
                                         // 使用新创建的变量
                                         nestedVar = newVar;
                                     } else {
