@@ -76,9 +76,7 @@ public class LNestedLogic {
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
-            table.row();
-            
-            // 绘制所有可能的UI元素，根据type值决定可见性
+            // 不使用row()，所有元素在同一行
             
             // Variable输入框，仅在push分支可见
             field(table, "Variable", str -> {
@@ -86,11 +84,11 @@ public class LNestedLogic {
                 saveUI();
             }).size(150f, 40f).pad(2f).visible(() -> type == NestedLogicType.push);
             
-            // Logic Name输入框，仅在call分支可见
+            // Logic Name输入框，仅在call分支可见，宽度改为300
             field(table, "Logic Name", str -> {
                 p1 = str;
                 saveUI();
-            }).size(150f, 40f).pad(2f).visible(() -> type == NestedLogicType.call);
+            }).size(300f, 40f).pad(2f).visible(() -> type == NestedLogicType.call);
             
             // Edit Logic按钮，仅在call分支可见
             table.button(b -> {
@@ -305,7 +303,7 @@ public class LNestedLogic {
                     stmt.p2 = params[3];
                 }
                 
-                if (params.length >= 5 && stmt.type == NestedLogicType.call) {
+                if (params.length >= 5) {
                     // 改进反序列化逻辑，使用Base64解码嵌套代码
                     String rawCode = params[4];
                     if (rawCode.startsWith("\"")) {
@@ -323,7 +321,6 @@ public class LNestedLogic {
                         stmt.nestedCode = rawCode;
                     }
                 }
-                
                 stmt.afterRead();
                 return stmt;
             });
