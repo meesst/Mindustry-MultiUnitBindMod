@@ -265,7 +265,7 @@ public class LNestedLogic {
             if (type == NestedLogicType.call) {
                 // 使用Base64编码嵌套代码，避免转义字符问题
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes());
-                builder.append(" \"").append(encoded).append('\'');
+                builder.append(" \"").append(encoded).append('"');
             }
         }
 
@@ -303,9 +303,9 @@ public class LNestedLogic {
                     stmt.p2 = params[3];
                 }
                 
-                if (params.length >= 5) {
+                if (params.length >= 4) {
                     // 改进反序列化逻辑，使用Base64解码嵌套代码
-                    String rawCode = params[4];
+                    String rawCode = params[3];
                     if (rawCode.startsWith("\"")) {
                         try {
                             // 移除外层引号
