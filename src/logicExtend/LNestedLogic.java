@@ -45,7 +45,7 @@ public class LNestedLogic {
     
     /** 获取当前调用上下文 */
     public static CallContext getCurrentContext() {
-        return callContextStack.isEmpty() ? null : callContextStack.last();
+        return callContextStack.isEmpty() ? null : callContextStack.get(callContextStack.size - 1);
     }
     
     public static class LNestedLogicStatement extends LStatement {
@@ -76,7 +76,7 @@ public class LNestedLogic {
                                 dialog.hide();
                             }).size(200f, 60f).row();
                         }
-                    }).pack();
+                    });
                     dialog.addCloseButton();
                     dialog.show();
                 });
@@ -136,14 +136,15 @@ public class LNestedLogic {
                 case call:
                     try {
                         // 解析嵌套代码
-                        Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, builder.privileged);
+                        // 使用false作为privileged参数，因为我们无法访问builder的私有字段
+                        Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
                         
                         // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
                         nestedStatements.each(l -> l.elem = null);
                         
                         // 创建新的LAssembler实例，不共享主builder的变量表
                         LAssembler nestedBuilder = new LAssembler();
-                        nestedBuilder.privileged = builder.privileged;
+                        // 不再直接访问privileged字段
                         
                         // 复制共享全局变量（除了@counter）
                         for (arc.struct.OrderedMap.Entry<String, LVar> entry : builder.vars) {
@@ -242,39 +243,6 @@ public class LNestedLogic {
             return LCategoryExt.function;
         }
 
-        /** Anuken, if you see this, you can replace it with your own @RegisterStatement, because this is my last resort... **/
-        public static void create() {
-            LAssembler.customParsers.put("nestedlogic", params -> {
-                LNestedLogicStatement stmt = new LNestedLogicStatement();
-                if (params.length >= 2) {
-                    // 先读取defaultFieldText
-                    stmt.defaultFieldText = params[1];
-                }
-                if (params.length >= 3) {
-                    // 再读取嵌套代码
-                    // 改进反序列化逻辑，使用Base64解码嵌套代码
-                    String rawCode = params[2];
-                    if (rawCode.startsWith("\"")) {
-                        try {
-                            // 移除外层引号
-                            String encoded = rawCode.substring(1, rawCode.length() - 1);
-                            // 使用Base64解码嵌套代码
-                            byte[] decodedBytes = Base64.getDecoder().decode(encoded);
-                            stmt.nestedCode = new String(decodedBytes);
-                        } catch (IllegalArgumentException e) {
-                            // 如果解码失败，返回空字符串
-                            stmt.nestedCode = "";
-                        }
-                    } else {
-                        stmt.nestedCode = rawCode;
-                    }
-                }
-                stmt.afterRead();
-                return stmt;
-            });
-            LogicIO.allStatements.add(LNestedLogicStatement::new);
-        }
-
         @Override
         public void write(StringBuilder builder) {
             // 序列化嵌套逻辑指令
@@ -306,11 +274,19 @@ public class LNestedLogic {
             LAssembler.customParsers.put("nestedlogic", params -> {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 
+                // 处理旧格式的兼容性
                 if (params.length >= 2) {
                     try {
+                        // 尝试解析为新格式的指令类型
                         stmt.type = NestedLogicType.valueOf(params[1]);
                     } catch (IllegalArgumentException e) {
-                        stmt.type = NestedLogicType.push;
+                        // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
+                        // 新格式：第一个参数是指令类型，第二个是p1，第三个是p2，第四个是嵌套代码
+                        stmt.type = NestedLogicType.call;
+                        if (params.length >= 3) {
+                            stmt.nestedCode = params[2];
+                        }
+                        return stmt;
                     }
                 }
                 
