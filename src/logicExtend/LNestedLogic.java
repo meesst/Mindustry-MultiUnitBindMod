@@ -104,6 +104,10 @@ public class LNestedLogic {
                         type = t;
                         // 保存UI状态
                         saveUI();
+                        // 重建UI
+                        table.parent.invalidateHierarchy();
+                        table.clearChildren();
+                        build(table);
                     }, 2, cell -> cell.size(120, 50));
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
@@ -350,12 +354,6 @@ public class LNestedLogic {
                             } finally {
                                 // 退出调用上下文
                                 callContextStack.pop();
-                                // 清空调用栈
-                                if (!callContextStack.isEmpty()) {
-                                    CallContext prevContext = callContextStack.get(callContextStack.size - 1);
-                                    prevContext.callStack.clear();
-                                    log("call: 清空调用栈");
-                                }
                                 log("call: 退出调用上下文，执行完毕");
                             }
                         };
