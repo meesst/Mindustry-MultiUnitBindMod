@@ -14,149 +14,226 @@ import static mindustry.logic.LCanvas.tooltip;
 import static arc.Core.*;
 
 public class LNestedLogic {
-
+    
+    /** nestedlogic指令的分支枚举 */
+    public enum NestedLogicType {
+        push("variable"),
+        call("logicName");
+        
+        public final String[] params;
+        
+        NestedLogicType(String... params) {
+            this.params = params;
+        }
+    }
+    
+    /** 调用栈元素 */
+    public static class CallStackElement {
+        public String varName;
+        public Object varValue;
+    }
+    
+    /** 调用上下文 */
+    public static class CallContext {
+        public Seq<CallStackElement> callStack = new Seq<>();
+        public double callCounter;
+        public mindustry.logic.LogicDialog dialog;
+    }
+    
+    /** 全局调用上下文栈 */
+    public static final Seq<CallContext> callContextStack = new Seq<>();
+    
+    /** 获取当前调用上下文 */
+    public static CallContext getCurrentContext() {
+        return callContextStack.isEmpty() ? null : callContextStack.last();
+    }
+    
     public static class LNestedLogicStatement extends LStatement {
+        // 指令类型
+        public NestedLogicType type = NestedLogicType.push;
+        // 第一个参数
+        public String p1 = "";
+        // 第二个参数
+        public String p2 = "";
         // 存储嵌套的逻辑代码
         public String nestedCode = "";
-        // 文本输入框的默认值为语言包中的lnestedlogic.field键值
-        public String defaultFieldText = arc.Core.bundle.get("lnestedlogic.field");
 
         @Override
         public void build(Table table) {
             table.setColor(table.color);
-            // 使用field方法实现文本框
-             field(table, defaultFieldText, str -> {
-                        defaultFieldText = "\"" + str + "\"";
-                    })
-               .size(500f, 40f).pad(2f)
-               .self(c -> tooltip(c, "lnestedlogic.field"));
-            // 添加编辑按钮，使用指定的样式
+            table.left();
+            
+            // 分支选择按钮
             table.button(b -> {
-                b.label(() -> "Edit");
+                b.label(() -> type.name());
                 b.clicked(() -> {
-                    // 保存当前的canvas实例
-                    final mindustry.logic.LCanvas oldCanvas;
-                    mindustry.logic.LCanvas tempCanvas = null;
-                    try {
-                        // 使用反射访问包级私有变量
-                        java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                        canvasField.setAccessible(true);
-                        tempCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    oldCanvas = tempCanvas;
-                    
-                    // 为嵌套逻辑编辑创建一个新的LogicDialog实例
-                    // 这样当关闭嵌套逻辑编辑页面时，只会关闭这个新的对话框，而不会影响主逻辑编辑器
-                    mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
-                    
-                    // 创建恢复canvas的lambda
-                    Runnable restoreCanvas = () -> {
-                        if (oldCanvas != null) {
-                            try {
-                                // 使用反射恢复canvas实例
-                                java.lang.reflect.Field canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                                canvasField.setAccessible(true);
-                                canvasField.set(null, oldCanvas);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+                    // 显示分支选择对话框
+                    mindustry.ui.dialogs.BaseDialog dialog = new mindustry.ui.dialogs.BaseDialog("Select Branch");
+                    dialog.cont.table(t -> {
+                        for (NestedLogicType branch : NestedLogicType.values()) {
+                            t.button(branch.name(), () -> {
+                                type = branch;
+                                dialog.hide();
+                            }).size(200f, 60f).row();
                         }
-                    };
-                    
-                    // 显示编辑器，传入当前代码和回调函数
-                    nestedDialog.show(nestedCode, null, false, modifiedCode -> {
-                        // 保存修改后的代码
-                        nestedCode = modifiedCode;
-                        // 恢复原来的canvas实例
-                        restoreCanvas.run();
-                    });
-                    
-                    // 当对话框隐藏时恢复canvas实例（确保无论如何都会恢复）
-                    nestedDialog.hidden(restoreCanvas);
+                    }).pack();
+                    dialog.addCloseButton();
+                    dialog.show();
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(60, 40).color(table.color).left().padLeft(2)
-              .self(c -> tooltip(c, "lnestedlogic.button"));
+            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
+            
+            table.row();
+            
+            // 根据选择的分支显示不同的参数输入框
+            switch (type) {
+                case push:
+                    field(table, "Variable", str -> p1 = str).size(300f, 40f).pad(2f);
+                    break;
+                case call:
+                    field(table, "Logic Name", str -> p1 = str).size(200f, 40f).pad(2f);
+                    table.button(b -> {
+                        b.label(() -> "Edit Logic");
+                        b.clicked(() -> {
+                            // 打开嵌套逻辑编辑器
+                            mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                            nestedDialog.show(nestedCode, null, false, modifiedCode -> {
+                                // 保存修改后的代码
+                                nestedCode = modifiedCode;
+                            });
+                            // 编辑器关闭时清理资源
+                            nestedDialog.hidden(() -> {
+                                // 清理逻辑
+                            });
+                        });
+                    }, mindustry.ui.Styles.logict, () -> {}).size(150f, 40f).pad(2f);
+                    break;
+            }
         }
 
         @Override
         public LExecutor.LInstruction build(LAssembler builder) {
-            // 编译嵌套的逻辑指令
-            // 1. 解码Base64嵌套代码
-            // 2. 使用LAssembler.read()解析嵌套代码
-            // 3. 使用主builder的变量表，确保变量共享
-            // 4. 使用独立的builder编译嵌套指令，避免jump指令地址冲突
-            try {
-                // 直接使用嵌套代码，不需要额外解码
-                // 因为nestedCode已经是解码后的原始代码
-                // 使用LAssembler.read()解析嵌套代码
-                Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
-                
-                // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
-                nestedStatements.each(l -> l.elem = null);
-                
-                // 创建新的LAssembler实例，但共享主builder的变量表
-                LAssembler nestedBuilder = new LAssembler() {
-                    @Override
-                    public LVar var(String symbol) {
-                        // 优先从主builder获取变量，确保变量共享
-                        LVar mainVar = builder.var(symbol);
-                        // 如果主builder中存在该变量，直接返回
-                        if (builder.vars.containsKey(mainVar.name)) {
-                            return mainVar;
+            switch (type) {
+                case push:
+                    // push指令：将变量压入当前上下文的调用栈
+                    return (LExecutor exec) -> {
+                        // 获取或创建当前调用上下文
+                        CallContext context = getCurrentContext();
+                        if (context == null) {
+                            context = new CallContext();
+                            callContextStack.add(context);
                         }
-                        // 否则在嵌套builder中创建
-                        return super.var(symbol);
+                        
+                        // 获取要压入的变量
+                        LVar var = exec.optionalVar(p1);
+                        if (var != null) {
+                            CallStackElement elem = new CallStackElement();
+                            elem.varName = p1;
+                            elem.varValue = var.isobj ? var.objval : var.numval;
+                            context.callStack.add(elem);
+                        }
+                    };
+                    
+                case call:
+                    try {
+                        // 解析嵌套代码
+                        Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, builder.privileged);
+                        
+                        // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
+                        nestedStatements.each(l -> l.elem = null);
+                        
+                        // 创建新的LAssembler实例，不共享主builder的变量表
+                        LAssembler nestedBuilder = new LAssembler();
+                        nestedBuilder.privileged = builder.privileged;
+                        
+                        // 复制共享全局变量（除了@counter）
+                        for (arc.struct.OrderedMap.Entry<String, LVar> entry : builder.vars) {
+                            String key = entry.key;
+                            LVar var = entry.value;
+                            if (key.startsWith("@") && !key.equals("@counter")) {
+                                LVar nestedVar = nestedBuilder.putVar(key);
+                                nestedVar.set(var);
+                                nestedVar.constant = var.constant;
+                            }
+                        }
+                        
+                        // 编译嵌套指令
+                        LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
+                            return l.build(nestedBuilder);
+                        }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
+                        
+                        return (LExecutor exec) -> {
+                            // 进入新的调用上下文
+                            CallContext context = new CallContext();
+                            context.callCounter = exec.counter.numval;
+                            callContextStack.add(context);
+                            
+                            try {
+                                // 获取当前上下文的调用栈
+                                CallContext currentContext = getCurrentContext();
+                                
+                                // 创建嵌套执行器
+                                LExecutor nestedExec = new LExecutor();
+                                nestedExec.build = exec.build;
+                                nestedExec.team = exec.team;
+                                nestedExec.privileged = exec.privileged;
+                                nestedExec.links = exec.links;
+                                nestedExec.linkIds = exec.linkIds;
+                                
+                                // 获取共享全局变量并复制到嵌套执行器
+                                for (LVar var : exec.vars) {
+                                    if (var.name.startsWith("@") && !var.name.equals("@counter")) {
+                                        LVar nestedVar = nestedExec.optionalVar(var.name);
+                                        if (nestedVar != null) {
+                                            nestedVar.set(var);
+                                        }
+                                    }
+                                }
+                                
+                                // 复制调用栈中的变量到嵌套执行器
+                                for (CallStackElement elem : currentContext.callStack) {
+                                    LVar nestedVar = nestedExec.optionalVar(elem.varName);
+                                    if (nestedVar != null) {
+                                        if (elem.varValue instanceof Double) {
+                                            nestedVar.isobj = false;
+                                            nestedVar.numval = (Double) elem.varValue;
+                                        } else {
+                                            nestedVar.isobj = true;
+                                            nestedVar.objval = elem.varValue;
+                                        }
+                                    }
+                                }
+                                
+                                // 执行嵌套指令
+                                for (LExecutor.LInstruction inst : nestedInstructions) {
+                                    if (exec.counter.numval >= LExecutor.maxInstructions) {
+                                        break;
+                                    }
+                                    inst.run(nestedExec);
+                                    // 累加指令计数
+                                    exec.counter.numval++;
+                                }
+                                
+                                // 将嵌套执行器中修改后的变量复制回主执行器
+                                for (CallStackElement elem : currentContext.callStack) {
+                                    LVar mainVar = exec.optionalVar(elem.varName);
+                                    LVar nestedVar = nestedExec.optionalVar(elem.varName);
+                                    if (mainVar != null && nestedVar != null) {
+                                        mainVar.set(nestedVar);
+                                    }
+                                }
+                                
+                            } finally {
+                                // 退出调用上下文
+                                callContextStack.pop();
+                            }
+                        };
+                    } catch (Exception e) {
+                        // 如果编译失败，返回空指令
+                        return (LExecutor exec) -> {};
                     }
                     
-                    @Override
-                    public LVar putVar(String name) {
-                        // 优先从主builder获取变量
-                        if (builder.vars.containsKey(name)) {
-                            return builder.vars.get(name);
-                        }
-                        // 否则在嵌套builder中创建，并同步到主builder
-                        LVar var = super.putVar(name);
-                        builder.vars.put(name, var);
-                        return var;
-                    }
-                    
-                    @Override
-                    public LVar putConst(String name, Object value) {
-                        // 优先从主builder获取常量
-                        if (builder.vars.containsKey(name)) {
-                            return builder.vars.get(name);
-                        }
-                        // 否则在嵌套builder中创建，并同步到主builder
-                        LVar var = super.putConst(name, value);
-                        builder.vars.put(name, var);
-                        return var;
-                    }
-                };
-                
-                // 复制主builder的privileged状态（使用反射访问私有字段）
-                try {
-                    java.lang.reflect.Field privilegedField = LAssembler.class.getDeclaredField("privileged");
-                    privilegedField.setAccessible(true);
-                    boolean isPrivileged = privilegedField.getBoolean(builder);
-                    privilegedField.setBoolean(nestedBuilder, isPrivileged);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                
-                // 编译嵌套指令，使用共享变量表的nestedBuilder
-                LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
-                    return l.build(nestedBuilder);
-                }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
-                
-                // 获取当前builder的指令数量，作为嵌套指令的起始位置
-                int startIndex = builder.instructions != null ? builder.instructions.length : 0;
-                
-                return new LNestedLogicInstruction(nestedInstructions, startIndex);
-            } catch (Exception e) {
-                // 如果编译失败，返回空指令
-                return new LNestedLogicInstruction(new LExecutor.LInstruction[0], 0);
+                default:
+                    return (LExecutor exec) -> {};
             }
         }
 
@@ -202,17 +279,72 @@ public class LNestedLogic {
         public void write(StringBuilder builder) {
             // 序列化嵌套逻辑指令
             builder.append("nestedlogic ");
-            // 先序列化defaultFieldText
-            builder.append(defaultFieldText);
-            // 再序列化嵌套代码
-            // 使用Base64编码嵌套代码，避免转义字符问题
-            String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes());
-            builder.append(" \"").append(encoded).append('"');
+            // 先序列化指令类型
+            builder.append(type.name());
+            builder.append(" ");
+            // 序列化第一个参数
+            builder.append(p1);
+            builder.append(" ");
+            // 序列化第二个参数
+            builder.append(p2);
+            
+            // 如果是call指令，序列化嵌套代码
+            if (type == NestedLogicType.call) {
+                // 使用Base64编码嵌套代码，避免转义字符问题
+                String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes());
+                builder.append(" \"").append(encoded).append('\'');
+            }
         }
 
         @Override
         public void afterRead() {
             // 不需要额外处理，直接使用nestedCode
+        }
+        
+        /** Anuken, if you see this, you can replace it with your own @RegisterStatement, because this is my last resort... **/
+        public static void create() {
+            LAssembler.customParsers.put("nestedlogic", params -> {
+                LNestedLogicStatement stmt = new LNestedLogicStatement();
+                
+                if (params.length >= 2) {
+                    try {
+                        stmt.type = NestedLogicType.valueOf(params[1]);
+                    } catch (IllegalArgumentException e) {
+                        stmt.type = NestedLogicType.push;
+                    }
+                }
+                
+                if (params.length >= 3) {
+                    stmt.p1 = params[2];
+                }
+                
+                if (params.length >= 4) {
+                    stmt.p2 = params[3];
+                }
+                
+                if (params.length >= 5 && stmt.type == NestedLogicType.call) {
+                    // 改进反序列化逻辑，使用Base64解码嵌套代码
+                    String rawCode = params[4];
+                    if (rawCode.startsWith("\"")) {
+                        try {
+                            // 移除外层引号
+                            String encoded = rawCode.substring(1, rawCode.length() - 1);
+                            // 使用Base64解码嵌套代码
+                            byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+                            stmt.nestedCode = new String(decodedBytes);
+                        } catch (IllegalArgumentException e) {
+                            // 如果解码失败，返回空字符串
+                            stmt.nestedCode = "";
+                        }
+                    } else {
+                        stmt.nestedCode = rawCode;
+                    }
+                }
+                
+                stmt.afterRead();
+                return stmt;
+            });
+            LogicIO.allStatements.add(LNestedLogicStatement::new);
         }
     }
 
