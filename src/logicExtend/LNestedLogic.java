@@ -296,6 +296,12 @@ public class LNestedLogic {
                                     nestedExec.vars[i].id = i;
                                 }
                                 
+                                // 初始化嵌套执行器的counter、unit、thisv等字段
+                                nestedExec.counter = nestedBuilder.getVar("@counter");
+                                nestedExec.unit = nestedBuilder.getVar("@unit");
+                                nestedExec.thisv = nestedBuilder.getVar("@this");
+                                nestedExec.ipt = nestedBuilder.putConst("@ipt", nestedExec.build != null ? nestedExec.build.ipt : 0);
+                                
                                 // 记录日志：嵌套执行器变量列表
                                 log("call: 嵌套执行器变量数量: " + nestedExec.vars.length);
                                 for (LVar var : nestedExec.vars) {
