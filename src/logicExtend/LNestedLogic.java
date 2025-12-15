@@ -80,13 +80,13 @@ public class LNestedLogic {
             // 根据当前选项动态创建UI元素
             if (type == NestedLogicType.push) {
                 // push分支：创建变量输入框
-                field(table, "Variable", str -> {
+                fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
                 }).size(150f, 40f).pad(2f);
             } else if (type == NestedLogicType.call) {
                 // call分支：创建变量输入框 + 编辑页面按钮
-                field(table, "Logic Name", str -> {
+                fields(table, "Logic Name", p1, str -> {
                     p1 = str;
                     saveUI();
                 }).size(300f, 40f).pad(2f);
