@@ -344,34 +344,49 @@ public class LNestedLogic {
                                 // 记录日志：执行嵌套逻辑前
                                 log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
                                 
-                                // 执行嵌套指令，模拟LExecutor.runOnce()的方式，考虑counter变化
-                                // 主执行器的@counter值由主执行器自己管理，只会在整个call指令执行完后递增1
-                                int instructionCount = 0;
+                                // 保存原始counter值
                                 double originalCounter = nestedExec.counter.numval;
                                 
                                 // 设置嵌套执行器的instructions，用于jump指令
                                 nestedExec.instructions = nestedInstructions;
                                 
-                                // 执行嵌套指令，直到达到最大指令数限制或counter超出范围
-                                while (instructionCount < nestedInstructions.length) {
+                                // 执行嵌套指令，使用与LExecutor.runOnce()类似的方式
+                                int instructionCount = 0;
+                                
+                                // 初始化counter为0
+                                nestedExec.counter.numval = 0;
+                                
+                                // 执行指令，直到counter超出范围
+                                while (true) {
                                     if (exec.counter.numval >= LExecutor.maxInstructions) {
                                         log("call: 达到最大指令数限制，停止执行嵌套逻辑");
                                         break;
                                     }
                                     
                                     // 检查counter是否在有效范围内
-                                    double counterVal = nestedExec.counter.numval;
-                                    if (counterVal < 0 || counterVal >= nestedInstructions.length) {
+                                    if (nestedExec.counter.numval < 0 || nestedExec.counter.numval >= nestedInstructions.length) {
                                         log("call: counter超出范围，停止执行嵌套逻辑");
                                         break;
                                     }
                                     
+                                    // 获取当前指令索引
+                                    int currentIndex = (int)nestedExec.counter.numval;
+                                    
                                     // 执行当前指令
-                                    LExecutor.LInstruction inst = nestedInstructions[(int)counterVal];
+                                    LExecutor.LInstruction inst = nestedInstructions[currentIndex];
                                     inst.run(nestedExec);
                                     
                                     // 增加指令计数
                                     instructionCount++;
+                                    
+                                    // 自动增加counter，jump指令会直接修改counter，所以不需要额外处理
+                                    nestedExec.counter.numval++;
+                                    
+                                    // 限制循环次数，防止无限循环
+                                    if (instructionCount >= nestedInstructions.length * 2) {
+                                        log("call: 执行指令次数超出限制，停止执行嵌套逻辑");
+                                        break;
+                                    }
                                 }
                                 
                                 // 恢复嵌套执行器的counter到原始值
@@ -510,7 +525,12 @@ public class LNestedLogic {
 
         @Override
         public void afterRead() {
-            // 不需要额外处理，直接使用nestedCode
+            // 修复嵌套代码的解析问题
+            // 检查是否是旧格式的嵌套代码，如果是则转换为新格式
+            if (type == NestedLogicType.call && nestedCode.isEmpty() && params.length >= 3) {
+                // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
+                nestedCode = params[2];
+            }
         }
         
         /** Anuken, if you see this, you can replace it with your own @RegisterStatement, because this is my last resort... **/
