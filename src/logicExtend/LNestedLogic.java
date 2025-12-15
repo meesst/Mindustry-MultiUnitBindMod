@@ -199,8 +199,34 @@ public class LNestedLogic {
                                 
                                 // 复制调用栈中的变量到嵌套执行器
                                 for (CallStackElement elem : currentContext.callStack) {
+                                    // 首先尝试获取变量，如果不存在则创建
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
-                                    if (nestedVar != null) {
+                                    if (nestedVar == null) {
+                                        // 变量不存在，创建一个新的LVar
+                                        LVar newVar = new LVar(elem.varName);
+                                        // 设置变量值
+                                        if (elem.varValue instanceof Double) {
+                                            newVar.isobj = false;
+                                            newVar.numval = (Double) elem.varValue;
+                                        } else {
+                                            newVar.isobj = true;
+                                            newVar.objval = elem.varValue;
+                                        }
+                                        // 将新变量添加到嵌套执行器的变量列表中
+                                        // 首先创建一个新的数组，长度加1
+                                        LVar[] newVars = new LVar[nestedExec.vars.length + 1];
+                                        // 复制旧数组的内容到新数组
+                                        System.arraycopy(nestedExec.vars, 0, newVars, 0, nestedExec.vars.length);
+                                        // 添加新变量到数组末尾
+                                        newVars[nestedExec.vars.length] = newVar;
+                                        // 更新嵌套执行器的变量列表
+                                        nestedExec.vars = newVars;
+                                        // 重置nameMap，以便下次optionalVar能正确找到新变量
+                                        nestedExec.nameMap = null;
+                                        // 使用新创建的变量
+                                        nestedVar = newVar;
+                                    } else {
+                                        // 变量存在，直接设置值
                                         if (elem.varValue instanceof Double) {
                                             nestedVar.isobj = false;
                                             nestedVar.numval = (Double) elem.varValue;
@@ -226,6 +252,7 @@ public class LNestedLogic {
                                     LVar mainVar = exec.optionalVar(elem.varName);
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
                                     if (mainVar != null && nestedVar != null) {
+                                        // 将嵌套执行器中修改后的变量值复制回主执行器
                                         mainVar.set(nestedVar);
                                     }
                                 }
