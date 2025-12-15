@@ -70,19 +70,27 @@ public class LNestedLogic {
                     // 直接使用父类的showSelect方法
                     super.showSelect(b, NestedLogicType.values(), type, t -> {
                         type = t;
+                        // 保存UI状态
+                        saveUI();
                     }, 2, cell -> cell.size(120, 50));
                 });
             }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
-            // 不需要row()，所有元素显示在同一行
+            table.row();
             
             // 根据选择的分支显示不同的参数输入框
             switch (type) {
                 case push:
-                    field(table, "Variable", str -> p1 = str).size(150f, 40f).pad(2f); // 输入框长度减半
+                    field(table, "Variable", str -> {
+                        p1 = str;
+                        saveUI();
+                    }).size(150f, 40f).pad(2f); // 输入框长度减半
                     break;
                 case call:
-                    field(table, "Logic Name", str -> p1 = str).size(150f, 40f).pad(2f);
+                    field(table, "Logic Name", str -> {
+                        p1 = str;
+                        saveUI();
+                    }).size(150f, 40f).pad(2f);
                     table.button(b -> {
                         b.label(() -> "Edit Logic");
                         b.clicked(() -> {
@@ -91,6 +99,7 @@ public class LNestedLogic {
                             nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                                 // 保存修改后的代码
                                 nestedCode = modifiedCode;
+                                saveUI();
                             });
                             // 编辑器关闭时清理资源
                             nestedDialog.hidden(() -> {
@@ -100,6 +109,12 @@ public class LNestedLogic {
                     }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).pad(2f);
                     break;
             }
+        }
+        
+        @Override
+        public void saveUI() {
+            super.saveUI();
+            // 确保UI状态被正确保存
         }
 
         @Override
