@@ -188,17 +188,17 @@ public class LNestedLogic {
                                 nestedExec.links = exec.links;
                                 nestedExec.linkIds = exec.linkIds;
                                 
-                                // 获取共享全局变量并复制到嵌套执行器
-                                for (LVar var : exec.vars) {
-                                    if (var.name.startsWith("@") && !var.name.equals("@counter")) {
-                                        LVar nestedVar = nestedExec.optionalVar(var.name);
-                                        if (nestedVar != null) {
-                                            nestedVar.set(var);
-                                        }
-                                    }
+                                // 关键修复：初始化嵌套执行器的vars数组
+                                // 将nestedBuilder中的所有非恒定变量复制到嵌套执行器的vars数组中
+                                nestedExec.vars = nestedBuilder.vars.values().toSeq().retainAll(var -> !var.constant).toArray(LVar.class);
+                                // 为每个变量设置id
+                                for (int i = 0; i < nestedExec.vars.length; i++) {
+                                    nestedExec.vars[i].id = i;
                                 }
+                                // 重置nameMap，确保下次optionalVar能正确找到变量
+                                nestedExec.nameMap = null;
                                 
-                                // 复制所有push的变量到嵌套执行器
+                                // 复制调用栈中的变量值到嵌套执行器
                                 for (CallStackElement elem : currentContext.callStack) {
                                     // 从嵌套执行器中获取变量
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
