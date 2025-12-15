@@ -148,11 +148,12 @@ public class LNestedLogic {
                         LAssembler nestedBuilder = new LAssembler();
                         // 不再直接访问privileged字段
                         
-                        // 复制共享全局变量（除了@counter）
+                        // 复制所有变量（除了@counter）
+                        // 这确保嵌套逻辑能访问主逻辑中所有变量，包括普通变量和全局变量
                         for (arc.struct.OrderedMap.Entry<String, LVar> entry : builder.vars) {
                             String key = entry.key;
                             LVar var = entry.value;
-                            if (key.startsWith("@") && !key.equals("@counter")) {
+                            if (!key.equals("@counter")) {
                                 LVar nestedVar = nestedBuilder.putVar(key);
                                 nestedVar.set(var);
                                 nestedVar.constant = var.constant;
@@ -197,34 +198,12 @@ public class LNestedLogic {
                                     }
                                 }
                                 
-                                // 复制调用栈中的变量到嵌套执行器
+                                // 复制所有push的变量到嵌套执行器
                                 for (CallStackElement elem : currentContext.callStack) {
-                                    // 首先尝试获取变量，如果不存在则创建
+                                    // 从嵌套执行器中获取变量
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
-                                    if (nestedVar == null) {
-                                        // 变量不存在，创建一个新的LVar
-                                        LVar newVar = new LVar(elem.varName);
-                                        // 设置变量值
-                                        if (elem.varValue instanceof Double) {
-                                            newVar.isobj = false;
-                                            newVar.numval = (Double) elem.varValue;
-                                        } else {
-                                            newVar.isobj = true;
-                                            newVar.objval = elem.varValue;
-                                        }
-                                        // 将新变量添加到嵌套执行器的变量列表中
-                                        // 首先创建一个新的数组，长度加1
-                                        LVar[] newVars = new LVar[nestedExec.vars.length + 1];
-                                        // 复制旧数组的内容到新数组
-                                        System.arraycopy(nestedExec.vars, 0, newVars, 0, nestedExec.vars.length);
-                                        // 添加新变量到数组末尾
-                                        newVars[nestedExec.vars.length] = newVar;
-                                        // 更新嵌套执行器的变量列表
-                                        nestedExec.vars = newVars;
-                                        // 使用新创建的变量
-                                        nestedVar = newVar;
-                                    } else {
-                                        // 变量存在，直接设置值
+                                    if (nestedVar != null) {
+                                        // 变量存在，设置其值为调用栈中保存的值
                                         if (elem.varValue instanceof Double) {
                                             nestedVar.isobj = false;
                                             nestedVar.numval = (Double) elem.varValue;
