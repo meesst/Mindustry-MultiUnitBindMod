@@ -352,7 +352,7 @@ public class LNestedLogic {
                                 }
                                 
                                 // 将更新后的调用栈写回到前一个上下文
-                                if (callContextStack.size() > 1) {
+                                if (callContextStack.size > 1) {
                                     CallContext prevContext = callContextStack.get(callContextStack.size - 2);
                                     // 清除前一个上下文的调用栈
                                     prevContext.callStack.clear();
