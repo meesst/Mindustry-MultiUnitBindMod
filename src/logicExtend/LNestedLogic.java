@@ -232,7 +232,15 @@ public class LNestedLogic {
                         
                         // 创建新的LAssembler实例，不共享主builder的变量表
                         LAssembler nestedBuilder = new LAssembler();
-                        // 不再直接访问privileged字段
+                        // 设置nestedBuilder的privileged字段为主builder的privileged字段
+                        java.lang.reflect.Field privilegedField = null;
+                        try {
+                            privilegedField = LAssembler.class.getDeclaredField("privileged");
+                            privilegedField.setAccessible(true);
+                            privilegedField.setBoolean(nestedBuilder, privilegedField.getBoolean(builder));
+                        } catch (Exception e) {
+                            // 忽略反射异常
+                        }
                         
                         // 复制所有变量（除了@counter）
                         // 这确保嵌套逻辑能访问主逻辑中所有变量，包括普通变量和全局变量
@@ -301,6 +309,11 @@ public class LNestedLogic {
                                 nestedExec.unit = nestedBuilder.getVar("@unit");
                                 nestedExec.thisv = nestedBuilder.getVar("@this");
                                 nestedExec.ipt = nestedBuilder.putConst("@ipt", nestedExec.build != null ? nestedExec.build.ipt : 0);
+                                
+                                // 从主执行器复制动态变量的实际值到嵌套执行器
+                                // 这些变量在编译时可能没有正确的值，需要在运行时获取
+                                nestedExec.thisv.set(exec.thisv);
+                                nestedExec.unit.set(exec.unit);
                                 
                                 // 记录日志：嵌套执行器变量列表
                                 log("call: 嵌套执行器变量数量: " + nestedExec.vars.length);
