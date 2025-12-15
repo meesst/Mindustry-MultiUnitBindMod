@@ -74,7 +74,7 @@ public class LNestedLogic {
                         saveUI();
                     }, 2, cell -> cell.size(120, 50));
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
+            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).padLeft(2);
             
             // 不使用row()，所有元素在同一行
             
@@ -106,7 +106,7 @@ public class LNestedLogic {
                         // 清理逻辑
                     });
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).pad(2f).visible(() -> type == NestedLogicType.call);
+            }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f).visible(() -> type == NestedLogicType.call);
         }
         
         @Override
@@ -280,27 +280,27 @@ public class LNestedLogic {
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
                 
                 // 处理旧格式的兼容性
-                if (params.length >= 2) {
+                if (params.length >= 1) {
                     try {
                         // 尝试解析为新格式的指令类型
-                        stmt.type = NestedLogicType.valueOf(params[1]);
+                        stmt.type = NestedLogicType.valueOf(params[0]);
                     } catch (IllegalArgumentException e) {
                         // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
                         // 新格式：第一个参数是指令类型，第二个是p1，第三个是p2，第四个是嵌套代码
                         stmt.type = NestedLogicType.call;
-                        if (params.length >= 3) {
-                            stmt.nestedCode = params[2];
+                        if (params.length >= 2) {
+                            stmt.nestedCode = params[1];
                         }
                         return stmt;
                     }
                 }
                 
-                if (params.length >= 3) {
-                    stmt.p1 = params[2];
+                if (params.length >= 2) {
+                    stmt.p1 = params[1];
                 }
                 
-                if (params.length >= 4) {
-                    stmt.p2 = params[3];
+                if (params.length >= 3) {
+                    stmt.p2 = params[2];
                 }
                 
                 if (params.length >= 4) {
