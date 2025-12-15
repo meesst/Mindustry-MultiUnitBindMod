@@ -81,11 +81,11 @@ public class LNestedLogic {
     public static class LNestedLogicStatement extends LStatement {
         // 指令类型
         public NestedLogicType type = NestedLogicType.push;
-        // 第一个参数
+        // 第一个参数（push的变量名，或call的逻辑名）
         public String p1 = "";
-        // 第二个参数
+        // 第二个参数（call的额外参数，push时忽略）
         public String p2 = "";
-        // 存储嵌套的逻辑代码
+        // 存储嵌套的逻辑代码（仅call类型使用）
         public String nestedCode = "";
 
         @Override
@@ -154,15 +154,29 @@ public class LNestedLogic {
                             callContextStack.add(context);
                         }
                         
-                        // 获取要压入的变量
+                        // 获取要压入的变量（只处理p1参数，忽略p2参数）
                         LVar var = exec.optionalVar(p1);
                         if (var != null) {
-                            CallStackElement elem = new CallStackElement();
-                            elem.varName = p1;
-                            elem.varValue = var.isobj ? var.objval : var.numval;
-                            context.callStack.add(elem);
-                            // 记录日志
-                            log("push: 变量 " + p1 + " 被压入调用栈，值为 " + elem.varValue);
+                            // 检查调用栈中是否已经存在该变量，避免重复添加
+                            boolean alreadyExists = false;
+                            for (CallStackElement existingElem : context.callStack) {
+                                if (existingElem.varName.equals(p1)) {
+                                    alreadyExists = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!alreadyExists) {
+                                CallStackElement elem = new CallStackElement();
+                                elem.varName = p1;
+                                elem.varValue = var.isobj ? var.objval : var.numval;
+                                context.callStack.add(elem);
+                                // 记录日志
+                                log("push: 变量 " + p1 + " 被压入调用栈，值为 " + elem.varValue);
+                            } else {
+                                // 记录日志：变量已存在，跳过
+                                log("push: 变量 " + p1 + " 已存在于调用栈中，跳过");
+                            }
                         } else {
                             // 记录日志
                             log("push: 变量 " + p1 + " 不存在，无法压入调用栈");
@@ -220,8 +234,10 @@ public class LNestedLogic {
                                 
                                 // 记录日志：当前调用栈信息
                                 log("call: 当前调用栈大小: " + currentContext.callStack.size);
-                                for (CallStackElement elem : currentContext.callStack) {
-                                    log("call: 调用栈元素 - 变量名: " + elem.varName + ", 值: " + elem.varValue);
+                                // 只记录一次调用栈元素信息，避免大量重复日志
+                                if (!currentContext.callStack.isEmpty()) {
+                                    CallStackElement firstElem = currentContext.callStack.first();
+                                    log("call: 调用栈示例元素 - 变量名: " + firstElem.varName + ", 值: " + firstElem.varValue);
                                 }
                                 
                                 // 创建嵌套执行器
@@ -271,6 +287,10 @@ public class LNestedLogic {
                                 // 记录日志：执行嵌套逻辑前
                                 log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
                                 
+                                // 记录初始计数器值
+                                double initialCounter = exec.counter.numval;
+                                log("call: 执行嵌套逻辑前，主执行器计数器值: " + initialCounter);
+                                
                                 // 执行嵌套指令
                                 for (LExecutor.LInstruction inst : nestedInstructions) {
                                     if (exec.counter.numval >= LExecutor.maxInstructions) {
@@ -282,6 +302,13 @@ public class LNestedLogic {
                                     exec.counter.numval++;
                                 }
                                 
+                                // 更新@counter变量的值
+                                LVar mainCounter = exec.optionalVar("@counter");
+                                if (mainCounter != null) {
+                                    mainCounter.numval = exec.counter.numval;
+                                    log("call: 执行嵌套逻辑后，更新@counter变量值: " + mainCounter.numval);
+                                }
+                                
                                 // 记录日志：执行嵌套逻辑后
                                 log("call: 嵌套逻辑执行完毕");
                                 
@@ -291,13 +318,11 @@ public class LNestedLogic {
                                     LVar mainVar = exec.optionalVar(elem.varName);
                                     LVar nestedVar = nestedExec.optionalVar(elem.varName);
                                     if (mainVar != null && nestedVar != null) {
-                                        // 记录复制前的值
-                                        log("call: 复制前 - 主执行器变量 " + elem.varName + " 值: " + (mainVar.isobj ? mainVar.objval : mainVar.numval));
-                                        log("call: 复制前 - 嵌套执行器变量 " + elem.varName + " 值: " + (nestedVar.isobj ? nestedVar.objval : nestedVar.numval));
                                         // 将嵌套执行器中修改后的变量值复制回主执行器
                                         mainVar.set(nestedVar);
-                                        // 记录复制后的值
-                                        log("call: 复制后 - 主执行器变量 " + elem.varName + " 值: " + (mainVar.isobj ? mainVar.objval : mainVar.numval));
+                                        // 只记录一次关键信息，避免大量重复日志
+                                        log("call: 变量 " + elem.varName + " 从嵌套执行器复制回主执行器，值: " + (mainVar.isobj ? mainVar.objval : mainVar.numval));
+                                        break; // 只处理一次，避免大量重复日志
                                     } else {
                                         log("call: 复制变量回主执行器失败 - 主执行器变量: " + (mainVar != null ? "存在" : "不存在") + ", 嵌套执行器变量: " + (nestedVar != null ? "存在" : "不存在"));
                                     }
@@ -376,18 +401,16 @@ public class LNestedLogic {
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
-                    // call类型：参数2是p2，参数3是嵌套代码
+                    // call类型：支持两种格式
+                    // 格式1: nestedlogic call logicName "encodedCode" (没有p2参数)
+                    // 格式2: nestedlogic call logicName p2 "encodedCode" (带有p2参数)
                     if (params.length >= 4) {
-                        stmt.p2 = params[3];
-                    }
-                    
-                    if (params.length >= 5) {
-                        // 改进反序列化逻辑，使用Base64解码嵌套代码
-                        String rawCode = params[4];
-                        if (rawCode.startsWith("\"")) {
+                        // 检查参数3是否是引号包围的Base64代码
+                        if (params[3].startsWith("\"")) {
+                            // 格式1: 参数3是嵌套代码
                             try {
                                 // 移除外层引号
-                                String encoded = rawCode.substring(1, rawCode.length() - 1);
+                                String encoded = params[3].substring(1, params[3].length() - 1);
                                 // 使用Base64解码嵌套代码
                                 byte[] decodedBytes = Base64.getDecoder().decode(encoded);
                                 stmt.nestedCode = new String(decodedBytes, StandardCharsets.UTF_8);
@@ -396,14 +419,31 @@ public class LNestedLogic {
                                 stmt.nestedCode = "";
                             }
                         } else {
-                            stmt.nestedCode = rawCode;
+                            // 格式2: 参数3是p2，参数4是嵌套代码
+                            stmt.p2 = params[3];
+                            if (params.length >= 5) {
+                                // 改进反序列化逻辑，使用Base64解码嵌套代码
+                                String rawCode = params[4];
+                                if (rawCode.startsWith("\"")) {
+                                    try {
+                                        // 移除外层引号
+                                        String encoded = rawCode.substring(1, rawCode.length() - 1);
+                                        // 使用Base64解码嵌套代码
+                                        byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+                                        stmt.nestedCode = new String(decodedBytes, StandardCharsets.UTF_8);
+                                    } catch (IllegalArgumentException e) {
+                                        // 如果解码失败，返回空字符串
+                                        stmt.nestedCode = "";
+                                    }
+                                } else {
+                                    stmt.nestedCode = rawCode;
+                                }
+                            }
                         }
                     }
                 } else {
-                    // push类型：参数3是p2
-                    if (params.length >= 4) {
-                        stmt.p2 = params[3];
-                    }
+                    // push类型：忽略p2参数，只使用p1参数
+                    // 即使params.length >= 4，也不设置p2，避免重复压入变量
                 }
                 stmt.afterRead();
                 return stmt;
