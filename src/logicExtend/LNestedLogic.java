@@ -352,6 +352,14 @@ public class LNestedLogic {
                                 }
                                 
                             } finally {
+                                // 将更新后的调用栈写回到前一个上下文
+                                if (!callContextStack.isEmpty()) {
+                                    CallContext prevContext = callContextStack.get(callContextStack.size - 1);
+                                    // 清除前一个上下文的调用栈
+                                    prevContext.callStack.clear();
+                                    // 将当前上下文的调用栈复制到前一个上下文
+                                    prevContext.callStack.addAll(currentContext.callStack);
+                                }
                                 // 退出调用上下文
                                 callContextStack.pop();
                                 log("call: 退出调用上下文，执行完毕");
