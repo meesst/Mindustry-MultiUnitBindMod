@@ -1,0 +1,4 @@
+nestedlogic pop a 1
+jump 3 always x false
+op add a a 1
+nestedlogic push a 1

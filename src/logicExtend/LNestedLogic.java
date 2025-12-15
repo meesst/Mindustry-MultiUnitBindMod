@@ -378,8 +378,9 @@ public class LNestedLogic {
                                     instructionCount++;
                                     
                                     // 限制循环次数，防止无限循环
-                                    if (instructionCount >= nestedExec.instructions.length + 1) {
-                                        log("call: 嵌套逻辑执行完毕");
+                                    // 为了支持跳转循环，将限制设置为指令数量的100倍
+                                    if (instructionCount >= nestedExec.instructions.length * 100) {
+                                        log("call: 执行次数过多，防止无限循环，停止执行嵌套逻辑");
                                         break;
                                     }
                                 }
