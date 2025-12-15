@@ -287,27 +287,18 @@ public class LNestedLogic {
                                 // 记录日志：执行嵌套逻辑前
                                 log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
                                 
-                                // 记录初始计数器值
-                                double initialCounter = exec.counter.numval;
-                                log("call: 执行嵌套逻辑前，主执行器计数器值: " + initialCounter);
-                                
-                                // 执行嵌套指令
+                                // 执行嵌套指令，不影响主执行器的@counter值
+                                // 主执行器的@counter值由主执行器自己管理，只会在整个call指令执行完后递增1
                                 for (LExecutor.LInstruction inst : nestedInstructions) {
                                     if (exec.counter.numval >= LExecutor.maxInstructions) {
                                         log("call: 达到最大指令数限制，停止执行嵌套逻辑");
                                         break;
                                     }
                                     inst.run(nestedExec);
-                                    // 累加指令计数
-                                    exec.counter.numval++;
+                                    // 只检查总指令数限制，不修改主执行器的@counter值
                                 }
                                 
-                                // 更新@counter变量的值
-                                LVar mainCounter = exec.optionalVar("@counter");
-                                if (mainCounter != null) {
-                                    mainCounter.numval = exec.counter.numval;
-                                    log("call: 执行嵌套逻辑后，更新@counter变量值: " + mainCounter.numval);
-                                }
+                                log("call: 执行了 " + nestedInstructions.length + " 条嵌套指令");
                                 
                                 // 记录日志：执行嵌套逻辑后
                                 log("call: 嵌套逻辑执行完毕");
