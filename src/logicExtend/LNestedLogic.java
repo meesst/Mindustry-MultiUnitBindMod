@@ -350,6 +350,9 @@ public class LNestedLogic {
                                 // 加载嵌套指令到嵌套执行器
                                 nestedExec.load(nestedBuilder);
                                 
+                                // 重置嵌套执行器的counter为0，确保从第一条指令开始执行
+                                nestedExec.counter.numval = 0;
+                                
                                 // 执行嵌套指令，使用LExecutor的原生执行逻辑
                                 // 执行嵌套指令，直到所有指令执行完毕或达到最大指令数限制
                                 int instructionCount = 0;
