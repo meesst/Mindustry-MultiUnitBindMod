@@ -166,9 +166,14 @@ public class LNestedLogic {
                         
                         return (LExecutor exec) -> {
                             // 进入新的调用上下文
-                            CallContext context = new CallContext();
-                            context.callCounter = exec.counter.numval;
-                            callContextStack.add(context);
+                        CallContext context = new CallContext();
+                        context.callCounter = exec.counter.numval;
+                        // 复制前一个上下文的调用栈（如果存在）
+                        if (!callContextStack.isEmpty()) {
+                            CallContext prevContext = callContextStack.get(callContextStack.size - 1);
+                            context.callStack = prevContext.callStack.copy();
+                        }
+                        callContextStack.add(context);
                             
                             try {
                                 // 获取当前上下文的调用栈
