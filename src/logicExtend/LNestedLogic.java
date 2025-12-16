@@ -21,6 +21,9 @@ import static arc.Core.*;
 
 public class LNestedLogic {
     
+    /** 日志记录开关，1表示开启日志，0表示关闭日志，默认开启 */
+    public static int debugLog = 1;
+    
     /** nestedlogic指令的分支枚举 */
     public enum NestedLogicType {
         push("variable", "index", "stackName"),
@@ -72,25 +75,28 @@ public class LNestedLogic {
     
     /** 日志记录方法，记录信息到指定路径 */
     public static void log(String message) {
-        try {
-            // 日志文件路径
-            String logPath = "E:\\SteamLibrary\\steamapps\\common\\Mindustry\\nestedlogic.log";
-            // 创建日志文件（如果不存在）
-            File logFile = new File(logPath);
-            logFile.getParentFile().mkdirs();
-            
-            // 获取当前时间
-            LocalDateTime now = LocalDateTime.now();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String timestamp = now.format(formatter);
-            
-            // 写入日志
-            try (FileWriter writer = new FileWriter(logFile, true)) {
-                writer.write("[" + timestamp + "] " + message + "\n");
+        // 只有当debugLog等于1时才记录日志
+        if (debugLog == 1) {
+            try {
+                // 日志文件路径
+                String logPath = "E:\\SteamLibrary\\steamapps\\common\\Mindustry\\nestedlogic.log";
+                // 创建日志文件（如果不存在）
+                File logFile = new File(logPath);
+                logFile.getParentFile().mkdirs();
+                
+                // 获取当前时间
+                LocalDateTime now = LocalDateTime.now();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String timestamp = now.format(formatter);
+                
+                // 写入日志
+                try (FileWriter writer = new FileWriter(logFile, true)) {
+                    writer.write("[" + timestamp + "] " + message + "\n");
+                }
+            } catch (IOException e) {
+                // 忽略日志写入错误
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            // 忽略日志写入错误
-            e.printStackTrace();
         }
     }
     
