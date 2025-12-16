@@ -67,8 +67,12 @@ public class FastUnitControl {
             int c = 0;
             for(int i = 0; i < type.params.length; i++) {
                 final int index = i;
+                String paramName = type.params[i];
                 
-                fields(table, type.params[i], index == 0 ? p1 : index == 1 ? p2 : p3, index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v).width(100f);
+                // 添加参数字段和悬浮提示
+                fields(table, paramName, index == 0 ? p1 : index == 1 ? p2 : p3, index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v)
+                    .width(100f)
+                    .self(elem -> tooltip(elem, "fastunitcontrol." + type.name().toLowerCase() + "." + paramName.toLowerCase()));
                 
                 if(++c % 2 == 0) row(table);
             }

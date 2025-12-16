@@ -104,51 +104,149 @@ Mindustry-MultiUnitBindMod/
 
 ### 5. 指令标签多语言悬浮提示实现
 #### 核心实现机制
-- **实现原理**：利用Mindustry游戏的LCanvas.tooltip()静态方法为指令参数标签添加多语言悬浮提示
+- **实现原理**：利用Mindustry游戏的LCanvas.tooltip()静态方法为指令、分支和参数添加多语言悬浮提示
 - **关键类和方法**：
-  - `LStatement.param()`：为参数标签添加多语言悬浮提示的主要方法
+  - `LStatement.showSelect()`：为指令分支自动添加悬浮提示的方法
+  - `LStatement.param()`：为参数标签添加多语言悬浮提示的方法
   - `LCanvas.tooltip()`：实际处理悬浮提示显示的底层方法
   - `Core.bundle`：访问游戏多语言系统的核心实例
 
-#### 多语言键名构建规则
-- **键名格式**：`指令名.参数名`（例如：`radar.from`）
-- **自动构建**：param()方法内部会自动使用当前指令的名称和参数标签文本来构建多语言键
-- **实现细节**：通过`name().getText().trim()`获取指令名称，与参数标签文本结合
-- **重要注意事项**：Mindustry引擎的LCanvas.tooltip()方法会自动将键名转换为全小写并移除空格，因此在定义tooltip键名时必须使用全小写格式，不能使用驼峰命名法。例如：应使用`unitbindgroup.type`而不是`unitBindGroup.type`，否则会导致悬浮提示无法正常显示。
+#### 悬浮提示类型及键名构建规则
+Mindustry支持三种类型的悬浮提示，每种类型有不同的键名规则：
+
+##### 1. 整个指令的悬浮提示
+- **作用**：描述指令的整体功能和用途
+- **键名格式**：`lst.指令名`（指令名全小写，例如：`lst.radar`）
+- **查找机制**：Mindustry自动查找，无需额外代码
+- **效果**：在指令选择列表和指令标题上显示
+
+##### 2. 指令分支的悬浮提示
+- **作用**：描述指令的各个分支功能
+- **键名格式**：`枚举类名.分支名`（全小写，例如：`fastunitcontroltype.itemtake`）
+- **查找机制**：`showSelect()`方法自动查找
+- **效果**：在分支选择按钮上显示
+- **自动回退机制**：如果找不到`枚举类名.分支名`，会回退查找`lenum.分支名`
+
+##### 3. 分支参数的悬浮提示
+- **作用**：描述分支中各个参数的用途
+- **键名格式**：`指令名.分支名.参数名`（全小写，例如：`fastunitcontrol.itemtake.from`）
+- **查找机制**：需要手动调用`tooltip()`方法并指定键名
+- **效果**：在参数字段上显示
+
+#### 自动转换规则
+- **重要注意事项**：Mindustry引擎的LCanvas.tooltip()方法会自动将键名转换为全小写并移除空格
+- **命名规范**：在定义tooltip键名时必须使用全小写格式，不能使用驼峰命名法
+- **错误示例**：`unitBindGroup.type`（驼峰命名，不会生效）
+- **正确示例**：`unitbindgroup.type`（全小写，会正常生效）
 
 #### 具体实现步骤
-1. **在LStatement子类中添加参数标签**
-   ```java
-   table.add(" 参数名 ").self(this::param); // 使用param()方法添加悬浮提示
-   ```
 
-2. **在语言包文件中添加翻译**
-   - 在项目的`assets/bundles/`目录下创建或修改对应语言的properties文件
-   - 格式：`指令名.参数名=参数说明文本`
-   - 示例（中文支持）：`radar.from=来源单位：指定要扫描的单位`
+##### 1. 整个指令的悬浮提示
+- **实现方式**：无需代码修改，直接在语言包中添加
+- **语言包示例**：
+  ```properties
+  lst.fastunitcontrol = 快速单位控制指令，无CD限制，支持多种分支操作
+  ```
 
-3. **支持移动和桌面平台**
-   - 自动适配不同平台的交互方式
-   - 桌面版：鼠标悬停显示提示
-   - 移动版：长按显示提示
+##### 2. 指令分支的悬浮提示
+- **实现方式**：使用`showSelect()`方法自动添加
+- **代码示例**：
+  ```java
+  // 分支选择按钮
+  table.button(b -> {
+      b.label(() -> type.name());
+      b.clicked(() -> showSelect(b, FastUnitControlType.values(), type, t -> {
+          type = t;
+          rebuild(table);
+      }, 2, cell -> cell.size(120, 50)));
+  }, Styles.logict, () -> {}).size(120, 40);
+  ```
+- **语言包示例**：
+  ```properties
+  fastunitcontroltype.itemtake = 从建筑中快速取出物品（无CD）
+  fastunitcontroltype.itemdrop = 快速将物品放入建筑（无CD）
+  ```
 
-#### 代码示例
+##### 3. 分支参数的悬浮提示
+- **实现方式**：手动调用`tooltip()`方法
+- **代码示例**：
+  ```java
+  // 添加参数字段和悬浮提示
+  fields(table, paramName, paramValue, paramSetter)
+      .width(100f)
+      .self(elem -> tooltip(elem, "fastunitcontrol." + type.name().toLowerCase() + "." + paramName.toLowerCase()));
+  ```
+- **语言包示例**：
+  ```properties
+  fastunitcontrol.itemtake.from = 要从中取出物品的建筑
+  fastunitcontrol.itemtake.item = 要取出的物品类型
+  fastunitcontrol.itemtake.amount = 要取出的物品数量
+  ```
+
+#### 支持平台
+- **自动适配**：悬浮提示系统会自动适配不同平台的交互方式
+- **桌面版**：鼠标悬停显示提示
+- **移动版**：长按显示提示
+
+#### 完整代码示例
 ```java
-// 在自定义LStatement子类的build方法中
-@Override
-public void build(LCanvas canvas, Table table) {
-    // 添加带悬浮提示的参数标签
-    table.add(" from ").self(this::param);
-    fields(table, input -> from = input);
+// 快速单位控制指令完整悬浮提示实现
+public class FastUnitControlStatement extends LStatement {
+    public FastUnitControlType type = FastUnitControlType.itemTake;
+    public String p1 = "0", p2 = "0", p3 = "0";
     
-    table.add(" target ").self(this::param);
-    fields(table, input -> target = input);
+    @Override
+    public void build(Table table) {
+        rebuild(table);
+    }
+    
+    private void rebuild(Table table) {
+        table.clearChildren();
+        table.left();
+        
+        // 分支选择按钮（自动添加分支悬浮提示）
+        table.button(b -> {
+            b.label(() -> type.name());
+            b.clicked(() -> showSelect(b, FastUnitControlType.values(), type, t -> {
+                type = t;
+                rebuild(table);
+            }, 2, cell -> cell.size(120, 50)));
+        }, Styles.logict, () -> {}).size(120, 40);
+        
+        row(table);
+        
+        // 分支参数（手动添加参数悬浮提示）
+        for(int i = 0; i < type.params.length; i++) {
+            final int index = i;
+            String paramName = type.params[i];
+            
+            fields(table, paramName, index == 0 ? p1 : index == 1 ? p2 : p3, 
+                   index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v)
+                .width(100f)
+                .self(elem -> tooltip(elem, "fastunitcontrol." + type.name().toLowerCase() + "." + paramName.toLowerCase()));
+        }
+    }
 }
+```
 
-// 在语言包文件(bundle_zh_CN.properties)中添加
-// 指令名.参数名=参数说明文本
-customcmd.from=来源参数：指定数据源
-customcmd.target=目标参数：指定目标位置
+#### 语言包完整示例
+```properties
+# 1. 整个指令的悬浮提示
+lst.fastunitcontrol = 快速单位控制指令，无CD限制，支持多种分支操作
+
+# 2. 指令分支的悬浮提示
+fastunitcontroltype.itemtake = 从建筑中快速取出物品（无CD）
+fastunitcontroltype.itemdrop = 快速将物品放入建筑（无CD）
+fastunitcontroltype.paytake = 快速拾取载荷（无CD）
+fastunitcontroltype.paydrop = 快速卸下载荷（无CD）
+fastunitcontroltype.assist = 快速协助其他单位建造（无CD）
+
+# 3. 分支参数的悬浮提示
+fastunitcontrol.itemtake.from = 要从中取出物品的建筑
+fastunitcontrol.itemtake.item = 要取出的物品类型
+fastunitcontrol.itemtake.amount = 要取出的物品数量
+fastunitcontrol.itemdrop.to = 要放入物品的建筑
+fastunitcontrol.itemdrop.amount = 要放入的物品数量
 ```
 
 ## 版本兼容性

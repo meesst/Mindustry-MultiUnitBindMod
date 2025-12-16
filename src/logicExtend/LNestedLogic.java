@@ -121,7 +121,7 @@ public class LNestedLogic {
             table.button(b -> {
                 b.label(() -> type.name());
                 b.clicked(() -> {
-                    // 直接使用父类的showSelect方法
+                    // 直接使用父类的showSelect方法，它会自动为枚举值添加悬浮提示
                     super.showSelect(b, NestedLogicType.values(), type, t -> {
                         type = t;
                         // 保存UI状态
@@ -132,8 +132,7 @@ public class LNestedLogic {
                         build(table);
                     }, 2, cell -> cell.size(120, 50));
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2)
-            .self(elem -> tooltip(elem, bundle.get("lnestedlogic." + type.name().toLowerCase(), type.name())));
+            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
             // 根据当前选项动态创建UI元素
             if (type == NestedLogicType.push) {
