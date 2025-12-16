@@ -69,10 +69,10 @@ public class FastUnitControl {
                 final int index = i;
                 String paramName = type.params[i];
                 
-                // 添加参数字段和悬浮提示
+                // fields方法内部会自动为标签添加悬浮提示，使用this::param
+                // param()方法会自动构建键名：指令名.参数名
                 fields(table, paramName, index == 0 ? p1 : index == 1 ? p2 : p3, index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v)
-                    .width(100f)
-                    .self(elem -> tooltip(elem, "fastunitcontrol." + type.name().toLowerCase() + "." + paramName.toLowerCase()));
+                    .width(100f);
                 
                 if(++c % 2 == 0) row(table);
             }
