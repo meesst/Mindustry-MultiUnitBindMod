@@ -195,16 +195,9 @@ public class LNestedLogic {
                             e.printStackTrace();
                         }
                         
-                        // 打开嵌套逻辑编辑器
-                        log("call: 开始创建并显示嵌套逻辑编辑器");
-                        mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
-                        nestedDialog.show(nestedCode, null, false, modifiedCode -> {
-                            // 保存修改后的代码
-                            log("call: 开始处理嵌套逻辑编辑器回调");
-                            nestedCode = modifiedCode;
-                            saveUI();
-                            log("call: 保存修改后的代码成功");
-                            
+                        // 创建恢复canvas的Runnable
+                        Runnable restoreCanvasRunnable = () -> {
+                            log("call: 开始执行恢复canvas的Runnable");
                             // 恢复原始canvas静态变量
                             if (reflectionSuccess[0]) {
                                 try {
@@ -240,8 +233,23 @@ public class LNestedLogic {
                             } else {
                                 log("call: 反射获取失败，跳过恢复操作");
                             }
-                            
-                            log("call: 嵌套逻辑编辑器回调处理完成");
+                            log("call: 恢复canvas的Runnable执行完成");
+                        };
+                        
+                        // 打开嵌套逻辑编辑器
+                        log("call: 开始创建并显示嵌套逻辑编辑器");
+                        mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                        
+                        // 添加hidden回调，无论用户是点击保存还是返回按钮，都会触发
+                        nestedDialog.hidden(restoreCanvasRunnable);
+                        
+                        nestedDialog.show(nestedCode, null, false, modifiedCode -> {
+                            // 保存修改后的代码
+                            log("call: 开始处理嵌套逻辑编辑器保存回调");
+                            nestedCode = modifiedCode;
+                            saveUI();
+                            log("call: 保存修改后的代码成功");
+                            log("call: 嵌套逻辑编辑器保存回调处理完成");
                         });
                         
                         log("call: Edit Logic按钮点击处理完成");
