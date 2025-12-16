@@ -22,7 +22,7 @@ import static arc.Core.*;
 public class LNestedLogic {
     
     /** 日志记录开关，1表示开启日志，0表示关闭日志，默认开启 */
-    public static int debugLog = 1;
+    public static int debugLog = 0;
     
     /** nestedlogic指令的分支枚举 */
     public enum NestedLogicType {
@@ -132,7 +132,8 @@ public class LNestedLogic {
                         build(table);
                     }, 2, cell -> cell.size(120, 50));
                 });
-            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
+            }, mindustry.ui.Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2)
+            .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic." + type.name().toLowerCase(), type.name())));
             
             // 根据当前选项动态创建UI元素
             if (type == NestedLogicType.push) {
@@ -140,23 +141,27 @@ public class LNestedLogic {
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.variable", "Variable")));
                 
                 fields(table, "Index", p2, str -> {
                     p2 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.index", "Index")));
                 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.stackname", "Stack Name")));
             } else if (type == NestedLogicType.call) {
                 // call分支：创建变量输入框 + 编辑页面按钮
                 fields(table, "Logic Name", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(120f, 40f).pad(2f);
+                }).size(120f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.logicname", "Logic Name")));
                 
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
@@ -255,23 +260,27 @@ public class LNestedLogic {
                         
                         log("call: Edit Logic按钮点击处理完成");
                     });
-                }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f);
+                }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.editlogic", "Edit Logic")));
             } else if (type == NestedLogicType.pop) {
                 // pop分支：创建变量输入框、索引输入框和栈名称输入框
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.variable", "Variable")));
                 
                 fields(table, "Index", p2, str -> {
                     p2 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.index", "Index")));
                 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, Core.bundle.get("lnestedlogic.stackname", "Stack Name")));
             }
         }
         
