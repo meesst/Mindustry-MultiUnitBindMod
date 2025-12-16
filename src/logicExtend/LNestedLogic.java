@@ -376,10 +376,14 @@ public class LNestedLogic {
                                     
                                     // 增加指令计数
                                     instructionCount++;
+                                    
+                                    // 关键修复：增加主执行器的counter，这样会受到maxInstructions限制
+                                    // 与vanilla逻辑控制器保持一致，避免无限循环导致游戏卡死
+                                    exec.counter.numval++;
                                 }
                                 
-                                // 恢复主执行器的counter值
-                                exec.counter.numval = originalMainCounter;
+                                // 不再恢复主执行器的counter值，因为我们已经正确消耗了指令预算
+                                // 这与vanilla逻辑控制器的行为一致
                                 
                                 log("call: 执行了 " + instructionCount + " 条嵌套指令");
                                 
