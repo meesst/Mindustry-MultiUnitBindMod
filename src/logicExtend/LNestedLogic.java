@@ -217,14 +217,9 @@ public class LNestedLogic {
                                         
                                         // 触发主编辑器的UI重绘
                                         log("call: 开始触发主编辑器UI重绘");
-                                        originalCanvas[0].statements.updateJumpHeights = true;
-                                        log("call: 设置updateJumpHeights = true");
-                                        originalCanvas[0].statements.invalidate();
-                                        log("call: 调用statements.invalidate()");
-                                        originalCanvas[0].invalidateHierarchy();
-                                        log("call: 调用invalidateHierarchy()");
                                         originalCanvas[0].rebuild();
                                         log("call: 调用rebuild()");
+                                        log("call: 主编辑器UI重绘完成");
                                     }
                                 } catch (Exception e) {
                                     log("call: 无法恢复原始canvas字段: " + e.getMessage());
