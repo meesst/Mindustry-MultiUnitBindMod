@@ -21,7 +21,7 @@ import static arc.Core.*;
 
 public class LNestedLogic {
     
-    /** 日志记录开关，1表示开启日志，0表示关闭日志，默认开启 */
+    /** 日志记录开关，1表示开启日志，0表示关闭日志，默认关闭 */
     public static int debugLog = 0;
     
     /** nestedlogic指令的分支枚举 */
@@ -75,8 +75,9 @@ public class LNestedLogic {
     
     /** 日志记录方法，记录信息到指定路径 */
     public static void log(String message) {
-        // 只有当debugLog等于1时才记录日志
-        if (debugLog == 1) {
+        // 每次调用都从设置中读取最新值，确保开关立即生效
+        boolean isEnabled = arc.Core.settings.getBool("lnestedlogic-debug-log");
+        if (isEnabled) {
             try {
                 // 日志文件路径
                 String logPath = "E:\\SteamLibrary\\steamapps\\common\\Mindustry\\nestedlogic.log";

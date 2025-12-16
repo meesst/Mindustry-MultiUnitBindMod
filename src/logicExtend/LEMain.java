@@ -1,13 +1,41 @@
 package logicExtend;
 
+import arc.Core;
 import mindustry.mod.Mod;
+import mindustry.ui.dialogs.SettingsMenuDialog;
+import mindustry.ui.Styles;
+import arc.scene.ui.layout.Table;
 
 public class LEMain extends Mod {
     public LEMain() {}
 
     @Override
     public void init() {
-        // 初始化代码
+        // 添加设置界面
+        addSettings();
+    }
+
+    private void addSettings() {
+        // 设置构建器
+        mindustry.gen.Cons<SettingsMenuDialog.SettingsTable> builder = settingsTable -> {
+            SettingsMenuDialog.SettingsTable settings = new SettingsMenuDialog.SettingsTable();
+            
+            // 添加日志开关选项
+            settings.checkPref("lnestedlogic-debug-log", false, value -> {
+                LNestedLogic.debugLog = value ? 1 : 0;
+            }).title = Core.bundle.get("lnestedlogic.settings.debug-log", "Debug Log");
+            
+            settingsTable.add(settings);
+        };
+        
+        // 添加设置类别
+        mindustry.Vars.ui.settings.getCategories().add(
+            new SettingsMenuDialog.SettingsCategory(
+                Core.bundle.get("lnestedlogic.settings.title", "Logic Extend Mod"),
+                new arc.scene.style.TextureRegionDrawable(Core.atlas.find("clear")), // 使用默认图标
+                builder
+            )
+        );
     }
 
     @Override
@@ -23,5 +51,8 @@ public class LEMain extends Mod {
         
         // 注册快速单位控制指令
         FastUnitControl.create();
+        
+        // 初始化debugLog值
+        LNestedLogic.debugLog = Core.settings.getBool("lnestedlogic-debug-log") ? 1 : 0;
     }
 }
