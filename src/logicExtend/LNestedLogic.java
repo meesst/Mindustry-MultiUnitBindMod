@@ -155,14 +155,14 @@ public class LNestedLogic {
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
-                        // 保存当前的canvas静态变量
-                        mindustry.logic.LCanvas originalCanvas = null;
-                        java.lang.reflect.Field canvasField = null;
+                        // 保存当前的canvas静态变量，使用数组包装以便在lambda中访问
+                        final mindustry.logic.LCanvas[] originalCanvas = {null};
+                        final java.lang.reflect.Field[] canvasField = {null};
                         try {
                             // 使用反射获取LCanvas类的私有静态canvas字段
-                            canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
-                            canvasField.setAccessible(true);
-                            originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                            canvasField[0] = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                            canvasField[0].setAccessible(true);
+                            originalCanvas[0] = (mindustry.logic.LCanvas) canvasField[0].get(null);
                         } catch (Exception e) {
                             log("call: 无法获取原始canvas字段: " + e.getMessage());
                         }
@@ -176,15 +176,15 @@ public class LNestedLogic {
                             
                             // 恢复原始canvas静态变量
                             try {
-                                if (canvasField != null && originalCanvas != null) {
-                                    canvasField.set(null, originalCanvas);
+                                if (canvasField[0] != null && originalCanvas[0] != null) {
+                                    canvasField[0].set(null, originalCanvas[0]);
                                     log("call: 成功恢复原始canvas");
                                     
                                     // 触发主编辑器的UI重绘
-                                    originalCanvas.statements.updateJumpHeights = true;
-                                    originalCanvas.statements.invalidate();
-                                    originalCanvas.invalidateHierarchy();
-                                    originalCanvas.rebuild();
+                                    originalCanvas[0].statements.updateJumpHeights = true;
+                                    originalCanvas[0].statements.invalidate();
+                                    originalCanvas[0].invalidateHierarchy();
+                                    originalCanvas[0].rebuild();
                                 }
                             } catch (Exception e) {
                                 log("call: 无法恢复原始canvas字段: " + e.getMessage());
