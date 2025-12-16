@@ -155,41 +155,96 @@ public class LNestedLogic {
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
+                        log("call: 开始点击Edit Logic按钮");
+                        
                         // 保存当前的canvas静态变量，使用数组包装以便在lambda中访问
                         final mindustry.logic.LCanvas[] originalCanvas = {null};
                         final java.lang.reflect.Field[] canvasField = {null};
+                        final boolean[] reflectionSuccess = {false};
+                        
                         try {
+                            log("call: 开始尝试获取LCanvas类");
+                            // 获取LCanvas类
+                            Class<?> lCanvasClass = mindustry.logic.LCanvas.class;
+                            log("call: 成功获取LCanvas类: " + lCanvasClass.getName());
+                            
                             // 使用反射获取LCanvas类的私有静态canvas字段
-                            canvasField[0] = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                            log("call: 开始尝试获取canvas字段");
+                            canvasField[0] = lCanvasClass.getDeclaredField("canvas");
+                            log("call: 成功获取canvas字段");
+                            
+                            // 设置字段可访问
                             canvasField[0].setAccessible(true);
+                            log("call: 成功设置canvas字段可访问");
+                            
+                            // 获取当前canvas值
                             originalCanvas[0] = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                            log("call: 成功获取当前canvas值: " + originalCanvas[0]);
+                            reflectionSuccess[0] = true;
+                        } catch (NoSuchFieldException e) {
+                            log("call: 无法找到canvas字段: " + e.getMessage());
+                            e.printStackTrace();
+                        } catch (IllegalAccessException e) {
+                            log("call: 无法访问canvas字段: " + e.getMessage());
+                            e.printStackTrace();
+                        } catch (SecurityException e) {
+                            log("call: 安全异常: " + e.getMessage());
+                            e.printStackTrace();
                         } catch (Exception e) {
-                            log("call: 无法获取原始canvas字段: " + e.getMessage());
+                            log("call: 其他异常: " + e.getMessage());
+                            e.printStackTrace();
                         }
                         
                         // 打开嵌套逻辑编辑器
+                        log("call: 开始创建并显示嵌套逻辑编辑器");
                         mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
                         nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                             // 保存修改后的代码
+                            log("call: 开始处理嵌套逻辑编辑器回调");
                             nestedCode = modifiedCode;
                             saveUI();
+                            log("call: 保存修改后的代码成功");
                             
                             // 恢复原始canvas静态变量
-                            try {
-                                if (canvasField[0] != null && originalCanvas[0] != null) {
-                                    canvasField[0].set(null, originalCanvas[0]);
-                                    log("call: 成功恢复原始canvas");
-                                    
-                                    // 触发主编辑器的UI重绘
-                                    originalCanvas[0].statements.updateJumpHeights = true;
-                                    originalCanvas[0].statements.invalidate();
-                                    originalCanvas[0].invalidateHierarchy();
-                                    originalCanvas[0].rebuild();
+                            if (reflectionSuccess[0]) {
+                                try {
+                                    log("call: 开始尝试恢复原始canvas");
+                                    if (canvasField[0] != null && originalCanvas[0] != null) {
+                                        // 获取当前canvas值，用于比较
+                                        mindustry.logic.LCanvas currentCanvas = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                                        log("call: 当前canvas值: " + currentCanvas + ", 原始canvas值: " + originalCanvas[0]);
+                                        
+                                        // 恢复原始canvas值
+                                        canvasField[0].set(null, originalCanvas[0]);
+                                        log("call: 成功恢复原始canvas");
+                                        
+                                        // 获取恢复后的canvas值，用于验证
+                                        mindustry.logic.LCanvas restoredCanvas = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                                        log("call: 恢复后的canvas值: " + restoredCanvas);
+                                        
+                                        // 触发主编辑器的UI重绘
+                                        log("call: 开始触发主编辑器UI重绘");
+                                        originalCanvas[0].statements.updateJumpHeights = true;
+                                        log("call: 设置updateJumpHeights = true");
+                                        originalCanvas[0].statements.invalidate();
+                                        log("call: 调用statements.invalidate()");
+                                        originalCanvas[0].invalidateHierarchy();
+                                        log("call: 调用invalidateHierarchy()");
+                                        originalCanvas[0].rebuild();
+                                        log("call: 调用rebuild()");
+                                    }
+                                } catch (Exception e) {
+                                    log("call: 无法恢复原始canvas字段: " + e.getMessage());
+                                    e.printStackTrace();
                                 }
-                            } catch (Exception e) {
-                                log("call: 无法恢复原始canvas字段: " + e.getMessage());
+                            } else {
+                                log("call: 反射获取失败，跳过恢复操作");
                             }
+                            
+                            log("call: 嵌套逻辑编辑器回调处理完成");
                         });
+                        
+                        log("call: Edit Logic按钮点击处理完成");
                     });
                 }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f);
             } else if (type == NestedLogicType.pop) {
