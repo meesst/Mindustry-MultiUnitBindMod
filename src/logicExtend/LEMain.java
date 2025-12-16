@@ -21,10 +21,10 @@ public class LEMain extends Mod {
         Cons<SettingsMenuDialog.SettingsTable> builder = settingsTable -> {
             SettingsMenuDialog.SettingsTable settings = new SettingsMenuDialog.SettingsTable();
             
-            // 添加日志开关选项，直接使用checkPref方法的正确参数
+            // 添加日志开关选项，使用checkPref方法的正确参数（3个参数）
             settings.checkPref("lnestedlogic-debug-log", false, value -> {
                 LNestedLogic.debugLog = value ? 1 : 0;
-            }, Core.bundle.get("lnestedlogic.settings.debug-log", "Debug Log"));
+            });
             
             settingsTable.add(settings);
         };
