@@ -107,19 +107,7 @@ public class SimpleLogicDialog extends BaseDialog {
                         cat.button(example.name(), Styles.flatt, () -> {
                             canvas.add(prov.get());
                             dialog.hide();
-                        }).size(130f, 50f).self(c -> {
-                            // 使用tooltip方法，避免直接访问静态canvas
-                            if(Core.settings.getBool("logichints", true)) {
-                                String key = "lst." + example.name();
-                                if(Core.bundle.has(key.toLowerCase())) {
-                                    c.get().addListener(new arc.scene.event.Tooltip(tip -> {
-                                        tip.background(Styles.black8);
-                                        tip.margin(4f);
-                                        tip.add("[lightgray]" + Core.bundle.get(key.toLowerCase()));
-                                    }));
-                                }
-                            }
-                        }).top().left();
+                        }).size(130f, 50f).top().left();
                         
                         if(cat.getChildren().size % 3 == 0) cat.row();
                     }
