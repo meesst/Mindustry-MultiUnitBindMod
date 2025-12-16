@@ -134,7 +134,7 @@ public class LNestedLogic {
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(150f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f);
                 
                 fields(table, "Index", p2, str -> {
                     p2 = str;
@@ -144,19 +144,19 @@ public class LNestedLogic {
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                }).size(120f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f);
             } else if (type == NestedLogicType.call) {
                 // call分支：创建变量输入框 + 编辑页面按钮
                 fields(table, "Logic Name", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(300f, 40f).pad(2f);
+                }).size(120f, 40f).pad(2f);
                 
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
-                        // 打开嵌套逻辑编辑器
-                        mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                        // 打开嵌套逻辑编辑器 - 使用简化版对话框，避免影响主页面跳转线
+                        SimpleLogicDialog nestedDialog = new SimpleLogicDialog();
                         nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                             // 保存修改后的代码
                             nestedCode = modifiedCode;
@@ -169,7 +169,7 @@ public class LNestedLogic {
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(150f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f);
                 
                 fields(table, "Index", p2, str -> {
                     p2 = str;
@@ -179,7 +179,7 @@ public class LNestedLogic {
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                }).size(120f, 40f).pad(2f);
+                }).size(80f, 40f).pad(2f);
             }
         }
         
