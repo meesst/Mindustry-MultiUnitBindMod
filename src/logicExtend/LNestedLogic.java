@@ -54,7 +54,10 @@ public class LNestedLogic {
             if (stackName == null || stackName.isEmpty()) {
                 stackName = "default";
             }
-            stacks.putIfAbsent(stackName, new Seq<>());
+            // Arc库的ObjectMap没有putIfAbsent方法，使用containsKey替代
+            if (!stacks.containsKey(stackName)) {
+                stacks.put(stackName, new Seq<>());
+            }
             return stacks.get(stackName);
         }
     }
@@ -329,24 +332,45 @@ public class LNestedLogic {
                             // 进入新的调用上下文
                         CallContext context = new CallContext();
                         context.callCounter = exec.counter.numval;
-                        // 复制前一个上下文的调用栈（如果存在）
+                        // 复制前一个上下文的所有栈（如果存在）
                         if (!callContextStack.isEmpty()) {
                             CallContext prevContext = callContextStack.get(callContextStack.size - 1);
-                            context.callStack = prevContext.callStack.copy();
-                            log("call: 复制前一个上下文的调用栈，栈大小: " + context.callStack.size);
+                            // 遍历前一个上下文的所有栈
+                            for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : prevContext.stacks) {
+                                String stackName = stackEntry.key;
+                                Seq<CallStackElement> stack = stackEntry.value;
+                                // 复制栈中的所有元素
+                                Seq<CallStackElement> newStack = new Seq<>();
+                                for (CallStackElement elem : stack) {
+                                    CallStackElement newElem = new CallStackElement();
+                                    newElem.varName = elem.varName;
+                                    newElem.varValue = elem.varValue;
+                                    newElem.index = elem.index;
+                                    newElem.stackName = elem.stackName;
+                                    newStack.add(newElem);
+                                }
+                                context.stacks.put(stackName, newStack);
+                            }
+                            log("call: 复制前一个上下文的所有栈，共 " + context.stacks.size + " 个栈");
                         }
                         callContextStack.add(context);
-                             
+                              
                             try {
-                                // 获取当前上下文的调用栈
+                                // 获取当前上下文
                                 CallContext currentContext = getCurrentContext();
                                 
-                                // 记录日志：当前调用栈信息
-                                log("call: 当前调用栈大小: " + currentContext.callStack.size);
-                                // 只记录一次调用栈元素信息，避免大量重复日志
-                                if (!currentContext.callStack.isEmpty()) {
-                                    CallStackElement firstElem = currentContext.callStack.first();
-                                    log("call: 调用栈示例元素 - 变量名: " + firstElem.varName + ", 值: " + firstElem.varValue);
+                                // 记录日志：当前所有栈信息
+                                log("call: 当前共有 " + currentContext.stacks.size + " 个栈");
+                                // 记录每个栈的大小和第一个元素
+                                for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : currentContext.stacks) {
+                                    String stackName = stackEntry.key;
+                                    Seq<CallStackElement> stack = stackEntry.value;
+                                    log("call: 栈 \"" + stackName + "\" 大小: " + stack.size);
+                                    // 记录栈的第一个元素（如果有）
+                                    if (!stack.isEmpty()) {
+                                        CallStackElement firstElem = stack.first();
+                                        log("call: 栈 \"" + stackName + "\" 示例元素 - 变量名: " + firstElem.varName + ", 值: " + firstElem.varValue);
+                                    }
                                 }
                                 
                                 // 创建嵌套执行器
@@ -384,23 +408,29 @@ public class LNestedLogic {
                                     log("call: 嵌套执行器变量 - 名称: " + var.name + ", 类型: " + (var.isobj ? "对象" : "数值") + ", 值: " + (var.isobj ? var.objval : var.numval));
                                 }
                                 
-                                // 复制调用栈中的变量值到嵌套执行器
-                                log("call: 复制调用栈中的变量值到嵌套执行器");
-                                for (CallStackElement elem : currentContext.callStack) {
-                                    // 从嵌套执行器中获取变量
-                                    LVar nestedVar = nestedExec.optionalVar(elem.varName);
-                                    if (nestedVar != null) {
-                                        // 变量存在，设置其值为调用栈中保存的值
-                                        if (elem.varValue instanceof Double) {
-                                            nestedVar.isobj = false;
-                                            nestedVar.numval = (Double) elem.varValue;
+                                // 复制所有栈中的变量值到嵌套执行器
+                                log("call: 复制所有栈中的变量值到嵌套执行器");
+                                // 遍历所有栈
+                                for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : currentContext.stacks) {
+                                    String stackName = stackEntry.key;
+                                    Seq<CallStackElement> stack = stackEntry.value;
+                                    // 遍历当前栈中的所有元素
+                                    for (CallStackElement elem : stack) {
+                                        // 从嵌套执行器中获取变量
+                                        LVar nestedVar = nestedExec.optionalVar(elem.varName);
+                                        if (nestedVar != null) {
+                                            // 变量存在，设置其值为调用栈中保存的值
+                                            if (elem.varValue instanceof Double) {
+                                                nestedVar.isobj = false;
+                                                nestedVar.numval = (Double) elem.varValue;
+                                            } else {
+                                                nestedVar.isobj = true;
+                                                nestedVar.objval = elem.varValue;
+                                            }
+                                            log("call: 从栈 \"" + stackName + "\" 复制变量 - 名称: " + elem.varName + ", 值: " + elem.varValue + " 到嵌套执行器");
                                         } else {
-                                            nestedVar.isobj = true;
-                                            nestedVar.objval = elem.varValue;
+                                            log("call: 嵌套执行器中未找到变量 - 名称: " + elem.varName);
                                         }
-                                        log("call: 复制变量 - 名称: " + elem.varName + ", 值: " + elem.varValue + " 到嵌套执行器");
-                                    } else {
-                                        log("call: 嵌套执行器中未找到变量 - 名称: " + elem.varName);
                                     }
                                 }
                                 
