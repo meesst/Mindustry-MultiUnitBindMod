@@ -10,8 +10,9 @@ import mindustry.ui.*;
 import mindustry.logic.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import arc.util.Log;
+import java.lang.reflect.Field;
 import static mindustry.Vars.*;
-import static mindustry.logic.LCanvas.*;
 
 public class SimpleLogicDialog extends BaseDialog {
     public LCanvas canvas;
@@ -23,36 +24,8 @@ public class SimpleLogicDialog extends BaseDialog {
         
         clearChildren();
         
-        // 创建LCanvas实例，但通过重写方法避免影响静态变量
-        canvas = new LCanvas() {
-            @Override
-            public void act(float delta) {
-                // 保存当前静态canvas
-                LCanvas oldCanvas = LCanvas.canvas;
-                try {
-                    // 设置静态canvas为当前实例，确保编辑功能正常
-                    LCanvas.canvas = this;
-                    super.act(delta);
-                } finally {
-                    // 恢复原静态canvas，避免影响其他页面
-                    LCanvas.canvas = oldCanvas;
-                }
-            }
-            
-            @Override
-            public void draw() {
-                // 保存当前静态canvas
-                LCanvas oldCanvas = LCanvas.canvas;
-                try {
-                    // 设置静态canvas为当前实例，确保绘制功能正常
-                    LCanvas.canvas = this;
-                    super.draw();
-                } finally {
-                    // 恢复原静态canvas，避免影响其他页面
-                    LCanvas.canvas = oldCanvas;
-                }
-            }
-        };
+        // 创建LCanvas实例
+        canvas = new LCanvas();
         
         shouldPause = true;
         
@@ -131,14 +104,22 @@ public class SimpleLogicDialog extends BaseDialog {
                             t.row();
                         }
                         
-                        TextButtonStyle style = new TextButtonStyle(Styles.flatt);
-                        style.fontColor = category.color;
-                        style.font = Fonts.outline;
-                        
-                        cat.button(example.name(), style, () -> {
+                        cat.button(example.name(), Styles.flatt, () -> {
                             canvas.add(prov.get());
                             dialog.hide();
-                        }).size(130f, 50f).self(c -> tooltip(c, "lst." + example.name())).top().left();
+                        }).size(130f, 50f).self(c -> {
+                            // 使用tooltip方法，避免直接访问静态canvas
+                            if(Core.settings.getBool("logichints", true)) {
+                                String key = "lst." + example.name();
+                                if(Core.bundle.has(key.toLowerCase())) {
+                                    c.get().addListener(new arc.scene.event.Tooltip(tip -> {
+                                        tip.background(Styles.black8);
+                                        tip.margin(4f);
+                                        tip.add("[lightgray]" + Core.bundle.get(key.toLowerCase()));
+                                    }));
+                                }
+                            }
+                        }).top().left();
                         
                         if(cat.getChildren().size % 3 == 0) cat.row();
                     }
@@ -155,29 +136,48 @@ public class SimpleLogicDialog extends BaseDialog {
         this.privileged = privileged;
         canvas.statements.clearChildren();
         canvas.rebuild();
-        canvas.privileged = privileged;
+        
+        // 使用反射设置privileged字段
         try {
-            // 保存当前静态canvas
-            LCanvas oldCanvas = LCanvas.canvas;
+            Field privilegedField = LCanvas.class.getDeclaredField("privileged");
+            privilegedField.setAccessible(true);
+            privilegedField.setBoolean(canvas, privileged);
+        } catch(Exception e) {
+            Log.err(e);
+        }
+        
+        try {
+            // 使用反射获取并保存当前静态canvas
+            Field canvasField = LCanvas.class.getDeclaredField("canvas");
+            canvasField.setAccessible(true);
+            Object oldCanvas = canvasField.get(null);
+            
             try {
                 // 设置静态canvas为当前实例，确保加载功能正常
-                LCanvas.canvas = canvas;
+                canvasField.set(null, canvas);
                 canvas.load(code);
             } finally {
                 // 恢复原静态canvas
-                LCanvas.canvas = oldCanvas;
+                canvasField.set(null, oldCanvas);
             }
         } catch(Throwable t) {
             Log.err(t);
-            // 保存当前静态canvas
-            LCanvas oldCanvas = LCanvas.canvas;
             try {
-                // 设置静态canvas为当前实例，确保加载功能正常
-                LCanvas.canvas = canvas;
-                canvas.load("");
-            } finally {
-                // 恢复原静态canvas
-                LCanvas.canvas = oldCanvas;
+                // 使用反射获取并保存当前静态canvas
+                Field canvasField = LCanvas.class.getDeclaredField("canvas");
+                canvasField.setAccessible(true);
+                Object oldCanvas = canvasField.get(null);
+                
+                try {
+                    // 设置静态canvas为当前实例，确保加载功能正常
+                    canvasField.set(null, canvas);
+                    canvas.load("");
+                } finally {
+                    // 恢复原静态canvas
+                    canvasField.set(null, oldCanvas);
+                }
+            } catch(Exception e) {
+                Log.err(e);
             }
         }
         this.consumer = result -> {
