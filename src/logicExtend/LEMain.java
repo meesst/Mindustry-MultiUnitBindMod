@@ -1,6 +1,7 @@
 package logicExtend;
 
 import arc.Core;
+import arc.func.Cons;
 import mindustry.mod.Mod;
 import mindustry.ui.dialogs.SettingsMenuDialog;
 import mindustry.ui.Styles;
@@ -17,13 +18,13 @@ public class LEMain extends Mod {
 
     private void addSettings() {
         // 设置构建器
-        mindustry.gen.Cons<SettingsMenuDialog.SettingsTable> builder = settingsTable -> {
+        Cons<SettingsMenuDialog.SettingsTable> builder = settingsTable -> {
             SettingsMenuDialog.SettingsTable settings = new SettingsMenuDialog.SettingsTable();
             
-            // 添加日志开关选项
+            // 添加日志开关选项，直接使用checkPref方法的正确参数
             settings.checkPref("lnestedlogic-debug-log", false, value -> {
                 LNestedLogic.debugLog = value ? 1 : 0;
-            }).title = Core.bundle.get("lnestedlogic.settings.debug-log", "Debug Log");
+            }, Core.bundle.get("lnestedlogic.settings.debug-log", "Debug Log"));
             
             settingsTable.add(settings);
         };
