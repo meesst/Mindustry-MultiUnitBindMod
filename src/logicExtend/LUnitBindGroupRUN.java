@@ -25,10 +25,11 @@ public class LUnitBindGroupRUN {
     private static final ObjectMap<Integer, UnitPool> executorPools = new ObjectMap<>();
 
     /** 执行单位绑定的核心逻辑 */
-    public static void run(LExecutor exec, LVar type, LVar count, LVar unitVar, LVar indexVar) {
+    public static void run(LExecutor exec, LVar type, LVar count, LVar mode, LVar unitVar, LVar indexVar) {
         // 获取单位类型和数量
         UnitType unitType = null;
         int bindCount = 1;
+        int modeValue = 2; // 默认mode为2
         
         if (type.isobj && type.obj() instanceof UnitType) {
             unitType = (UnitType) type.obj();
@@ -45,6 +46,14 @@ public class LUnitBindGroupRUN {
             bindCount = 1;
         }
         
+        // 解析mode参数
+        try {
+            modeValue = mode.isobj ? Integer.parseInt(mode.obj().toString()) : (int)mode.num();
+            if (modeValue < 1 || modeValue > 3) modeValue = 2;
+        } catch (NumberFormatException | ClassCastException e) {
+            modeValue = 2;
+        }
+        
         // 获取或创建单位池
         UnitPool pool = executorPools.get(exec.hashCode(), UnitPool::new);
         
@@ -52,7 +61,7 @@ public class LUnitBindGroupRUN {
         pool.type = unitType;
         
         // 单位池维护
-        maintainUnitPool(exec, pool, unitType, bindCount);
+        maintainUnitPool(exec, pool, unitType, bindCount, modeValue);
         
         // 检查维护后单位池是否为空
         if (pool.units.isEmpty()) {
@@ -174,7 +183,7 @@ public class LUnitBindGroupRUN {
     }
     
     //单位池维护方法
-    public static void maintainUnitPool(LExecutor exec, UnitPool pool, UnitType type, int count) {
+    public static void maintainUnitPool(LExecutor exec, UnitPool pool, UnitType type, int count, int mode) {
         // 检查池中单位数量是否满足count要求，如果不足则补充单位
         if (pool.units.size < count) {
             bindUnits(exec, pool, type, count - pool.units.size);
@@ -191,9 +200,32 @@ public class LUnitBindGroupRUN {
                 continue;
             }
             
-            // 2. 控制方判断
-            if (!(unit.controller() instanceof LogicAI) || 
-                unit.isPlayer()) {
+            // 2. 控制方判断，根据mode值执行不同的逻辑
+            boolean removeUnit = false;
+            
+            switch (mode) {
+                case 1: // 不进行控制方检查
+                    break;
+                case 2: // 判断控制方是否为玩家，是则移出
+                    if (!(unit.controller() instanceof LogicAI) || unit.isPlayer()) {
+                        removeUnit = true;
+                    }
+                    break;
+                case 3: // 判断控制方是否为自身，不是则移出
+                    if (!(unit.controller() instanceof LogicAI) || 
+                        unit.isPlayer() || 
+                        (unit.controller() instanceof LogicAI la && la.controller != exec.build)) {
+                        removeUnit = true;
+                    }
+                    break;
+                default: // 默认与mode2相同
+                    if (!(unit.controller() instanceof LogicAI) || unit.isPlayer()) {
+                        removeUnit = true;
+                    }
+                    break;
+            }
+            
+            if (removeUnit) {
                 toRemove.add(unit);
                 continue;
             }

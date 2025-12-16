@@ -9,6 +9,7 @@ import mindustry.gen.*;
 import mindustry.logic.*;
 import mindustry.world.*;
 import mindustry.type.*;
+import mindustry.entities.units.BuildPlan;
 import mindustry.ui.Styles;
 import mindustry.world.blocks.payloads.Payload;
 import mindustry.world.meta.BuildVisibility;
@@ -25,7 +26,8 @@ public class FastUnitControl {
         itemTake("from", "item", "amount"),
         itemDrop("to", "amount"),
         payTake("takeUnits", "x", "y"),
-        payDrop("x", "y");
+        payDrop("x", "y"),
+        assist("assister", "target");
         
         public final String[] params;
         
@@ -182,6 +184,41 @@ public class FastUnitControl {
                                 
                                 if(unit instanceof Payloadc pay && pay.hasPayload()) {
                                     Call.payloadDropped(unit, dropX, dropY);
+                                }
+                                break;
+                                
+                            case assist:
+                                // 获取协助者和目标单位
+                                Object assisterObj = p1Var != null ? p1Var.obj() : null;
+                                Object targetObj = p2Var != null ? p2Var.obj() : null;
+                                
+                                // 检查参数类型
+                                if(assisterObj instanceof Unit assister && targetObj instanceof Unit target) {
+                                    // 检查单位是否有效
+                                    if(assister.isValid() && target.isValid()) {
+                                        // 检查单位是否属于同一队伍
+                                        if(assister.team() == target.team()) {
+                                            // 设置unit.updateBuilding = true，允许移动时建造
+                                            assister.updateBuilding = true;
+                                            
+                                            // 在execCache中存储协助目标
+                                            ai.execCache.put("assistTarget", target);
+                                            
+                                            // 执行协助建造逻辑
+                                            if(target.activelyBuilding()) {
+                                                // 复制目标单位的建造计划，包括breaking状态
+                                                assister.plans.clear();
+                                                BuildPlan targetPlan = target.buildPlan();
+                                                if(targetPlan != null) {
+                                                    // 使用copy()方法复制BuildPlan，确保所有状态都被复制
+                                                    BuildPlan assistPlan = targetPlan.copy();
+                                                    // 显式复制breaking状态，确保正确
+                                                    assistPlan.breaking = targetPlan.breaking;
+                                                    assister.plans.addFirst(assistPlan);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 break;
                             default:
