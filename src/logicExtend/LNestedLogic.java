@@ -358,16 +358,22 @@ public class LNestedLogic {
                                 int instructionCount = 0;
                                 double originalMainCounter = exec.counter.numval;
                                 
+                                // 为嵌套执行器设置独立的最大指令数限制，防止无限循环卡死游戏
+                                // 使用与主执行器相同的最大指令数，但独立计算
+                                int nestedMaxInstructions = LExecutor.maxInstructions;
+                                int nestedCounter = 0;
+                                
                                 while (true) {
-                                    // 检查是否达到最大指令数限制
-                                    if (exec.counter.numval >= LExecutor.maxInstructions) {
-                                        log("call: 达到最大指令数限制，停止执行嵌套逻辑");
-                                        break;
-                                    }
-                                    
                                     // 检查嵌套执行器是否已经执行完毕
                                     if (nestedExec.counter.numval >= nestedExec.instructions.length) {
                                         log("call: 嵌套逻辑执行完毕");
+                                        break;
+                                    }
+                                    
+                                    // 检查嵌套执行器是否达到最大指令数限制（独立于主执行器）
+                                    // 这确保嵌套逻辑的无限循环不会导致游戏卡死
+                                    if (nestedCounter >= nestedMaxInstructions) {
+                                        log("call: 嵌套逻辑达到单tick最大指令数限制，停止执行");
                                         break;
                                     }
                                     
@@ -376,14 +382,12 @@ public class LNestedLogic {
                                     
                                     // 增加指令计数
                                     instructionCount++;
-                                    
-                                    // 关键修复：增加主执行器的counter，这样会受到maxInstructions限制
-                                    // 与vanilla逻辑控制器保持一致，避免无限循环导致游戏卡死
-                                    exec.counter.numval++;
+                                    nestedCounter++;
                                 }
                                 
-                                // 不再恢复主执行器的counter值，因为我们已经正确消耗了指令预算
-                                // 这与vanilla逻辑控制器的行为一致
+                                // 恢复主执行器的counter值，确保call指令不会影响主执行器的指令预算
+                                // 嵌套逻辑应该在独立的指令预算中执行，不影响主逻辑
+                                exec.counter.numval = originalMainCounter;
                                 
                                 log("call: 执行了 " + instructionCount + " 条嵌套指令");
                                 
