@@ -155,12 +155,40 @@ public class LNestedLogic {
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
-                        // 打开嵌套逻辑编辑器 - 使用简化版对话框，避免影响主页面跳转线
-                        SimpleLogicDialog nestedDialog = new SimpleLogicDialog();
+                        // 保存当前的canvas静态变量
+                        mindustry.logic.LCanvas originalCanvas = null;
+                        java.lang.reflect.Field canvasField = null;
+                        try {
+                            // 使用反射获取LCanvas类的私有静态canvas字段
+                            canvasField = mindustry.logic.LCanvas.class.getDeclaredField("canvas");
+                            canvasField.setAccessible(true);
+                            originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
+                        } catch (Exception e) {
+                            log("call: 无法获取原始canvas字段: " + e.getMessage());
+                        }
+                        
+                        // 打开嵌套逻辑编辑器
+                        mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
                         nestedDialog.show(nestedCode, null, false, modifiedCode -> {
                             // 保存修改后的代码
                             nestedCode = modifiedCode;
                             saveUI();
+                            
+                            // 恢复原始canvas静态变量
+                            try {
+                                if (canvasField != null && originalCanvas != null) {
+                                    canvasField.set(null, originalCanvas);
+                                    log("call: 成功恢复原始canvas");
+                                    
+                                    // 触发主编辑器的UI重绘
+                                    originalCanvas.statements.updateJumpHeights = true;
+                                    originalCanvas.statements.invalidate();
+                                    originalCanvas.invalidateHierarchy();
+                                    originalCanvas.rebuild();
+                                }
+                            } catch (Exception e) {
+                                log("call: 无法恢复原始canvas字段: " + e.getMessage());
+                            }
                         });
                     });
                 }, mindustry.ui.Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f);
