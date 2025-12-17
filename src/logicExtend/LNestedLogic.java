@@ -510,7 +510,7 @@ public class LNestedLogic {
                             try {
                                 // 直接使用全局栈，不再创建上下文
                                 
-                                // 创建嵌套执行器（优化：减少不必要的初始化）
+                                // 创建嵌套执行器
                                 LExecutor nestedExec = new LExecutor();
                                 nestedExec.build = exec.build;
                                 nestedExec.team = exec.team;
@@ -518,9 +518,28 @@ public class LNestedLogic {
                                 nestedExec.links = exec.links;
                                 nestedExec.linkIds = exec.linkIds;
                                 
+                                // 优化：提前加载指令和变量
+                                nestedBuilder.instructions = nestedInstructions;
+                                nestedExec.vars = nestedBuilder.vars.values().toSeq().retainAll(var -> !var.constant).toArray(LVar.class);
+                                
+                                // 为每个变量设置id
+                                for (int i = 0; i < nestedExec.vars.length; i++) {
+                                    nestedExec.vars[i].id = i;
+                                }
+                                
+                                // 初始化嵌套执行器的counter、unit、thisv等字段（必须在使用前初始化）
+                                nestedExec.counter = nestedBuilder.getVar("@counter");
+                                nestedExec.unit = nestedBuilder.getVar("@unit");
+                                nestedExec.thisv = nestedBuilder.getVar("@this");
+                                nestedExec.ipt = nestedBuilder.putConst("@ipt", nestedExec.build != null ? nestedExec.build.ipt : 0);
+                                
                                 // 从主执行器复制关键动态变量
-                                nestedExec.unit.set(exec.unit);
-                                nestedExec.thisv.set(exec.thisv);
+                                if (nestedExec.unit != null && exec.unit != null) {
+                                    nestedExec.unit.set(exec.unit);
+                                }
+                                if (nestedExec.thisv != null && exec.thisv != null) {
+                                    nestedExec.thisv.set(exec.thisv);
+                                }
                                 
                                 // 仅复制栈中实际存在的变量，跳过空栈检查
                                 if (isDebug) {
@@ -550,21 +569,6 @@ public class LNestedLogic {
                                         }
                                     }
                                 }
-                                
-                                // 优化：提前加载指令，避免重复操作
-                                nestedBuilder.instructions = nestedInstructions;
-                                nestedExec.vars = nestedBuilder.vars.values().toSeq().retainAll(var -> !var.constant).toArray(LVar.class);
-                                
-                                // 为每个变量设置id
-                                for (int i = 0; i < nestedExec.vars.length; i++) {
-                                    nestedExec.vars[i].id = i;
-                                }
-                                
-                                // 初始化嵌套执行器的counter、unit、thisv等字段
-                                nestedExec.counter = nestedBuilder.getVar("@counter");
-                                nestedExec.unit = nestedBuilder.getVar("@unit");
-                                nestedExec.thisv = nestedBuilder.getVar("@this");
-                                nestedExec.ipt = nestedBuilder.putConst("@ipt", nestedExec.build != null ? nestedExec.build.ipt : 0);
                                 
                                 // 加载嵌套指令到嵌套执行器
                                 nestedExec.load(nestedBuilder);
