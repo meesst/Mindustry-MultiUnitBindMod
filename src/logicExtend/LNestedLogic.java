@@ -187,11 +187,11 @@ public class LNestedLogic {
         // 唯一编号，用于标识每个call指令实例
         public String uniqueId = UUID.randomUUID().toString();
         // 第一个参数（push的变量名，或call的逻辑名）
-        public String p1 = "";
+        public String p1 = "var";
         // 第二个参数（index，push/pop使用）
-        public String p2 = "";
+        public String p2 = "0";
         // 第三个参数（stackName，push/pop使用）
-        public String p3 = "";
+        public String p3 = "default";
         // 存储嵌套的逻辑代码（仅call类型使用）
         public String nestedCode = "";
         
