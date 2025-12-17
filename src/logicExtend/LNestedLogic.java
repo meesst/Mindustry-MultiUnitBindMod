@@ -8,7 +8,7 @@ import mindustry.logic.LCategory;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LStatement;
 import mindustry.logic.LVar;
-import mindustry.world.building.Building;
+import mindustry.world.Building;
 import java.util.Base64;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
