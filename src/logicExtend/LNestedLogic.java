@@ -704,23 +704,26 @@ public class LNestedLogic {
             // 序列化唯一编号
             builder.append(uniqueId);
             builder.append(" ");
-            // 序列化第一个参数
-            builder.append(p1);
-            builder.append(" ");
-            // 序列化第二个参数
-            builder.append(p2);
             
-            // 序列化第三个参数（stackName），仅push和pop指令使用
-            if (type == NestedLogicType.push || type == NestedLogicType.pop) {
+            if (type == NestedLogicType.call) {
+                // call指令格式：nestedlogic call uniqueId logicName "encodedCode"
+                // 序列化第一个参数（logicName，玩家备注）
+                builder.append(p1);
+                builder.append(" ");
+                // 序列化嵌套代码，始终用引号包裹
+                String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
+                builder.append('"').append(encoded).append('"');
+            } else {
+                // push/pop指令：nestedlogic type uniqueId p1 p2 p3
+                // 序列化第一个参数
+                builder.append(p1);
+                builder.append(" ");
+                // 序列化第二个参数
+                builder.append(p2);
+                
+                // 序列化第三个参数（stackName），仅push和pop指令使用
                 builder.append(" ");
                 builder.append(p3);
-            }
-            
-            // 如果是call指令，序列化嵌套代码
-            if (type == NestedLogicType.call) {
-                // 使用Base64编码嵌套代码，避免转义字符问题
-                String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
-                builder.append(" \"").append(encoded).append('"');
             }
         }
 
@@ -751,7 +754,6 @@ public class LNestedLogic {
                         stmt.type = NestedLogicType.valueOf(params[1]);
                     } catch (IllegalArgumentException e) {
                         // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
-                        // 新格式：第一个参数是指令类型，第二个是唯一编号，第三个是p1，第四个是p2，第五个是嵌套代码
                         stmt.type = NestedLogicType.call;
                         if (params.length >= 3) {
                             stmt.nestedCode = params[2];
@@ -765,22 +767,39 @@ public class LNestedLogic {
                     stmt.uniqueId = params[2];
                 }
                 
-                // 解析第一个参数
-                if (params.length >= 4) {
-                    stmt.p1 = params[3];
-                }
-                
                 if (stmt.type == NestedLogicType.call) {
-                    // call类型：支持两种格式
-                    // 格式1: nestedlogic call uniqueId logicName "encodedCode" (没有p2参数)
-                    // 格式2: nestedlogic call uniqueId logicName p2 "encodedCode" (带有p2参数)
-                    if (params.length >= 5) {
-                        // 检查参数4是否是引号包围的Base64代码
-                        if (params[4].startsWith("\"")) {
-                            // 格式1: 参数4是嵌套代码
+                    // call指令格式：nestedlogic call uniqueId logicName "encodedCode"
+                    // 解析logicName（玩家备注）和嵌套代码
+                    if (params.length >= 4) {
+                        // 寻找嵌套代码的位置（以引号开头的参数）
+                        int codeIndex = -1;
+                        for (int i = 3; i < params.length; i++) {
+                            if (params[i].startsWith("\"")) {
+                                codeIndex = i;
+                                break;
+                            }
+                        }
+                        
+                        if (codeIndex != -1) {
+                            // 解析logicName（如果存在）
+                            if (codeIndex > 3) {
+                                // 从参数3到codeIndex-1都是logicName的组成部分（处理包含空格的情况）
+                                StringBuilder logicNameBuilder = new StringBuilder();
+                                for (int i = 3; i < codeIndex; i++) {
+                                    if (i > 3) logicNameBuilder.append(" ");
+                                    logicNameBuilder.append(params[i]);
+                                }
+                                stmt.p1 = logicNameBuilder.toString();
+                            } else {
+                                // logicName为空
+                                stmt.p1 = "";
+                            }
+                            
+                            // 解析嵌套代码
+                            String rawCode = params[codeIndex];
                             try {
                                 // 移除外层引号
-                                String encoded = params[4].substring(1, params[4].length() - 1);
+                                String encoded = rawCode.substring(1, rawCode.length() - 1);
                                 // 使用Base64解码嵌套代码
                                 byte[] decodedBytes = Base64.getDecoder().decode(encoded);
                                 stmt.nestedCode = new String(decodedBytes, StandardCharsets.UTF_8);
@@ -789,30 +808,18 @@ public class LNestedLogic {
                                 stmt.nestedCode = "";
                             }
                         } else {
-                            // 格式2: 参数4是p2，参数5是嵌套代码
-                            stmt.p2 = params[4];
-                            if (params.length >= 6) {
-                                // 改进反序列化逻辑，使用Base64解码嵌套代码
-                                String rawCode = params[5];
-                                if (rawCode.startsWith("\"")) {
-                                    try {
-                                        // 移除外层引号
-                                        String encoded = rawCode.substring(1, rawCode.length() - 1);
-                                        // 使用Base64解码嵌套代码
-                                        byte[] decodedBytes = Base64.getDecoder().decode(encoded);
-                                        stmt.nestedCode = new String(decodedBytes, StandardCharsets.UTF_8);
-                                    } catch (IllegalArgumentException e) {
-                                        // 如果解码失败，返回空字符串
-                                        stmt.nestedCode = "";
-                                    }
-                                } else {
-                                    stmt.nestedCode = rawCode;
-                                }
-                            }
+                            // 没有找到嵌套代码，设置默认值
+                            stmt.p1 = params.length > 3 ? params[3] : "";
+                            stmt.nestedCode = "";
                         }
                     }
                 } else {
-                    // push和pop类型：支持索引参数和栈名称
+                    // push/pop指令：nestedlogic type uniqueId p1 p2 p3
+                    // 解析第一个参数
+                    if (params.length >= 4) {
+                        stmt.p1 = params[3];
+                    }
+                    // 解析第二个参数
                     if (params.length >= 5) {
                         stmt.p2 = params[4];
                     }
@@ -891,4 +898,6 @@ public class LNestedLogic {
             }
         }
     }
+    
+
 }
