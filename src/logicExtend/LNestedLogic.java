@@ -503,7 +503,7 @@ public class LNestedLogic {
                                 // 直接编译嵌套逻辑，复用游戏的编译机制
                                 LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
                                 
-                                // 如果主逻辑块有链接点，将链接点变量添加到嵌套逻辑中
+                                // 添加主逻辑块的链接点信息
                                 if (exec.build != null) {
                                     // 获取主逻辑块的链接点
                                     for (var link : exec.build.links) {
@@ -517,6 +517,11 @@ public class LNestedLogic {
                                             }
                                         }
                                     }
+                                    
+                                    // 添加@links常量，值为主逻辑块的链接数量
+                                    nestedBuilder.putConst("@links", exec.links.length);
+                                    // 添加@ipt常量，值为指令每tick执行数量
+                                    nestedBuilder.putConst("@ipt", exec.build.ipt);
                                 }
                                 
                                 // 创建嵌套执行器
