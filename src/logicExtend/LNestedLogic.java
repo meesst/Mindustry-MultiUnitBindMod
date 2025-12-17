@@ -501,16 +501,16 @@ public class LNestedLogic {
                         }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
                         
                         return (LExecutor exec) -> {
-                            // 仅在调试模式下记录日志，减少性能开销
-                            boolean isDebug = arc.Core.settings.getBool("lnestedlogic-debug-log");
-                            if (isDebug) {
-                                log("call: 开始执行call指令，逻辑名称: " + p1);
-                            }
+                            // 记录日志：开始执行call指令
+                            log("call: 开始执行call指令，逻辑名称: " + p1);
+                            
+                            // 直接使用全局栈，不再创建上下文
+                            log("call: 使用全局栈进行操作");
                             
                             try {
-                                // 直接使用全局栈，不再创建上下文
                                 
                                 // 创建嵌套执行器
+                                log("call: 创建嵌套执行器");
                                 LExecutor nestedExec = new LExecutor();
                                 nestedExec.build = exec.build;
                                 nestedExec.team = exec.team;
@@ -518,44 +518,44 @@ public class LNestedLogic {
                                 nestedExec.links = exec.links;
                                 nestedExec.linkIds = exec.linkIds;
                                 
-                                // 优化：提前加载指令和变量
-                                nestedBuilder.instructions = nestedInstructions;
+                                // 关键修复：初始化嵌套执行器的vars数组
+                                // 将nestedBuilder中的所有非恒定变量复制到嵌套执行器的vars数组中
+                                log("call: 初始化嵌套执行器的vars数组，变量数量: " + nestedBuilder.vars.size);
                                 nestedExec.vars = nestedBuilder.vars.values().toSeq().retainAll(var -> !var.constant).toArray(LVar.class);
-                                
                                 // 为每个变量设置id
                                 for (int i = 0; i < nestedExec.vars.length; i++) {
                                     nestedExec.vars[i].id = i;
                                 }
                                 
-                                // 初始化嵌套执行器的counter、unit、thisv等字段（必须在使用前初始化）
+                                // 初始化嵌套执行器的counter、unit、thisv等字段
                                 nestedExec.counter = nestedBuilder.getVar("@counter");
                                 nestedExec.unit = nestedBuilder.getVar("@unit");
                                 nestedExec.thisv = nestedBuilder.getVar("@this");
                                 nestedExec.ipt = nestedBuilder.putConst("@ipt", nestedExec.build != null ? nestedExec.build.ipt : 0);
                                 
-                                // 从主执行器复制关键动态变量
-                                if (nestedExec.unit != null && exec.unit != null) {
-                                    nestedExec.unit.set(exec.unit);
-                                }
-                                if (nestedExec.thisv != null && exec.thisv != null) {
-                                    nestedExec.thisv.set(exec.thisv);
+                                // 从主执行器复制动态变量的实际值到嵌套执行器
+                                // 这些变量在编译时可能没有正确的值，需要在运行时获取
+                                nestedExec.thisv.set(exec.thisv);
+                                nestedExec.unit.set(exec.unit);
+                                
+                                // 记录日志：嵌套执行器变量列表
+                                log("call: 嵌套执行器变量数量: " + nestedExec.vars.length);
+                                for (LVar var : nestedExec.vars) {
+                                    log("call: 嵌套执行器变量 - 名称: " + var.name + ", 类型: " + (var.isobj ? "对象" : "数值") + ", 值: " + (var.isobj ? var.objval : var.numval));
                                 }
                                 
-                                // 仅复制栈中实际存在的变量，跳过空栈检查
-                                if (isDebug) {
-                                    log("call: 复制栈变量到嵌套执行器");
-                                }
-                                
-                                // 优化：只遍历非空栈
+                                // 复制所有栈中的变量值到嵌套执行器
+                                log("call: 复制所有栈中的变量值到嵌套执行器");
+                                // 遍历所有栈
                                 for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : stacks) {
-                                    Seq<CallStackElement> stack = stackEntry.value;
-                                    if (stack.isEmpty()) continue;
-                                    
                                     String stackName = stackEntry.key;
+                                    Seq<CallStackElement> stack = stackEntry.value;
+                                    // 遍历当前栈中的所有元素
                                     for (CallStackElement elem : stack) {
+                                        // 从嵌套执行器中获取变量
                                         LVar nestedVar = nestedExec.optionalVar(elem.varName);
                                         if (nestedVar != null) {
-                                            // 变量存在，设置其值
+                                            // 变量存在，设置其值为调用栈中保存的值
                                             if (elem.varValue instanceof Double) {
                                                 nestedVar.isobj = false;
                                                 nestedVar.numval = (Double) elem.varValue;
@@ -563,75 +563,80 @@ public class LNestedLogic {
                                                 nestedVar.isobj = true;
                                                 nestedVar.objval = elem.varValue;
                                             }
-                                            if (isDebug) {
-                                                log("call: 从栈 \"" + stackName + "\" 复制变量 - 名称: " + elem.varName + ", 值: " + elem.varValue);
-                                            }
+                                            log("call: 从栈 \"" + stackName + "\" 复制变量 - 名称: " + elem.varName + ", 值: " + elem.varValue + " 到嵌套执行器");
+                                        } else {
+                                            log("call: 嵌套执行器中未找到变量 - 名称: " + elem.varName);
                                         }
                                     }
                                 }
                                 
+                                // 记录日志：执行嵌套逻辑前
+                                log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
+                                
+                                // 编译嵌套指令到nestedBuilder
+                                nestedBuilder.instructions = nestedInstructions;
+                                
                                 // 加载嵌套指令到嵌套执行器
                                 nestedExec.load(nestedBuilder);
                                 
-                                // 重置嵌套执行器的counter为0
+                                // 重置嵌套执行器的counter为0，确保从第一条指令开始执行
                                 nestedExec.counter.numval = 0;
                                 
                                 // 执行嵌套指令，使用LExecutor的原生执行逻辑
+                                // 执行嵌套指令，直到所有指令执行完毕或达到最大指令数限制
                                 int instructionCount = 0;
                                 double originalMainCounter = exec.counter.numval;
                                 
-                                // 为嵌套执行器设置独立的最大指令数限制
+                                // 为嵌套执行器设置独立的最大指令数限制，防止无限循环卡死游戏
+                                // 使用与主执行器相同的最大指令数，但独立计算
                                 int nestedMaxInstructions = LExecutor.maxInstructions;
                                 int nestedCounter = 0;
                                 
-                                // 优化：直接执行指令，减少日志输出
                                 while (true) {
+                                    // 检查嵌套执行器是否已经执行完毕
                                     if (nestedExec.counter.numval >= nestedExec.instructions.length) {
-                                        break; // 执行完毕
+                                        log("call: 嵌套逻辑执行完毕");
+                                        break;
                                     }
                                     
+                                    // 检查嵌套执行器是否达到最大指令数限制（独立于主执行器）
+                                    // 这确保嵌套逻辑的无限循环不会导致游戏卡死
                                     if (nestedCounter >= nestedMaxInstructions) {
-                                        if (isDebug) {
-                                            log("call: 嵌套逻辑达到单tick最大指令数限制");
-                                        }
+                                        log("call: 嵌套逻辑达到单tick最大指令数限制，停止执行");
                                         break;
                                     }
                                     
                                     // 执行一条嵌套指令
                                     nestedExec.runOnce();
+                                    
+                                    // 增加指令计数
                                     instructionCount++;
                                     nestedCounter++;
                                 }
                                 
-                                // 恢复主执行器的counter值
+                                // 恢复主执行器的counter值，确保call指令不会影响主执行器的指令预算
+                                // 嵌套逻辑应该在独立的指令预算中执行，不影响主逻辑
                                 exec.counter.numval = originalMainCounter;
                                 
-                                if (isDebug) {
-                                    log("call: 执行了 " + instructionCount + " 条嵌套指令");
-                                }
+                                log("call: 执行了 " + instructionCount + " 条嵌套指令");
                                 
-                                // 更新栈中的变量值（从嵌套执行器）
+                                // 更新所有栈中的变量值（从嵌套执行器）
                                 for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : stacks) {
-                                    Seq<CallStackElement> stack = stackEntry.value;
-                                    if (stack.isEmpty()) continue;
-                                    
                                     String stackName = stackEntry.key;
+                                    Seq<CallStackElement> stack = stackEntry.value;
+                                    // 遍历当前栈中的所有元素
                                     for (CallStackElement elem : stack) {
                                         LVar nestedVar = nestedExec.optionalVar(elem.varName);
                                         if (nestedVar != null) {
                                             // 更新调用栈中的变量值
                                             elem.varValue = nestedVar.isobj ? nestedVar.objval : nestedVar.numval;
-                                            if (isDebug) {
-                                                log("call: 更新栈 \"" + stackName + "\" 中变量 " + elem.varName + " 的值为 " + elem.varValue);
-                                            }
+                                            log("call: 更新栈 \"" + stackName + "\" 中变量 " + elem.varName + " 的值为 " + elem.varValue);
                                         }
                                     }
                                 }
                                 
                             } finally {
-                                if (isDebug) {
-                                    log("call: 嵌套逻辑执行完毕，退出调用");
-                                }
+                                log("call: 嵌套逻辑执行完毕，退出调用");
                             }
                         };
                     } catch (Exception e) {
