@@ -238,8 +238,16 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
+                // 为p2添加数字验证
                 fields(table, "Index", p2, str -> {
-                    p2 = str;
+                    try {
+                        // 尝试解析为整数
+                        Integer.parseInt(str);
+                        p2 = str;
+                    } catch (NumberFormatException e) {
+                        // 如果输入不是数字，保持原有值
+                        // 不做任何操作，保留之前的有效数字
+                    }
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
@@ -361,8 +369,16 @@ public class LNestedLogic {
                 }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.variable", "Variable")));
                 
+                // 为p2添加数字验证
                 fields(table, "Index", p2, str -> {
-                    p2 = str;
+                    try {
+                        // 尝试解析为整数
+                        Integer.parseInt(str);
+                        p2 = str;
+                    } catch (NumberFormatException e) {
+                        // 如果输入不是数字，保持原有值
+                        // 不做任何操作，保留之前的有效数字
+                    }
                     saveUI();
                 }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.index", "Index")));
@@ -385,7 +401,7 @@ public class LNestedLogic {
         public LExecutor.LInstruction build(LAssembler builder) {
             switch (type) {
                 case push:
-                    // 注册要压入的变量和索引变量
+                    // 注册要压入的变量
                     if (!p1.isEmpty()) {
                         builder.putVar(p1);
                     }
@@ -393,6 +409,7 @@ public class LNestedLogic {
                     if (!p2.isEmpty() && !p2.matches("\\d+")) {
                         builder.putVar(p2);
                     }
+                    // p3不注册为变量，只作为文本使用
                     // push指令：将变量压入全局调用栈，支持索引和多栈
                         return (LExecutor exec) -> {
                             // 获取要压入的变量
@@ -436,13 +453,14 @@ public class LNestedLogic {
                                     }
                                 }
                                 
-                                // 获取栈名称，默认为"default"
+                                // 对栈名进行Base64编码
                                 String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
+                                String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
                                 
                                 // 加锁确保栈操作的线程安全，同一时间只能读或写，支持同时读，不支持同时写
                                 synchronized(stackLock) {
                                     // 获取指定名称的栈
-                                    Seq<CallStackElement> currentStack = getStack(stackName);
+                                    Seq<CallStackElement> currentStack = getStack(encodedStackName);
                                     
                                     // 检查调用栈中是否已经存在该索引，如果存在则更新其值
                                     boolean alreadyExists = false;
@@ -451,10 +469,10 @@ public class LNestedLogic {
                                             // 更新已有索引的值
                                             existingElem.varName = p1;
                                             existingElem.varValue = var.isobj ? var.objval : var.numval;
-                                            existingElem.stackName = stackName;
+                                            existingElem.stackName = encodedStackName;
                                             existingElem.lastPushTime = System.currentTimeMillis();
                                             alreadyExists = true;
-                                            log("push: 更新栈 \"" + stackName + "\" 中索引 " + index + " 的变量 " + p1 + " 值为 " + existingElem.varValue);
+                                            log("push: 更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的变量 " + p1 + " 值为 " + existingElem.varValue);
                                             break;
                                         }
                                     }
@@ -464,11 +482,11 @@ public class LNestedLogic {
                                         elem.varName = p1;
                                         elem.varValue = var.isobj ? var.objval : var.numval;
                                         elem.index = index;
-                                        elem.stackName = stackName;
+                                        elem.stackName = encodedStackName;
                                         elem.lastPushTime = System.currentTimeMillis();
                                         currentStack.add(elem);
                                         // 记录日志
-                                        log("push: 将变量 " + p1 + " 压入栈 \"" + stackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
+                                        log("push: 将变量 " + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
                                     }
                                 }
                             } else {
@@ -621,7 +639,7 @@ public class LNestedLogic {
                     };
                     
                 case pop:
-                    // 注册要弹出到的变量和索引变量
+                    // 注册要弹出到的变量
                     if (!p1.isEmpty()) {
                         builder.putVar(p1);
                     }
@@ -629,10 +647,12 @@ public class LNestedLogic {
                     if (!p2.isEmpty() && !p2.matches("\\d+")) {
                         builder.putVar(p2);
                     }
+                    // p3不注册为变量，只作为文本使用
                     // pop指令：从全局调用栈中弹出指定索引的值到指定变量，支持多栈
                         return (LExecutor exec) -> {
-                            // 获取栈名称，默认为"default"
+                            // 对栈名进行Base64编码
                             String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
+                            String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
                             
                             // 解析索引值，支持变量引用
                             int index = 0;
@@ -675,9 +695,9 @@ public class LNestedLogic {
                             // 加锁确保栈操作的线程安全，同一时间只能读或写，支持同时读，不支持同时写
                             synchronized(stackLock) {
                                 // 获取指定名称的栈
-                                Seq<CallStackElement> currentStack = getStack(stackName);
+                                Seq<CallStackElement> currentStack = getStack(encodedStackName);
                                 if (currentStack.isEmpty()) {
-                                    log("pop: 栈 \"" + stackName + "\" 为空，无法弹出值");
+                                    log("pop: 栈 \"" + encodedStackName + "\" 为空，无法读取值");
                                     return;
                                 }
                                 
@@ -708,14 +728,11 @@ public class LNestedLogic {
                                         targetVar.objval = targetElem.varValue;
                                     }
                                     
-                                    // 从调用栈中移除该元素
-                                    currentStack.remove(targetElem);
-                                    
-                                    // 记录日志
-                                    log("pop: 从栈 \"" + stackName + "\" 的索引 " + index + " 弹出值 " + targetElem.varValue + " 到变量 " + p1);
+                                    // 记录日志，不删除元素
+                                    log("pop: 从栈 \"" + encodedStackName + "\" 的索引 " + index + " 读取值 " + targetElem.varValue + " 到变量 " + p1);
                                 } else {
                                     // 记录日志
-                                    log("pop: 栈 \"" + stackName + "\" 中不存在索引为 " + index + " 的元素");
+                                    log("pop: 栈 \"" + encodedStackName + "\" 中不存在索引为 " + index + " 的元素");
                                 }
                             }
                         };
