@@ -8,6 +8,7 @@ import mindustry.logic.LCategory;
 import mindustry.logic.LExecutor;
 import mindustry.logic.LStatement;
 import mindustry.logic.LVar;
+import mindustry.world.building.Building;
 import java.util.Base64;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
@@ -509,7 +510,7 @@ public class LNestedLogic {
                                         // 检查链接点是否有效
                                         if (link.valid) {
                                             // 获取链接点对应的建筑
-                                            mindustry.world.Building building = mindustry.Vars.world.build(link.x, link.y);
+                                            Building building = mindustry.Vars.world.build(link.x, link.y);
                                             if (building != null) {
                                                 // 在嵌套逻辑的汇编器中创建链接点变量
                                                 nestedBuilder.putConst(link.name, building);
