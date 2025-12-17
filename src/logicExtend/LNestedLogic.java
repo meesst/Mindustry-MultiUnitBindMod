@@ -718,12 +718,12 @@ public class LNestedLogic {
             // 先序列化指令类型
             builder.append(type.name());
             builder.append(" ");
-            // 序列化唯一编号
-            builder.append(uniqueId);
-            builder.append(" ");
             
             if (type == NestedLogicType.call) {
                 // call指令格式：nestedlogic call uniqueId logicName "encodedCode"
+                // 序列化唯一编号
+                builder.append(uniqueId);
+                builder.append(" ");
                 // 序列化第一个参数（logicName，玩家备注）
                 builder.append(p1);
                 builder.append(" ");
@@ -731,7 +731,7 @@ public class LNestedLogic {
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
                 builder.append('"').append(encoded).append('"');
             } else {
-                // push/pop指令：nestedlogic type uniqueId p1 p2 p3
+                // push/pop指令：nestedlogic type p1 p2 p3
                 // 序列化第一个参数
                 builder.append(p1);
                 builder.append(" ");
@@ -779,13 +779,13 @@ public class LNestedLogic {
                     }
                 }
                 
-                // 解析唯一编号
-                if (params.length >= 3) {
-                    stmt.uniqueId = params[2];
-                }
-                
                 if (stmt.type == NestedLogicType.call) {
                     // call指令格式：nestedlogic call uniqueId logicName "encodedCode"
+                    // 解析唯一编号
+                    if (params.length >= 3) {
+                        stmt.uniqueId = params[2];
+                    }
+                    
                     // 解析logicName（玩家备注）和嵌套代码
                     if (params.length >= 4) {
                         // 寻找嵌套代码的位置（以引号开头的参数）
@@ -831,18 +831,18 @@ public class LNestedLogic {
                         }
                     }
                 } else {
-                    // push/pop指令：nestedlogic type uniqueId p1 p2 p3
+                    // push/pop指令：nestedlogic type p1 p2 p3
                     // 解析第一个参数
-                    if (params.length >= 4) {
-                        stmt.p1 = params[3];
+                    if (params.length >= 3) {
+                        stmt.p1 = params[2];
                     }
                     // 解析第二个参数
-                    if (params.length >= 5) {
-                        stmt.p2 = params[4];
+                    if (params.length >= 4) {
+                        stmt.p2 = params[3];
                     }
                     // 解析第三个参数（stackName）
-                    if (params.length >= 6) {
-                        stmt.p3 = params[5];
+                    if (params.length >= 5) {
+                        stmt.p3 = params[4];
                     }
                 }
                 stmt.afterRead();
