@@ -51,6 +51,9 @@ public class LNestedLogic {
     /** 全局栈存储，key为栈名称，value为该栈的元素列表 */
     public static final arc.struct.ObjectMap<String, Seq<CallStackElement>> stacks = new arc.struct.ObjectMap<>();
     
+    /** 用于管理栈操作的锁，确保同一时间只能读或写，支持同时读，不支持同时写 */
+    private static final Object stackLock = new Object();
+    
     /** 定时器，用于自动回收栈元素 */
     private static arc.util.Timer.Task cleanupTask;
     
@@ -427,34 +430,37 @@ public class LNestedLogic {
                                 // 获取栈名称，默认为"default"
                                 String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
                                 
-                                // 获取指定名称的栈
-                                Seq<CallStackElement> currentStack = getStack(stackName);
-                                
-                                // 检查调用栈中是否已经存在该索引，如果存在则更新其值
-                                boolean alreadyExists = false;
-                                for (CallStackElement existingElem : currentStack) {
-                                    if (existingElem.index == index) {
-                                        // 更新已有索引的值
-                                        existingElem.varName = p1;
-                                        existingElem.varValue = var.isobj ? var.objval : var.numval;
-                                        existingElem.stackName = stackName;
-                                        existingElem.lastPushTime = System.currentTimeMillis();
-                                        alreadyExists = true;
-                                        log("push: 更新栈 \"" + stackName + "\" 中索引 " + index + " 的变量 " + p1 + " 值为 " + existingElem.varValue);
-                                        break;
+                                // 加锁确保栈操作的线程安全，同一时间只能读或写，支持同时读，不支持同时写
+                                synchronized(stackLock) {
+                                    // 获取指定名称的栈
+                                    Seq<CallStackElement> currentStack = getStack(stackName);
+                                    
+                                    // 检查调用栈中是否已经存在该索引，如果存在则更新其值
+                                    boolean alreadyExists = false;
+                                    for (CallStackElement existingElem : currentStack) {
+                                        if (existingElem.index == index) {
+                                            // 更新已有索引的值
+                                            existingElem.varName = p1;
+                                            existingElem.varValue = var.isobj ? var.objval : var.numval;
+                                            existingElem.stackName = stackName;
+                                            existingElem.lastPushTime = System.currentTimeMillis();
+                                            alreadyExists = true;
+                                            log("push: 更新栈 \"" + stackName + "\" 中索引 " + index + " 的变量 " + p1 + " 值为 " + existingElem.varValue);
+                                            break;
+                                        }
                                     }
-                                }
-                                
-                                if (!alreadyExists) {
-                                    CallStackElement elem = new CallStackElement();
-                                    elem.varName = p1;
-                                    elem.varValue = var.isobj ? var.objval : var.numval;
-                                    elem.index = index;
-                                    elem.stackName = stackName;
-                                    elem.lastPushTime = System.currentTimeMillis();
-                                    currentStack.add(elem);
-                                    // 记录日志
-                                    log("push: 将变量 " + p1 + " 压入栈 \"" + stackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
+                                    
+                                    if (!alreadyExists) {
+                                        CallStackElement elem = new CallStackElement();
+                                        elem.varName = p1;
+                                        elem.varValue = var.isobj ? var.objval : var.numval;
+                                        elem.index = index;
+                                        elem.stackName = stackName;
+                                        elem.lastPushTime = System.currentTimeMillis();
+                                        currentStack.add(elem);
+                                        // 记录日志
+                                        log("push: 将变量 " + p1 + " 压入栈 \"" + stackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
+                                    }
                                 }
                             } else {
                                 // 记录日志
@@ -544,31 +550,7 @@ public class LNestedLogic {
                                     log("call: 嵌套执行器变量 - 名称: " + var.name + ", 类型: " + (var.isobj ? "对象" : "数值") + ", 值: " + (var.isobj ? var.objval : var.numval));
                                 }
                                 
-                                // 复制所有栈中的变量值到嵌套执行器
-                                log("call: 复制所有栈中的变量值到嵌套执行器");
-                                // 遍历所有栈
-                                for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : stacks) {
-                                    String stackName = stackEntry.key;
-                                    Seq<CallStackElement> stack = stackEntry.value;
-                                    // 遍历当前栈中的所有元素
-                                    for (CallStackElement elem : stack) {
-                                        // 从嵌套执行器中获取变量
-                                        LVar nestedVar = nestedExec.optionalVar(elem.varName);
-                                        if (nestedVar != null) {
-                                            // 变量存在，设置其值为调用栈中保存的值
-                                            if (elem.varValue instanceof Double) {
-                                                nestedVar.isobj = false;
-                                                nestedVar.numval = (Double) elem.varValue;
-                                            } else {
-                                                nestedVar.isobj = true;
-                                                nestedVar.objval = elem.varValue;
-                                            }
-                                            log("call: 从栈 \"" + stackName + "\" 复制变量 - 名称: " + elem.varName + ", 值: " + elem.varValue + " 到嵌套执行器");
-                                        } else {
-                                            log("call: 嵌套执行器中未找到变量 - 名称: " + elem.varName);
-                                        }
-                                    }
-                                }
+
                                 
                                 // 记录日志：执行嵌套逻辑前
                                 log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
@@ -620,20 +602,7 @@ public class LNestedLogic {
                                 
                                 log("call: 执行了 " + instructionCount + " 条嵌套指令");
                                 
-                                // 更新所有栈中的变量值（从嵌套执行器）
-                                for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> stackEntry : stacks) {
-                                    String stackName = stackEntry.key;
-                                    Seq<CallStackElement> stack = stackEntry.value;
-                                    // 遍历当前栈中的所有元素
-                                    for (CallStackElement elem : stack) {
-                                        LVar nestedVar = nestedExec.optionalVar(elem.varName);
-                                        if (nestedVar != null) {
-                                            // 更新调用栈中的变量值
-                                            elem.varValue = nestedVar.isobj ? nestedVar.objval : nestedVar.numval;
-                                            log("call: 更新栈 \"" + stackName + "\" 中变量 " + elem.varName + " 的值为 " + elem.varValue);
-                                        }
-                                    }
-                                }
+
                                 
                             } finally {
                                 log("call: 嵌套逻辑执行完毕，退出调用");
@@ -657,13 +626,6 @@ public class LNestedLogic {
                         return (LExecutor exec) -> {
                             // 获取栈名称，默认为"default"
                             String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
-                            
-                            // 获取指定名称的栈
-                            Seq<CallStackElement> currentStack = getStack(stackName);
-                            if (currentStack.isEmpty()) {
-                                log("pop: 栈 \"" + stackName + "\" 为空，无法弹出值");
-                                return;
-                            }
                             
                             // 解析索引值，支持变量引用
                             int index = 0;
@@ -703,41 +665,51 @@ public class LNestedLogic {
                                 }
                             }
                             
-                            // 查找指定索引的元素
-                            CallStackElement targetElem = null;
-                            for (CallStackElement elem : currentStack) {
-                                if (elem.index == index) {
-                                    targetElem = elem;
-                                    break;
-                                }
-                            }
-                            
-                            if (targetElem != null) {
-                                // 获取要弹出到的变量
-                                LVar targetVar = exec.optionalVar(p1);
-                                if (targetVar == null) {
-                                    // 变量不存在，跳过
-                                    log("pop: 目标变量 " + p1 + " 不存在");
+                            // 加锁确保栈操作的线程安全，同一时间只能读或写，支持同时读，不支持同时写
+                            synchronized(stackLock) {
+                                // 获取指定名称的栈
+                                Seq<CallStackElement> currentStack = getStack(stackName);
+                                if (currentStack.isEmpty()) {
+                                    log("pop: 栈 \"" + stackName + "\" 为空，无法弹出值");
                                     return;
                                 }
                                 
-                                // 设置变量值
-                                if (targetElem.varValue instanceof Double) {
-                                    targetVar.isobj = false;
-                                    targetVar.numval = (Double) targetElem.varValue;
-                                } else {
-                                    targetVar.isobj = true;
-                                    targetVar.objval = targetElem.varValue;
+                                // 查找指定索引的元素
+                                CallStackElement targetElem = null;
+                                for (CallStackElement elem : currentStack) {
+                                    if (elem.index == index) {
+                                        targetElem = elem;
+                                        break;
+                                    }
                                 }
                                 
-                                // 从调用栈中移除该元素
-                                currentStack.remove(targetElem);
-                                
-                                // 记录日志
-                                log("pop: 从栈 \"" + stackName + "\" 的索引 " + index + " 弹出值 " + targetElem.varValue + " 到变量 " + p1);
-                            } else {
-                                // 记录日志
-                                log("pop: 栈 \"" + stackName + "\" 中不存在索引为 " + index + " 的元素");
+                                if (targetElem != null) {
+                                    // 获取要弹出到的变量
+                                    LVar targetVar = exec.optionalVar(p1);
+                                    if (targetVar == null) {
+                                        // 变量不存在，跳过
+                                        log("pop: 目标变量 " + p1 + " 不存在");
+                                        return;
+                                    }
+                                    
+                                    // 设置变量值
+                                    if (targetElem.varValue instanceof Double) {
+                                        targetVar.isobj = false;
+                                        targetVar.numval = (Double) targetElem.varValue;
+                                    } else {
+                                        targetVar.isobj = true;
+                                        targetVar.objval = targetElem.varValue;
+                                    }
+                                    
+                                    // 从调用栈中移除该元素
+                                    currentStack.remove(targetElem);
+                                    
+                                    // 记录日志
+                                    log("pop: 从栈 \"" + stackName + "\" 的索引 " + index + " 弹出值 " + targetElem.varValue + " 到变量 " + p1);
+                                } else {
+                                    // 记录日志
+                                    log("pop: 栈 \"" + stackName + "\" 中不存在索引为 " + index + " 的元素");
+                                }
                             }
                         };
                     
