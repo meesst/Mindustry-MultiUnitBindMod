@@ -498,15 +498,21 @@ public class LNestedLogic {
                             nestedExec.links = exec.links;
                             nestedExec.linkIds = exec.linkIds;
                             
-                            // 从主执行器复制动态变量的实际值到嵌套执行器
-                            nestedExec.thisv.set(exec.thisv);
-                            nestedExec.unit.set(exec.unit);
-                            
                             // 加载嵌套指令到嵌套执行器
                             nestedExec.load(nestedBuilder);
                             
+                            // 从主执行器复制动态变量的实际值到嵌套执行器
+                            if (nestedExec.thisv != null && exec.thisv != null) {
+                                nestedExec.thisv.set(exec.thisv);
+                            }
+                            if (nestedExec.unit != null && exec.unit != null) {
+                                nestedExec.unit.set(exec.unit);
+                            }
+                            
                             // 重置嵌套执行器的counter为0
-                            nestedExec.counter.numval = 0;
+                            if (nestedExec.counter != null) {
+                                nestedExec.counter.numval = 0;
+                            }
                             
                             // 执行嵌套指令，与游戏的执行机制一致
                             int instructionCount = 0;
