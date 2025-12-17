@@ -517,11 +517,6 @@ public class LNestedLogic {
                                             }
                                         }
                                     }
-                                    
-                                    // 添加@links常量，值为主逻辑块的链接数量
-                                    nestedBuilder.putConst("@links", exec.links.length);
-                                    // 添加@ipt常量，值为指令每tick执行数量
-                                    nestedBuilder.putConst("@ipt", exec.build.ipt);
                                 }
                                 
                                 // 创建嵌套执行器
@@ -551,6 +546,25 @@ public class LNestedLogic {
                                 nestedExec.privileged = exec.privileged;
                                 nestedExec.links = exec.links;
                                 nestedExec.linkIds = exec.linkIds;
+                            }
+                            
+                            // 更新嵌套执行器的@links和@ipt常量，确保数据是最新的
+                            if (nestedExec.build != null) {
+                                // 获取主逻辑块的@links变量
+                                LVar linksVar = nestedExec.optionalVar("@links");
+                                if (linksVar != null) {
+                                    // 更新@links常量，值为主逻辑块的链接数量
+                                    linksVar.isobj = false;
+                                    linksVar.numval = nestedExec.links.length;
+                                }
+                                
+                                // 获取主逻辑块的@ipt变量
+                                LVar iptVar = nestedExec.optionalVar("@ipt");
+                                if (iptVar != null) {
+                                    // 更新@ipt常量，值为指令每tick执行数量
+                                    iptVar.isobj = false;
+                                    iptVar.numval = nestedExec.build.ipt;
+                                }
                             }
                             
                             // 从主执行器复制动态变量的实际值到嵌套执行器
