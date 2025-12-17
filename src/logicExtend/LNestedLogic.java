@@ -195,6 +195,11 @@ public class LNestedLogic {
         // 存储嵌套的逻辑代码（仅call类型使用）
         public String nestedCode = "";
         
+        // 编译后的嵌套逻辑缓存
+        private transient LAssembler cachedNestedBuilder = null;
+        // 嵌套执行器缓存，用于保持变量状态
+        private transient LExecutor cachedNestedExec = null;
+        
         // 重写name方法，返回正确的指令名称
         @Override
         public String name() {
@@ -486,20 +491,45 @@ public class LNestedLogic {
                             // 记录日志：开始执行call指令
                             log("call: 开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
                             
-                            // 直接编译嵌套逻辑，复用游戏的编译机制
-                            LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
+                            // 创建或获取嵌套执行器
+                            LExecutor nestedExec;
                             
-                            // 创建嵌套执行器
-                            log("call: 创建嵌套执行器");
-                            LExecutor nestedExec = new LExecutor();
-                            nestedExec.build = exec.build;
-                            nestedExec.team = exec.team;
-                            nestedExec.privileged = exec.privileged;
-                            nestedExec.links = exec.links;
-                            nestedExec.linkIds = exec.linkIds;
-                            
-                            // 加载嵌套指令到嵌套执行器
-                            nestedExec.load(nestedBuilder);
+                            // 检查是否有缓存的嵌套执行器
+                            if (cachedNestedExec == null) {
+                                // 第一次执行，编译嵌套逻辑
+                                log("call: 第一次执行，编译嵌套逻辑");
+                                
+                                // 直接编译嵌套逻辑，复用游戏的编译机制
+                                LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
+                                
+                                // 创建嵌套执行器
+                                log("call: 创建嵌套执行器");
+                                nestedExec = new LExecutor();
+                                nestedExec.build = exec.build;
+                                nestedExec.team = exec.team;
+                                nestedExec.privileged = exec.privileged;
+                                nestedExec.links = exec.links;
+                                nestedExec.linkIds = exec.linkIds;
+                                
+                                // 加载嵌套指令到嵌套执行器
+                                nestedExec.load(nestedBuilder);
+                                
+                                // 缓存编译后的嵌套逻辑和执行器
+                                cachedNestedBuilder = nestedBuilder;
+                                cachedNestedExec = nestedExec;
+                                log("call: 缓存嵌套逻辑和执行器");
+                            } else {
+                                // 使用缓存的执行器，保持变量状态
+                                log("call: 使用缓存的执行器，保持变量状态");
+                                nestedExec = cachedNestedExec;
+                                
+                                // 更新执行器的属性
+                                nestedExec.build = exec.build;
+                                nestedExec.team = exec.team;
+                                nestedExec.privileged = exec.privileged;
+                                nestedExec.links = exec.links;
+                                nestedExec.linkIds = exec.linkIds;
+                            }
                             
                             // 从主执行器复制动态变量的实际值到嵌套执行器
                             if (nestedExec.thisv != null && exec.thisv != null) {
@@ -698,6 +728,15 @@ public class LNestedLogic {
         public void afterRead() {
             // 不需要额外处理，直接使用nestedCode
             // 嵌套代码的解析已经在customParsers中处理
+        }
+        
+        // 重写setNestedCode方法，在nestedCode更新时清除缓存
+        public void setNestedCode(String nestedCode) {
+            this.nestedCode = nestedCode;
+            // 清除缓存，下次执行时重新编译
+            this.cachedNestedBuilder = null;
+            this.cachedNestedExec = null;
+            log("call: nestedCode更新，清除缓存");
         }
         
         /** Anuken, if you see this, you can replace it with your own @RegisterStatement, because this is my last resort... **/
