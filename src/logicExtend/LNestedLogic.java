@@ -15,6 +15,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 import static mindustry.logic.LCanvas.tooltip;
 import static arc.Core.*;
@@ -183,6 +184,8 @@ public class LNestedLogic {
     public static class LNestedLogicStatement extends LStatement {
         // 指令类型
         public NestedLogicType type = NestedLogicType.push;
+        // 唯一编号，用于标识每个call指令实例
+        public String uniqueId = UUID.randomUUID().toString();
         // 第一个参数（push的变量名，或call的逻辑名）
         public String p1 = "";
         // 第二个参数（index，push/pop使用）
@@ -469,149 +472,81 @@ public class LNestedLogic {
                         };
                     
                 case call:
-                    try {
-                        // 解析嵌套代码
-                        // 使用false作为privileged参数，因为我们无法访问builder的私有字段
-                        Seq<LStatement> nestedStatements = LAssembler.read(nestedCode, false);
+                    return (LExecutor exec) -> {
+                        // 使用简单的嵌套深度限制
+                        ThreadLocal<Integer> nestedDepth = ThreadLocal.withInitial(() -> 0);
+                        if (nestedDepth.get() >= 5) { // 限制嵌套深度为5层
+                            log("call: 嵌套深度超过限制，最大深度为5");
+                            return;
+                        }
                         
-                        // 清除嵌套逻辑的LStatement对象的elem属性，避免影响主层级的checkHovered()方法
-                        nestedStatements.each(l -> l.elem = null);
-                        
-                        // 创建新的LAssembler实例，不共享主builder的变量表
-                        LAssembler nestedBuilder = new LAssembler();
-                        // 设置nestedBuilder的privileged字段为主builder的privileged字段
-                        java.lang.reflect.Field privilegedField = null;
                         try {
-                            privilegedField = LAssembler.class.getDeclaredField("privileged");
-                            privilegedField.setAccessible(true);
-                            privilegedField.setBoolean(nestedBuilder, privilegedField.getBoolean(builder));
-                        } catch (Exception e) {
-                            // 忽略反射异常
-                        }
-                        
-                        // 复制所有变量（除了@counter）
-                        // 这确保嵌套逻辑能访问主逻辑中所有变量，包括普通变量和全局变量
-                        for (arc.struct.OrderedMap.Entry<String, LVar> entry : builder.vars) {
-                            String key = entry.key;
-                            LVar var = entry.value;
-                            if (!key.equals("@counter")) {
-                                LVar nestedVar = nestedBuilder.putVar(key);
-                                nestedVar.set(var);
-                                nestedVar.constant = var.constant;
-                            }
-                        }
-                        
-                        // 编译嵌套指令
-                        LExecutor.LInstruction[] nestedInstructions = nestedStatements.map(l -> {
-                            return l.build(nestedBuilder);
-                        }).retainAll(l -> l != null).toArray(LExecutor.LInstruction.class);
-                        
-                        return (LExecutor exec) -> {
+                            nestedDepth.set(nestedDepth.get() + 1);
+                            
                             // 记录日志：开始执行call指令
-                            log("call: 开始执行call指令，逻辑名称: " + p1);
+                            log("call: 开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
                             
-                            // 直接使用全局栈，不再创建上下文
-                            log("call: 使用全局栈进行操作");
+                            // 直接编译嵌套逻辑，复用游戏的编译机制
+                            LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
                             
-                            try {
-                                
-                                // 创建嵌套执行器
-                                log("call: 创建嵌套执行器");
-                                LExecutor nestedExec = new LExecutor();
-                                nestedExec.build = exec.build;
-                                nestedExec.team = exec.team;
-                                nestedExec.privileged = exec.privileged;
-                                nestedExec.links = exec.links;
-                                nestedExec.linkIds = exec.linkIds;
-                                
-                                // 关键修复：初始化嵌套执行器的vars数组
-                                // 将nestedBuilder中的所有非恒定变量复制到嵌套执行器的vars数组中
-                                log("call: 初始化嵌套执行器的vars数组，变量数量: " + nestedBuilder.vars.size);
-                                nestedExec.vars = nestedBuilder.vars.values().toSeq().retainAll(var -> !var.constant).toArray(LVar.class);
-                                // 为每个变量设置id
-                                for (int i = 0; i < nestedExec.vars.length; i++) {
-                                    nestedExec.vars[i].id = i;
+                            // 创建嵌套执行器
+                            log("call: 创建嵌套执行器");
+                            LExecutor nestedExec = new LExecutor();
+                            nestedExec.build = exec.build;
+                            nestedExec.team = exec.team;
+                            nestedExec.privileged = exec.privileged;
+                            nestedExec.links = exec.links;
+                            nestedExec.linkIds = exec.linkIds;
+                            
+                            // 从主执行器复制动态变量的实际值到嵌套执行器
+                            nestedExec.thisv.set(exec.thisv);
+                            nestedExec.unit.set(exec.unit);
+                            
+                            // 加载嵌套指令到嵌套执行器
+                            nestedExec.load(nestedBuilder);
+                            
+                            // 重置嵌套执行器的counter为0
+                            nestedExec.counter.numval = 0;
+                            
+                            // 执行嵌套指令，与游戏的执行机制一致
+                            int instructionCount = 0;
+                            double originalMainCounter = exec.counter.numval;
+                            
+                            // 为嵌套执行器设置独立的最大指令数限制
+                            int nestedMaxInstructions = LExecutor.maxInstructions;
+                            int nestedCounter = 0;
+                            
+                            while (true) {
+                                // 检查嵌套执行器是否已经执行完毕
+                                if (nestedExec.counter.numval >= nestedExec.instructions.length) {
+                                    log("call: 嵌套逻辑执行完毕");
+                                    break;
                                 }
                                 
-                                // 初始化嵌套执行器的counter、unit、thisv等字段
-                                nestedExec.counter = nestedBuilder.getVar("@counter");
-                                nestedExec.unit = nestedBuilder.getVar("@unit");
-                                nestedExec.thisv = nestedBuilder.getVar("@this");
-                                nestedExec.ipt = nestedBuilder.putConst("@ipt", nestedExec.build != null ? nestedExec.build.ipt : 0);
-                                
-                                // 从主执行器复制动态变量的实际值到嵌套执行器
-                                // 这些变量在编译时可能没有正确的值，需要在运行时获取
-                                nestedExec.thisv.set(exec.thisv);
-                                nestedExec.unit.set(exec.unit);
-                                
-                                // 记录日志：嵌套执行器变量列表
-                                log("call: 嵌套执行器变量数量: " + nestedExec.vars.length);
-                                for (LVar var : nestedExec.vars) {
-                                    log("call: 嵌套执行器变量 - 名称: " + var.name + ", 类型: " + (var.isobj ? "对象" : "数值") + ", 值: " + (var.isobj ? var.objval : var.numval));
+                                // 检查嵌套执行器是否达到最大指令数限制
+                                if (nestedCounter >= nestedMaxInstructions) {
+                                    log("call: 嵌套逻辑达到单tick最大指令数限制，停止执行");
+                                    break;
                                 }
                                 
-
+                                // 执行一条嵌套指令，与游戏的执行机制一致
+                                nestedExec.runOnce();
                                 
-                                // 记录日志：执行嵌套逻辑前
-                                log("call: 开始执行嵌套逻辑，指令数量: " + nestedInstructions.length);
-                                
-                                // 编译嵌套指令到nestedBuilder
-                                nestedBuilder.instructions = nestedInstructions;
-                                
-                                // 加载嵌套指令到嵌套执行器
-                                nestedExec.load(nestedBuilder);
-                                
-                                // 重置嵌套执行器的counter为0，确保从第一条指令开始执行
-                                nestedExec.counter.numval = 0;
-                                
-                                // 执行嵌套指令，使用LExecutor的原生执行逻辑
-                                // 执行嵌套指令，直到所有指令执行完毕或达到最大指令数限制
-                                int instructionCount = 0;
-                                double originalMainCounter = exec.counter.numval;
-                                
-                                // 为嵌套执行器设置独立的最大指令数限制，防止无限循环卡死游戏
-                                // 使用与主执行器相同的最大指令数，但独立计算
-                                int nestedMaxInstructions = LExecutor.maxInstructions;
-                                int nestedCounter = 0;
-                                
-                                while (true) {
-                                    // 检查嵌套执行器是否已经执行完毕
-                                    if (nestedExec.counter.numval >= nestedExec.instructions.length) {
-                                        log("call: 嵌套逻辑执行完毕");
-                                        break;
-                                    }
-                                    
-                                    // 检查嵌套执行器是否达到最大指令数限制（独立于主执行器）
-                                    // 这确保嵌套逻辑的无限循环不会导致游戏卡死
-                                    if (nestedCounter >= nestedMaxInstructions) {
-                                        log("call: 嵌套逻辑达到单tick最大指令数限制，停止执行");
-                                        break;
-                                    }
-                                    
-                                    // 执行一条嵌套指令
-                                    nestedExec.runOnce();
-                                    
-                                    // 增加指令计数
-                                    instructionCount++;
-                                    nestedCounter++;
-                                }
-                                
-                                // 恢复主执行器的counter值，确保call指令不会影响主执行器的指令预算
-                                // 嵌套逻辑应该在独立的指令预算中执行，不影响主逻辑
-                                exec.counter.numval = originalMainCounter;
-                                
-                                log("call: 执行了 " + instructionCount + " 条嵌套指令");
-                                
-
-                                
-                            } finally {
-                                log("call: 嵌套逻辑执行完毕，退出调用");
+                                // 增加指令计数
+                                instructionCount++;
+                                nestedCounter++;
                             }
-                        };
-                    } catch (Exception e) {
-                        // 如果编译失败，返回空指令
-                        return (LExecutor exec) -> {};
-                    }
+                            
+                            // 恢复主执行器的counter值
+                            exec.counter.numval = originalMainCounter;
+                            
+                            log("call: 执行了 " + instructionCount + " 条嵌套指令，唯一编号: " + uniqueId);
+                            
+                        } finally {
+                            nestedDepth.set(nestedDepth.get() - 1);
+                            log("call: 嵌套逻辑执行完毕，退出调用，唯一编号: " + uniqueId);
+                        }
+                    };
                     
                 case pop:
                     // 注册要弹出到的变量和索引变量
@@ -730,6 +665,9 @@ public class LNestedLogic {
             // 先序列化指令类型
             builder.append(type.name());
             builder.append(" ");
+            // 序列化唯一编号
+            builder.append(uniqueId);
+            builder.append(" ");
             // 序列化第一个参数
             builder.append(p1);
             builder.append(" ");
@@ -768,7 +706,7 @@ public class LNestedLogic {
                         stmt.type = NestedLogicType.valueOf(params[1]);
                     } catch (IllegalArgumentException e) {
                         // 旧格式：第一个参数是defaultFieldText，第二个是嵌套代码
-                        // 新格式：第一个参数是指令类型，第二个是p1，第三个是p2，第四个是嵌套代码
+                        // 新格式：第一个参数是指令类型，第二个是唯一编号，第三个是p1，第四个是p2，第五个是嵌套代码
                         stmt.type = NestedLogicType.call;
                         if (params.length >= 3) {
                             stmt.nestedCode = params[2];
@@ -777,21 +715,27 @@ public class LNestedLogic {
                     }
                 }
                 
+                // 解析唯一编号
                 if (params.length >= 3) {
-                    stmt.p1 = params[2];
+                    stmt.uniqueId = params[2];
+                }
+                
+                // 解析第一个参数
+                if (params.length >= 4) {
+                    stmt.p1 = params[3];
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
                     // call类型：支持两种格式
-                    // 格式1: nestedlogic call logicName "encodedCode" (没有p2参数)
-                    // 格式2: nestedlogic call logicName p2 "encodedCode" (带有p2参数)
-                    if (params.length >= 4) {
-                        // 检查参数3是否是引号包围的Base64代码
-                        if (params[3].startsWith("\"")) {
-                            // 格式1: 参数3是嵌套代码
+                    // 格式1: nestedlogic call uniqueId logicName "encodedCode" (没有p2参数)
+                    // 格式2: nestedlogic call uniqueId logicName p2 "encodedCode" (带有p2参数)
+                    if (params.length >= 5) {
+                        // 检查参数4是否是引号包围的Base64代码
+                        if (params[4].startsWith("\"")) {
+                            // 格式1: 参数4是嵌套代码
                             try {
                                 // 移除外层引号
-                                String encoded = params[3].substring(1, params[3].length() - 1);
+                                String encoded = params[4].substring(1, params[4].length() - 1);
                                 // 使用Base64解码嵌套代码
                                 byte[] decodedBytes = Base64.getDecoder().decode(encoded);
                                 stmt.nestedCode = new String(decodedBytes, StandardCharsets.UTF_8);
@@ -800,11 +744,11 @@ public class LNestedLogic {
                                 stmt.nestedCode = "";
                             }
                         } else {
-                            // 格式2: 参数3是p2，参数4是嵌套代码
-                            stmt.p2 = params[3];
-                            if (params.length >= 5) {
+                            // 格式2: 参数4是p2，参数5是嵌套代码
+                            stmt.p2 = params[4];
+                            if (params.length >= 6) {
                                 // 改进反序列化逻辑，使用Base64解码嵌套代码
-                                String rawCode = params[4];
+                                String rawCode = params[5];
                                 if (rawCode.startsWith("\"")) {
                                     try {
                                         // 移除外层引号
@@ -824,12 +768,12 @@ public class LNestedLogic {
                     }
                 } else {
                     // push和pop类型：支持索引参数和栈名称
-                    if (params.length >= 4) {
-                        stmt.p2 = params[3];
+                    if (params.length >= 5) {
+                        stmt.p2 = params[4];
                     }
                     // 解析第三个参数（stackName）
-                    if (params.length >= 5) {
-                        stmt.p3 = params[4];
+                    if (params.length >= 6) {
+                        stmt.p3 = params[5];
                     }
                 }
                 stmt.afterRead();
