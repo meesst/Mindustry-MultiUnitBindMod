@@ -401,13 +401,13 @@ public class LNestedLogic {
         public LExecutor.LInstruction build(LAssembler builder) {
             switch (type) {
                 case push:
-                    // 注册要压入的变量
+                    // p1使用builder.var处理
                     if (!p1.isEmpty()) {
-                        builder.putVar(p1);
+                        builder.var(p1);
                     }
-                    // 注册索引变量（如果是变量名）
-                    if (!p2.isEmpty() && !p2.matches("\\d+")) {
-                        builder.putVar(p2);
+                    // p2使用builder.var处理
+                    if (!p2.isEmpty()) {
+                        builder.var(p2);
                     }
                     // p3不注册为变量，只作为文本使用
                     // push指令：将变量压入全局调用栈，支持索引和多栈
@@ -639,13 +639,13 @@ public class LNestedLogic {
                     };
                     
                 case pop:
-                    // 注册要弹出到的变量
+                    // p1使用builder.var处理
                     if (!p1.isEmpty()) {
-                        builder.putVar(p1);
+                        builder.var(p1);
                     }
-                    // 注册索引变量（如果是变量名）
-                    if (!p2.isEmpty() && !p2.matches("\\d+")) {
-                        builder.putVar(p2);
+                    // p2使用builder.var处理
+                    if (!p2.isEmpty()) {
+                        builder.var(p2);
                     }
                     // p3不注册为变量，只作为文本使用
                     // pop指令：从全局调用栈中弹出指定索引的值到指定变量，支持多栈
