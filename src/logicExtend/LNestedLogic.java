@@ -502,6 +502,22 @@ public class LNestedLogic {
                                 // 直接编译嵌套逻辑，复用游戏的编译机制
                                 LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
                                 
+                                // 如果主逻辑块有链接点，将链接点变量添加到嵌套逻辑中
+                                if (exec.build != null) {
+                                    // 获取主逻辑块的链接点
+                                    for (var link : exec.build.links) {
+                                        // 检查链接点是否有效
+                                        if (link.valid) {
+                                            // 获取链接点对应的建筑
+                                            mindustry.world.Building building = mindustry.Vars.world.build(link.x, link.y);
+                                            if (building != null) {
+                                                // 在嵌套逻辑的汇编器中创建链接点变量
+                                                nestedBuilder.putConst(link.name, building);
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 // 创建嵌套执行器
                                 log("call: 创建嵌套执行器");
                                 nestedExec = new LExecutor();
