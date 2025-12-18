@@ -23,7 +23,7 @@ public class LEMain extends Mod {
             
             // 添加日志开关选项，使用checkPref方法的正确参数（3个参数）
             settings.checkPref("lnestedlogic-debug-log", false, value -> {
-                LNestedLogic.debugLog = value ? 1 : 0;
+                LELog.debugLog = value ? 1 : 0;
             });
             
             settingsTable.add(settings);
@@ -54,6 +54,6 @@ public class LEMain extends Mod {
         FastUnitControl.create();
         
         // 初始化debugLog值
-        LNestedLogic.debugLog = Core.settings.getBool("lnestedlogic-debug-log") ? 1 : 0;
+        LELog.debugLog = Core.settings.getBool("lnestedlogic-debug-log") ? 1 : 0;
     }
 }

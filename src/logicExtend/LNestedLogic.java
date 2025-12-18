@@ -67,6 +67,7 @@ public class LNestedLogic {
         }
         
         cleanupTask = Timer.schedule(() -> cleanupStacks(), checkInterval, checkInterval);
+        LELog.debug("初始化自动回收定时器，每" + checkInterval + "秒检查一次，元素超时时间：" + elementTimeout + "秒");
     }
     
     /** 清理超时的栈元素和空栈 */
@@ -74,8 +75,8 @@ public class LNestedLogic {
         if (stacks.isEmpty()) return;
         
         long currentTime = System.currentTimeMillis();
-        int timeout = settings.getInt("lnestedlogic-element-timeout", elementTimeout);
-        long timeoutMs = timeout * 1000L;
+        int timeoutValue = settings.getInt("lnestedlogic-element-timeout", elementTimeout);
+        long timeoutMs = timeoutValue * 1000L;
         
         Seq<String> emptyStacks = new Seq<>();
         for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> entry : stacks) {
@@ -88,8 +89,8 @@ public class LNestedLogic {
             }
             
             stack.removeAll(elem -> {
-                boolean timeout = currentTime - elem.lastPushTime > timeoutMs;
-                return timeout;
+                boolean isTimeout = currentTime - elem.lastPushTime > timeoutMs;
+                return isTimeout;
             });
             
             if (stack.isEmpty()) {
@@ -115,10 +116,7 @@ public class LNestedLogic {
     
     /** 日志记录方法 */
     public static void log(String message) {
-        if (settings.getBool("lnestedlogic-debug-log")) {
-            // 使用游戏内置日志系统
-            Log.infoTag("NestedLogic", message);
-        }
+        LELog.debug(message);
     }
     
     public static class LNestedLogicStatement extends LStatement {
@@ -192,7 +190,7 @@ public class LNestedLogic {
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
-                        log("call: Opening nested logic editor");
+                        log("开始点击Edit Logic按钮");
                         
                         // 简化的canvas处理
                         mindustry.logic.LCanvas originalCanvas = null;
@@ -205,8 +203,9 @@ public class LNestedLogic {
                             canvasField.setAccessible(true);
                             originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
                             reflectionSuccess = true;
+                            log("成功获取canvas字段");
                         } catch (Exception e) {
-                            log("call: Failed to get canvas field: " + e.getMessage());
+                            log("无法获取canvas字段: " + e.getMessage());
                         }
                         
                         // 恢复canvas的Runnable
@@ -215,8 +214,9 @@ public class LNestedLogic {
                                 try {
                                     canvasField.set(null, originalCanvas);
                                     originalCanvas.rebuild();
+                                    log("成功恢复canvas");
                                 } catch (Exception e) {
-                                    log("call: Failed to restore canvas: " + e.getMessage());
+                                    log("无法恢复canvas: " + e.getMessage());
                                 }
                             }
                         };
@@ -286,15 +286,24 @@ public class LNestedLogic {
                             if (indexVar != null) {
                                 if (!indexVar.isobj) {
                                     index = (int) indexVar.numval;
+                                    log("使用变量 " + p2 + " 的值 " + indexVar.numval + " 作为索引");
                                 } else if (indexVar.objval instanceof String) {
                                     try {
                                         index = Integer.parseInt((String) indexVar.objval);
-                                    } catch (NumberFormatException ignored) {}
+                                        log("成功将文本变量 \"" + p2 + "\" 的值 \"" + indexVar.objval + "\" 解析为索引 " + index);
+                                    } catch (NumberFormatException ignored) {
+                                        log("无法将文本变量 \"" + p2 + "\" 的值解析为数字，使用默认索引 0");
+                                    }
+                                } else {
+                                    log("变量 " + p2 + " 是对象类型，使用默认索引 0");
                                 }
                             } else {
                                 try {
                                     index = Integer.parseInt(p2);
-                                } catch (NumberFormatException ignored) {}
+                                    log("使用直接数字 " + p2 + " 作为索引");
+                                } catch (NumberFormatException ignored) {
+                                    log("无法解析 \"" + p2 + "\" 为数字，使用默认索引 0");
+                                }
                             }
                         }
                         
@@ -317,6 +326,7 @@ public class LNestedLogic {
                                 existing.varValue = pushValue;
                                 existing.stackName = encodedStackName;
                                 existing.lastPushTime = System.currentTimeMillis();
+                                log("更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的" + (isVariable ? "变量 " : "值 ") + p1 + " 值为 " + existing.varValue);
                             } else {
                                 CallStackElement elem = new CallStackElement();
                                 elem.varName = p1;
@@ -325,6 +335,7 @@ public class LNestedLogic {
                                 elem.stackName = encodedStackName;
                                 elem.lastPushTime = System.currentTimeMillis();
                                 currentStack.add(elem);
+                                log("将" + (isVariable ? "变量 " : "值 ") + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
                             }
                         }
                     };
@@ -333,14 +344,21 @@ public class LNestedLogic {
                     return (exec) -> {
                         // 简化的嵌套深度限制
                         ThreadLocal<Integer> nestedDepth = ThreadLocal.withInitial(() -> 0);
-                        if (nestedDepth.get() >= 5) return;
+                        if (nestedDepth.get() >= 5) {
+                            log("嵌套深度超过限制，最大深度为5");
+                            return;
+                        }
                         
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
+                            log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
+                            
                             LExecutor nestedExec;
                             
                             if (cachedNestedExec == null) {
+                                log("第一次执行，编译嵌套逻辑");
+                                
                                 LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
                                 
                                 if (exec.build != null) {
@@ -365,6 +383,7 @@ public class LNestedLogic {
                                 
                                 cachedNestedBuilder = nestedBuilder;
                                 cachedNestedExec = nestedExec;
+                                log("缓存嵌套逻辑和执行器");
                             } else {
                                 nestedExec = cachedNestedExec;
                                 nestedExec.build = exec.build;
@@ -372,6 +391,7 @@ public class LNestedLogic {
                                 nestedExec.privileged = exec.privileged;
                                 nestedExec.links = exec.links;
                                 nestedExec.linkIds = exec.linkIds;
+                                log("使用缓存的执行器，保持变量状态");
                             }
                             
                             // 更新嵌套执行器的常量
@@ -410,8 +430,11 @@ public class LNestedLogic {
                                 nestedExec.runOnce();
                                 nestedCounter++;
                             }
+                            
+                            log("嵌套逻辑执行完毕，执行了 " + nestedCounter + " 条指令");
                         } finally {
                             nestedDepth.set(nestedDepth.get() - 1);
+                            log("退出call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
                         }
                     };
                     
@@ -437,34 +460,53 @@ public class LNestedLogic {
                             if (indexVar != null) {
                                 if (!indexVar.isobj) {
                                     index = (int) indexVar.numval;
+                                    log("使用变量 " + p2 + " 的值 " + indexVar.numval + " 作为索引");
                                 } else if (indexVar.objval instanceof String) {
                                     try {
                                         index = Integer.parseInt((String) indexVar.objval);
-                                    } catch (NumberFormatException ignored) {}
+                                        log("成功将文本变量 \"" + p2 + "\" 的值 \"" + indexVar.objval + "\" 解析为索引 " + index);
+                                    } catch (NumberFormatException ignored) {
+                                        log("无法将文本变量 \"" + p2 + "\" 的值解析为数字，使用默认索引 0");
+                                    }
+                                } else {
+                                    log("变量 " + p2 + " 是对象类型，使用默认索引 0");
                                 }
                             } else {
                                 try {
                                     index = Integer.parseInt(p2);
-                                } catch (NumberFormatException ignored) {}
+                                    log("使用直接数字 " + p2 + " 作为索引");
+                                } catch (NumberFormatException ignored) {
+                                    log("无法解析 \"" + p2 + "\" 为数字，使用默认索引 0");
+                                }
                             }
                         }
                         
                         synchronized(stackLock) {
                             Seq<CallStackElement> currentStack = getStack(encodedStackName);
-                            if (currentStack.isEmpty()) return;
+                            if (currentStack.isEmpty()) {
+                                log("栈 \"" + encodedStackName + "\" 为空，无法读取值");
+                                return;
+                            }
                             
                             CallStackElement targetElem = currentStack.find(e -> e.index == index);
                             if (targetElem != null) {
                                 LVar targetVar = exec.optionalVar(p1);
-                                if (targetVar != null) {
-                                    if (targetElem.varValue instanceof Double) {
-                                        targetVar.isobj = false;
-                                        targetVar.numval = (Double) targetElem.varValue;
-                                    } else {
-                                        targetVar.isobj = true;
-                                        targetVar.objval = targetElem.varValue;
-                                    }
+                                if (targetVar == null) {
+                                    log("目标变量 " + p1 + " 不存在");
+                                    return;
                                 }
+                                
+                                if (targetElem.varValue instanceof Double) {
+                                    targetVar.isobj = false;
+                                    targetVar.numval = (Double) targetElem.varValue;
+                                } else {
+                                    targetVar.isobj = true;
+                                    targetVar.objval = targetElem.varValue;
+                                }
+                                
+                                log("从栈 \"" + encodedStackName + "\" 的索引 " + index + " 读取值 " + targetElem.varValue + " 到变量 " + p1);
+                            } else {
+                                log("栈 \"" + encodedStackName + "\" 中不存在索引为 " + index + " 的元素");
                             }
                         }
                     };
@@ -502,6 +544,7 @@ public class LNestedLogic {
             this.nestedCode = nestedCode;
             this.cachedNestedBuilder = null;
             this.cachedNestedExec = null;
+            log("nestedCode更新，清除缓存");
         }
         
         public static void create() {
