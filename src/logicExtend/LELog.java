@@ -34,7 +34,7 @@ public class LELog {
      * @param t 异常对象
      */
     public static void error(String message, Throwable t) {
-        Log.errTag("嵌套逻辑", message, t);
+        Log.errTag("嵌套逻辑", message + ": " + t.getMessage());
     }
     
     /**
