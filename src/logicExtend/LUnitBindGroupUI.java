@@ -59,8 +59,9 @@ public class LUnitBindGroupUI {
             table.setColor(table.color);
             table.left();
             
-            // 显示type参数和输入框，使用fields方法
-            TextField typeField = fields(table, "type", type, str -> type = str).size(120f, 40f).get();
+            // 显示type参数
+            table.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));  // 显示标签，添加空格并添加左12齐和参数样式及悬         // 创建可编辑的文本字段，用于输入或显示单位类型标识
+            TextField typeField = field(table, type, str -> type = str).get();
 
             // 添加选择按钮，点击后显示单位类型选择界面
             table.button(b -> {
@@ -98,10 +99,10 @@ public class LUnitBindGroupUI {
                     int value = Integer.parseInt(str);
                     count = value < 1 ? "1" : str;
                 } catch (NumberFormatException e) {
-                    // 如果输入不是数字，设置为默认值1
+            // 如果输入不是数字，设置为默认值1
                     count = "1";
                 }
-            }).size(80f, 40f).pad(2f);
+            }).size(60f, 40f).pad(2f);
               
             row(table);
 
@@ -112,19 +113,17 @@ public class LUnitBindGroupUI {
                 b.clicked(() -> showSelect(b, Mode.values(), mode, m -> {
                     mode = m;
                     rebuild(table);
-                }, 2, cell -> cell.size(40, 40)));
-            }, Styles.logict, () -> {}).size(80, 40).color(table.color).left().self(c -> tooltip(c, "unitbindgroup.mode"));
+                }, 1, cell -> cell.size(80, 40)));
+            }, Styles.logict, () -> {}).size(60, 40).color(table.color).left().self(c -> tooltip(c, "unitbindgroup.mode"));
             
             // 换行到第二排
             table.row();
             
             // 添加unitVar标签和输入框
-            fields(table, "unitVar", unitVar, str -> unitVar = str).size(80f, 40f).pad(2f);
+            fields(table, "unitVar", unitVar, str -> unitVar = str).size(120f, 40f).pad(2f);
               
-            row(table);
-
             // 添加indexVar标签和输入框
-            fields(table, "indexVar", indexVar, str -> indexVar = str).size(80f, 40f).pad(2f);
+            fields(table, "indexVar", indexVar, str -> indexVar = str).size(120f, 40f).pad(2f);
         }
         
     
