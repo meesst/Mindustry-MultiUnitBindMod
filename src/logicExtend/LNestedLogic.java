@@ -181,7 +181,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
-                row(table);
+                table.row();
 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -191,7 +191,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
-                row(table);
+                table.row();
 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
@@ -203,7 +203,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(120f, 40f).pad(2f);
                   
-                row(table);
+                table.row();
 
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
@@ -277,7 +277,7 @@ public class LNestedLogic {
                 }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.variable", "Variable")));
                   
-                row(table);
+                table.row();
 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -288,7 +288,7 @@ public class LNestedLogic {
                 }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.index", "Index")));
                 
-                row(table);
+                table.row();
 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
