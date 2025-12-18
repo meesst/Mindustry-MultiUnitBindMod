@@ -49,8 +49,8 @@ public class LNestedLogic {
     /** 定时器，用于自动回收栈元素 */
     private static Timer.Task cleanupTask;
     
-    /** 元素超时时间，默认30秒 */
-    public static int elementTimeout = 30;
+    /** 元素超时时间，默认10秒 */
+    public static int elementTimeout = 10;
     
     /** 检查间隔，默认10秒 */
     public static int checkInterval = 10;
