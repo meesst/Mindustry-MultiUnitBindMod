@@ -43,8 +43,10 @@ public class LNestedLogic {
     /** 全局栈存储，key为栈名称，value为该栈的元素列表 */
     public static final arc.struct.ObjectMap<String, Seq<CallStackElement>> stacks = new arc.struct.ObjectMap<>();
     
-    /** 用于管理栈操作的锁 */
-    private static final Object stackLock = new Object();
+    /** 用于管理栈操作的读写锁 */
+    private static final java.util.concurrent.locks.ReadWriteLock lock = new java.util.concurrent.locks.ReentrantReadWriteLock();
+    private static final java.util.concurrent.locks.Lock readLock = lock.readLock();
+    private static final java.util.concurrent.locks.Lock writeLock = lock.writeLock();
     
     /** 定时器，用于自动回收栈元素 */
     private static Timer.Task cleanupTask;
@@ -72,46 +74,56 @@ public class LNestedLogic {
     
     /** 清理超时的栈元素和空栈 */
     private static void cleanupStacks() {
-        if (stacks.isEmpty()) return;
-        
-        long currentTime = System.currentTimeMillis();
-        int timeoutValue = settings.getInt("lnestedlogic-element-timeout", elementTimeout);
-        long timeoutMs = timeoutValue * 1000L;
-        
-        Seq<String> emptyStacks = new Seq<>();
-        for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> entry : stacks) {
-            String stackName = entry.key;
-            Seq<CallStackElement> stack = entry.value;
+        writeLock.lock();
+        try {
+            if (stacks.isEmpty()) return;
             
-            if (stack.isEmpty()) {
-                emptyStacks.add(stackName);
-                continue;
+            long currentTime = System.currentTimeMillis();
+            int timeoutValue = settings.getInt("lnestedlogic-element-timeout", elementTimeout);
+            long timeoutMs = timeoutValue * 1000L;
+            
+            Seq<String> emptyStacks = new Seq<>();
+            for (arc.struct.ObjectMap.Entry<String, Seq<CallStackElement>> entry : stacks) {
+                String stackName = entry.key;
+                Seq<CallStackElement> stack = entry.value;
+                
+                if (stack.isEmpty()) {
+                    emptyStacks.add(stackName);
+                    continue;
+                }
+                
+                stack.removeAll(elem -> {
+                    boolean isTimeout = currentTime - elem.lastPushTime > timeoutMs;
+                    return isTimeout;
+                });
+                
+                if (stack.isEmpty()) {
+                    emptyStacks.add(stackName);
+                }
             }
             
-            stack.removeAll(elem -> {
-                boolean isTimeout = currentTime - elem.lastPushTime > timeoutMs;
-                return isTimeout;
-            });
-            
-            if (stack.isEmpty()) {
-                emptyStacks.add(stackName);
+            for (String stackName : emptyStacks) {
+                stacks.remove(stackName);
             }
-        }
-        
-        for (String stackName : emptyStacks) {
-            stacks.remove(stackName);
+        } finally {
+            writeLock.unlock();
         }
     }
     
     /** 获取指定名称的栈，如果不存在则创建 */
     public static Seq<CallStackElement> getStack(String stackName) {
-        if (stackName == null || stackName.isEmpty()) {
-            stackName = "default";
+        writeLock.lock();
+        try {
+            if (stackName == null || stackName.isEmpty()) {
+                stackName = "default";
+            }
+            if (!stacks.containsKey(stackName)) {
+                stacks.put(stackName, new Seq<>());
+            }
+            return stacks.get(stackName);
+        } finally {
+            writeLock.unlock();
         }
-        if (!stacks.containsKey(stackName)) {
-            stacks.put(stackName, new Seq<>());
-        }
-        return stacks.get(stackName);
     }
     
     /** 日志记录方法 */
@@ -338,7 +350,8 @@ public class LNestedLogic {
                         
                         String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
                         
-                        synchronized(stackLock) {
+                        writeLock.lock();
+                        try {
                             Seq<CallStackElement> currentStack = getStack(encodedStackName);
                             
                             // 检查调用栈中是否已经存在该索引，如果存在则更新其值
@@ -366,6 +379,8 @@ public class LNestedLogic {
                                 currentStack.add(elem);
                                 log("将" + (isVariable ? "变量 " : "值 ") + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
                             }
+                        } finally {
+                            writeLock.unlock();
                         }
                     };
                     
@@ -510,13 +525,14 @@ public class LNestedLogic {
                             }
                         }
                         
-                        synchronized(stackLock) {
-                            LVar targetVar = exec.optionalVar(p1);
-                            if (targetVar == null) {
-                                log("目标变量 " + p1 + " 不存在");
-                                return;
-                            }
-                            
+                        LVar targetVar = exec.optionalVar(p1);
+                        if (targetVar == null) {
+                            log("目标变量 " + p1 + " 不存在");
+                            return;
+                        }
+                        
+                        readLock.lock();
+                        try {
                             Seq<CallStackElement> currentStack = getStack(encodedStackName);
                             if (currentStack.isEmpty()) {
                                 log("栈 \"" + encodedStackName + "\" 为空，无法读取值");
@@ -544,9 +560,6 @@ public class LNestedLogic {
                                     targetVar.objval = targetElem.varValue;
                                 }
                                 
-                                // 更新元素的lastPushTime，延长生命周期
-                                targetElem.lastPushTime = System.currentTimeMillis();
-                                
                                 log("从栈 \"" + encodedStackName + "\" 的索引 " + index + " 读取值 " + targetElem.varValue + " 到变量 " + p1);
                             } else {
                                 log("栈 \"" + encodedStackName + "\" 中不存在索引为 " + index + " 的元素");
@@ -554,6 +567,8 @@ public class LNestedLogic {
                                 targetVar.isobj = true;
                                 targetVar.objval = null;
                             }
+                        } finally {
+                            readLock.unlock();
                         }
                     };
                     
