@@ -1,10 +1,36 @@
 # Mindustry-LogicExtendMod
 
-一个为Mindustry游戏添加多种逻辑扩展功能的模组，支持字符串处理、弹药自定义、函数定义和嵌套逻辑等高级功能。
+一个为Mindustry游戏添加多种逻辑扩展功能的模组，支持单位绑定控制、字符串处理、弹药自定义、嵌套逻辑等高级功能。
 
 ## 功能介绍
 
-### 1. 字符串合并指令 (stringmerge)
+### 1. 单位绑定组系统
+该系统允许玩家创建和管理单位绑定组，实现多控制器共享单位池或独立控制单位。
+
+#### 核心功能
+- **创建和管理绑定组**：支持创建多个绑定组，每个组可容纳多个单位
+- **两种工作模式**：
+  - 模式1：创建并填充绑定组
+  - 模式2：从现有共享组获取单位
+- **单位绑定与解绑**：灵活控制单位的绑定状态
+- **共享单位池**：多个控制器可共享同一单位池
+- **可视化UI**：直观的用户界面管理绑定组
+
+#### 相关指令
+- `unitbindgroup create` - 创建绑定组
+- `unitbindgroup join` - 加入绑定组
+- `unitbindgroup bind` - 绑定单位到组
+- `unitbindgroup unbind` - 解绑单位
+
+### 2. 快速单位控制
+提供高效的单位控制指令，简化单位操作逻辑。
+
+#### 核心功能
+- 快速选择和控制单位
+- 简化单位移动和攻击指令
+- 提高单位控制效率
+
+### 3. 字符串合并指令 (stringmerge)
 该指令允许玩家将两个字符串合并为一个字符串，扩展了Mindustry逻辑系统的字符串处理能力。
 
 **语法:**
@@ -22,7 +48,7 @@ stringmerge outputVar string1 string2
 stringmerge result "Hello, " "World!"
 ```
 
-### 2. 弹药创建与设置指令
+### 4. 弹药创建与设置指令
 该指令集允许玩家创建和自定义各种类型的弹药，包括基本子弹、炸弹、激光、闪电、导弹、火焰和火炮等。
 
 #### createammo 指令
@@ -55,7 +81,7 @@ setammo operation ammoProperty id value [team] [x] [y] [rotation]
 - `y`（可选）: Y坐标，用于create操作
 - `rotation`（可选）: 旋转角度，用于create操作
 
-### 3. 嵌套逻辑指令 (nestedlogic)
+### 5. 嵌套逻辑指令 (nestedlogic)
 该指令允许玩家在逻辑代码中嵌套其他逻辑代码，支持多层嵌套，与主逻辑共享变量作用域。
 
 **语法:**
@@ -72,9 +98,6 @@ nestedlogic "encodedNestedCode"
 - 提供可视化编辑器
 - 支持语言包
 - 添加了tooltip提示
-
-### 4. 函数指令 (function)
-该指令允许玩家定义和调用自定义函数，提高逻辑代码的复用性和可读性。
 
 ## 安装方法
 1. 编译mod生成jar文件
@@ -109,9 +132,19 @@ set y 20
 nestedlogic "c2V0IHogPSAqIHggeSAKcHJpbnQgeng="
 ```
 
+### 单位绑定组示例
+```
+# 创建绑定组
+unitbindgroup create "mygroup" 10
+# 绑定单位
+unitbindgroup bind "mygroup" @unit
+# 查看绑定组信息
+unitbindgroup info "mygroup"
+```
+
 ## 开发信息
 作者: meesst
-版本: 1.0.0
+版本: 1.0.1
 兼容性: Mindustry 151.1+
 
 ## 注意事项
@@ -124,19 +157,21 @@ nestedlogic "c2V0IHogPSAqIHggeSAKcHJpbnQgeng="
 
 ## 更新日志
 
+### v1.0.1
+- 添加了128*128像素的mod图标
+- 修改了build.gradle配置，确保图标被正确包含在编译后的jar包中
+
 ### v1.0.0
 - 初始版本
 - 添加了字符串合并指令
 - 添加了弹药创建和设置指令
 - 添加了函数指令
 - 添加了嵌套逻辑指令
+- 添加了单位绑定组系统
+- 添加了快速单位控制功能
 - 支持自定义类别和图标
 - 支持语言包
 - 添加了tooltip提示
-
-### v1.0.1
-- 添加了128*128像素的mod图标
-- 修改了build.gradle配置，确保图标被正确包含在编译后的jar包中
 
 ## 贡献
 欢迎提交Issue和Pull Request，帮助改进这个模组！
