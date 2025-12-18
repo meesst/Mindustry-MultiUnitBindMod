@@ -102,7 +102,7 @@ public class LUnitBindGroupUI {
                     count = "1";
                 }
             }).size(60f, 40f).pad(2f);
-            
+
             row(table);
 
             // 添加mode参数按钮
@@ -119,12 +119,12 @@ public class LUnitBindGroupUI {
             row(table);
             
             // 添加unitVar标签和输入框
-            fields(table, "unitVar", unitVar, str -> unitVar = str).size(140f, 40f).pad(2f);
+            fields(table, "unit", unitVar, str -> unitVar = str).size(140f, 40f).pad(2f);
               
             row(table);
 
             // 添加indexVar标签和输入框
-            fields(table, "indexVar", indexVar, str -> indexVar = str).size(140f, 40f).pad(2f);
+            fields(table, "index", indexVar, str -> indexVar = str).size(120f, 40f).pad(2f);
         }
         
     

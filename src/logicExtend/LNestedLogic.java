@@ -276,7 +276,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                   
-                //row(table);
+                row(table);
 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -286,7 +286,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
-                //row(table);
+                row(table);
 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
@@ -540,8 +540,9 @@ public class LNestedLogic {
                         
                         readLock.lock();
                         try {
-                            Seq<CallStackElement> currentStack = getStack(encodedStackName);
-                            if (currentStack.isEmpty()) {
+                            // 直接访问stacks变量，不调用getStack方法，避免创建新栈
+                            Seq<CallStackElement> currentStack = stacks.get(encodedStackName);
+                            if (currentStack == null || currentStack.isEmpty()) {
                                 log("栈 \"" + encodedStackName + "\" 为空，无法读取值");
                                 // 将目标变量设置为null
                                 targetVar.isobj = true;
