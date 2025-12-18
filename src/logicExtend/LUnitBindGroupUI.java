@@ -52,90 +52,72 @@ public class LUnitBindGroupUI {
         /** 构建指令的UI界面 */
         @Override
         public void build(Table table) {
-            rebuild(table);
-        }
-        
-        private void rebuild(Table table) {
             table.clearChildren();
             table.left();
             
-            // 第一排：type和count参数（使用嵌套Table）
+            // 使用fieldst方法将type参数放在一个嵌套Table中
+            Cell<TextField> typeFieldCell;
             table.table(t -> {
                 t.setColor(table.color);
                 
                 // 显示type参数
-                t.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
-
-                // 创建可编辑的文本字段，用于输入或显示单位类型标识
+                t.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));
+                // 创建可编辑的文本字段
                 TextField typeField = field(t, type, str -> type = str).get();
-
-                // 添加选择按钮，点击后显示单位类型选择界面
+                typeFieldCell = t.getCell(typeField);
+                
+                // 添加选择按钮
                 t.button(b -> {
-                    b.image(Icon.pencilSmall); // 按钮图标
-                    // 点击事件处理：显示单位类型选择对话框
+                    b.image(Icon.pencilSmall);
                     b.clicked(() -> showSelectTable(b, (tableSelect, hide) -> {
-                        tableSelect.row(); // 换行
-                        // 创建表格来显示所有可选的单位类型
+                        tableSelect.row();
                         tableSelect.table(i -> {
-                            i.left(); // 左对齐
-                            int c = 0; // 计数器，用于控制每行显示的单位数量
-                            // 遍历所有可用的单位类型
+                            i.left();
+                            int c = 0;
                             for(UnitType item : content.units()){
-                                // 过滤条件：必须已解锁、未隐藏且支持逻辑控制
                                 if(!item.unlockedNow() || item.isHidden() || !item.logicControllable) continue;
-                                // 为每个符合条件的单位类型创建一个选择按钮
                                 i.button(new TextureRegionDrawable(item.uiIcon), Styles.flati, iconSmall, () -> {
-                                    type = "@" + item.name; // 设置选中的单位类型标识
-                                    typeField.setText(type);    // 更新UI
-                                    hide.run();            // 关闭选择对话框
-                                }).size(40f); // 按钮大小
-
-                                // 每6个单位类型换行
+                                    type = "@" + item.name;
+                                    typeField.setText(type);
+                                    hide.run();
+                                }).size(40f);
+                                
                                 if(++c % 6 == 0) i.row();
                             }
-                        }).colspan(3).width(240f).left(); // 表格宽度和对齐方式
-                    })); // 结束showSelectTable调用
-                }, Styles.logict, () -> {}).size(40f).padLeft(-2).color(t.color); // 按钮样式和尺寸，调整间距为2
-                
-                // 添加count标签和文本输入框
-                t.add(" count ").left().self(c -> { this.param((Cell<Label>)c); tooltip(c, "unitbindgroup.count"); }); // 显示count标签，添加空格并添加左对齐和参数样式及悬浮提示
-                // 创建可编辑的文本字段，用于输入或显示绑定的单位数量，确保count值不小于1
-                field(t, count, str -> {
-                    try {
-                        int value = Integer.parseInt(str);
-                        count = value < 1 ? "1" : str;
-                    } catch (NumberFormatException e) {
-                        // 如果输入不是数字，设置为默认值1
-                        count = "1";
-                    }
-                });
-                
-                // 添加mode参数按钮
+                        }).colspan(3).width(240f).left();
+                    }));
+                }, Styles.logict, () -> {}).color(t.color).left().padLeft(-2);
+            }).left();
+            
+            // 使用fields方法创建count和mode参数输入框
+            fields(table, "count", count, str -> {
+                try {
+                    int value = Integer.parseInt(str);
+                    count = value < 1 ? "1" : str;
+                } catch (NumberFormatException e) {
+                    count = "1";
+                }
+            });
+            
+            // 添加mode参数按钮，使用游戏原生showSelect方法
+            table.table(t -> {
+                t.setColor(table.color);
                 t.add(" mode ").left().self(c -> tooltip(c, "unitbindgroup.mode"));
                 t.button(b -> {
                     b.label(() -> mode.value);
                     b.clicked(() -> showSelect(b, Mode.values(), mode, m -> {
                         mode = m;
-                        rebuild(table);
-                    }, 2, cell -> cell.size(80, 40)));
-                }, Styles.logict, () -> {}).size(80, 40).color(t.color).left().self(c -> tooltip(c, "unitbindgroup.mode"));
+                        // 使用游戏原生机制更新UI，无需手动rebuild
+                    }));
+                }, Styles.logict, () -> {}).color(t.color).left().self(c -> tooltip(c, "unitbindgroup.mode"));
             }).left();
             
-            // 换行到第二排
-            table.row();
+            // 使用游戏原生row方法，根据屏幕宽度自动判断是否换行
+            row(table);
             
-            // 第二排：unitVar和indexVar参数（使用嵌套Table）
-            table.table(t -> {
-                t.setColor(table.color);
-                
-                t.add(" unitVar ").left().self(c -> tooltip(c, "unitbindgroup.unitvar"));  // 显示unitVar标签，添加空格并添加左对齐和参数样式及悬浮提示
-                // 创建可编辑的文本字段，用于输入或显示单位变量名
-                field(t, unitVar, str -> unitVar = str);
-                
-                t.add(" indexVar ").left().self(c -> tooltip(c, "unitbindgroup.indexvar"));  // 显示indexVar标签，添加空格并添加左对齐和参数样式及悬浮提示
-                // 创建可编辑的文本字段，用于输入或显示索引变量名
-                field(t, indexVar, str -> indexVar = str);
-            }).left();
+            // 使用fields方法创建unitVar和indexVar参数输入框
+            fields(table, "unitVar", unitVar, str -> unitVar = str);
+            fields(table, "indexVar", indexVar, str -> indexVar = str);
         }
         
     

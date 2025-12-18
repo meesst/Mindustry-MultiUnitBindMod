@@ -43,38 +43,31 @@ public class FastUnitControl {
         
         @Override
         public void build(Table table) {
-            rebuild(table);
-        }
-        
-        private void rebuild(Table table) {
             table.clearChildren();
             table.left();
             
-            table.add(" ");
-            
-            // 分支选择按钮
+            // 分支选择按钮 - 使用游戏原生showSelect方法，移除固定尺寸
             table.button(b -> {
                 b.label(() -> type.name());
                 b.clicked(() -> showSelect(b, FastUnitControlType.values(), type, t -> {
                     type = t;
-                    rebuild(table);
-                }, 2, cell -> cell.size(120, 50)));
-            }, Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
+                    table.clearChildren();
+                    build(table);
+                }));
+            }, Styles.logict, () -> {}).color(table.color).left().padLeft(2);
             
+            // 使用游戏原生的row方法，根据屏幕宽度自动判断是否换行
             row(table);
             
             // 根据选择的分支显示不同的参数
-            int c = 0;
             for(int i = 0; i < type.params.length; i++) {
                 final int index = i;
                 String paramName = type.params[i];
                 
-                // fields方法内部会自动为标签添加悬浮提示，使用this::param
-                // param()方法会自动构建键名：指令名.参数名
-                fields(table, paramName, index == 0 ? p1 : index == 1 ? p2 : p3, index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v)
-                    .width(100f);
-                
-                if(++c % 2 == 0) row(table);
+                // 使用fields方法创建输入框，让游戏自动处理布局
+                fields(table, paramName, 
+                    index == 0 ? p1 : index == 1 ? p2 : p3, 
+                    index == 0 ? v -> p1 = v : index == 1 ? v -> p2 = v : v -> p3 = v);
             }
         }
         
