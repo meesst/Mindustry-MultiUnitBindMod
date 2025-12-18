@@ -181,7 +181,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
-                table.row();
+                row(table);
 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -191,7 +191,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
-                table.row();
+                row(table);
 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
@@ -203,7 +203,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(120f, 40f).pad(2f);
                   
-                table.row();
+                row(table);
 
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
@@ -274,10 +274,9 @@ public class LNestedLogic {
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f)
-                .self(elem -> tooltip(elem, bundle.get("lnestedlogic.variable", "Variable")));
+                }).size(80f, 40f).pad(2f);
                   
-                table.row();
+                row(table);
 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -285,16 +284,14 @@ public class LNestedLogic {
                         p2 = str;
                     } catch (NumberFormatException ignored) {}
                     saveUI();
-                }).size(80f, 40f).pad(2f)
-                .self(elem -> tooltip(elem, bundle.get("lnestedlogic.index", "Index")));
+                }).size(80f, 40f).pad(2f);
                 
-                table.row();
+                row(table);
 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                }).size(80f, 40f).pad(2f)
-                .self(elem -> tooltip(elem, bundle.get("lnestedlogic.stackname", "Stack Name")));
+                }).size(80f, 40f).pad(2f);
             }
         }
 
