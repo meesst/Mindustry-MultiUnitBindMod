@@ -1,103 +1,116 @@
 # Mindustry-LogicExtendMod
 
-一个为Mindustry游戏添加多种逻辑扩展功能的模组，支持单位绑定控制、字符串处理、弹药自定义、嵌套逻辑等高级功能。
+一个为Mindustry游戏添加多种逻辑扩展功能的模组，支持嵌套逻辑、单位绑定控制、字符串处理、弹药自定义等高级功能。
 
 ## 功能介绍
 
-### 1. 单位绑定组系统
-该系统允许玩家创建和管理单位绑定组，实现多控制器共享单位池或独立控制单位。
+### 1. 嵌套逻辑指令 (nestedlogic)
+该指令允许玩家在逻辑代码中实现调用栈和嵌套执行，支持三种操作类型：
 
 #### 核心功能
-- **创建和管理绑定组**：支持创建多个绑定组，每个组可容纳多个单位
-- **两种工作模式**：
-  - 模式1：创建并填充绑定组
-  - 模式2：从现有共享组获取单位
-- **单位绑定与解绑**：灵活控制单位的绑定状态
-- **共享单位池**：多个控制器可共享同一单位池
-- **可视化UI**：直观的用户界面管理绑定组
+- **push操作**：将变量或值压入指定栈的指定索引
+- **call操作**：执行嵌套的逻辑代码块
+- **pop操作**：从指定栈的指定索引读取值到变量
+- **多栈支持**：可以创建和使用多个独立的栈
+- **自动回收**：超时的栈元素会自动被清理
+- **嵌套深度限制**：防止无限递归
 
-#### 相关指令
-- `unitbindgroup create` - 创建绑定组
-- `unitbindgroup join` - 加入绑定组
-- `unitbindgroup bind` - 绑定单位到组
-- `unitbindgroup unbind` - 解绑单位
+#### 语法
+```
+nestedlogic push <variable> <index> <stackName>
+nestedlogic call <logicName> <encodedNestedCode>
+nestedlogic pop <variable> <index> <stackName>
+```
 
-### 2. 快速单位控制
-提供高效的单位控制指令，简化单位操作逻辑。
+#### 功能特性
+- 支持多层嵌套（最大深度5层）
+- 与主逻辑共享变量作用域和链接
+- 提供可视化编辑器
+- 支持语言包和tooltip提示
+
+### 2. 单位绑定组指令 (unitBindGroup)
+该指令允许玩家绑定和控制指定类型和数量的单位。
 
 #### 核心功能
-- 快速选择和控制单位
-- 简化单位移动和攻击指令
-- 提高单位控制效率
+- **单位类型绑定**：可以绑定到特定单位类型（如@poly、@dagger等）
+- **数量控制**：指定要绑定的单位数量
+- **三种工作模式**：
+  - 模式1：直接控制单位
+  - 模式2：共享控制模式
+  - 模式3：高级控制模式
+- **单位变量存储**：将当前单位和索引存储到指定变量
+
+#### 语法
+```
+unitBindGroup <type> <count> <mode> <unitVar> <indexVar>
+```
+
+#### 参数说明
+- `type`：目标单位类型标识（如@poly、@dagger）
+- `count`：要绑定的单位数量
+- `mode`：控制模式（1、2、3）
+- `unitVar`：存储当前单位的变量名
+- `indexVar`：存储单位索引的变量名
 
 ### 3. 字符串合并指令 (stringmerge)
-该指令允许玩家将两个字符串合并为一个字符串，扩展了Mindustry逻辑系统的字符串处理能力。
+该指令允许玩家将两个字符串合并为一个字符串。
 
-**语法:**
+#### 语法
 ```
-stringmerge outputVar string1 string2
+stringmerge <outputVar> <string1> <string2>
 ```
 
-**参数说明:**
-- `outputVar`: 存储合并结果的变量名
-- `string1`: 第一个要合并的字符串
-- `string2`: 第二个要合并的字符串
+#### 参数说明
+- `outputVar`：存储合并结果的变量名
+- `string1`：第一个要合并的字符串
+- `string2`：第二个要合并的字符串
 
-**示例:**
-```
-stringmerge result "Hello, " "World!"
-```
+#### 功能特性
+- 支持合并数字和字符串
+- 结果长度限制为220字符
+- 与Mindustry逻辑系统无缝集成
 
 ### 4. 弹药创建与设置指令
-该指令集允许玩家创建和自定义各种类型的弹药，包括基本子弹、炸弹、激光、闪电、导弹、火焰和火炮等。
+该指令集允许玩家创建和自定义各种类型的弹药。
 
 #### createammo 指令
 创建一种新的弹药类型。
 
 **语法:**
 ```
-createammo ammoType id
+createammo <ammoType> <id>
 ```
 
 **参数说明:**
-- `ammoType`: 弹药类型，可选值包括BasicBullet、BombBullet、LaserBullet、LightningBullet、MissileBullet、FireBullet、ArtilleryBullet
-- `id`: 用于标识该弹药的唯一ID
+- `ammoType`：弹药类型，可选值包括BasicBullet、BombBullet、LaserBullet、LightningBullet、MissileBullet、FireBullet、ArtilleryBullet
+- `id`：用于标识该弹药的唯一ID
 
 #### setammo 指令
 修改、删除或在世界中创建弹药。
 
 **语法:**
 ```
-setammo operation ammoProperty id value [team] [x] [y] [rotation]
+setammo <operation> <ammoProperty> <id> <value> [team] [x] [y] [rotation]
 ```
 
 **参数说明:**
-- `operation`: 操作类型，可选值包括set（修改属性）、remove（删除弹药）、create（在世界中创建弹药）
-- `ammoProperty`: 要修改的弹药属性，如damage、speed、lifetime等
-- `id`: 弹药的唯一ID
-- `value`: 要设置的属性值
+- `operation`：操作类型，可选值包括set（修改属性）、remove（删除弹药）、create（在世界中创建弹药）
+- `ammoProperty`：要修改的弹药属性，如damage、speed、lifetime等
+- `id`：弹药的唯一ID
+- `value`：要设置的属性值
 - `team`（可选）: 团队ID，用于create操作
 - `x`（可选）: X坐标，用于create操作
 - `y`（可选）: Y坐标，用于create操作
 - `rotation`（可选）: 旋转角度，用于create操作
 
-### 5. 嵌套逻辑指令 (nestedlogic)
-该指令允许玩家在逻辑代码中嵌套其他逻辑代码，支持多层嵌套，与主逻辑共享变量作用域。
+### 5. 快速单位控制 (FastUnitControl)
+提供快速控制单位的指令，简化单位操作逻辑。
 
-**语法:**
-```
-nestedlogic "encodedNestedCode"
-```
+### 6. 自定义类别扩展
+扩展了逻辑指令的类别，为新指令提供合适的分类。
 
-**参数说明:**
-- `encodedNestedCode`: Base64编码的嵌套逻辑代码
-
-**功能特性:**
-- 支持多层嵌套
-- 与主逻辑共享变量作用域
-- 提供可视化编辑器
-- 支持语言包
-- 添加了tooltip提示
+### 7. 调试日志系统
+提供可配置的调试日志功能，帮助开发者和玩家排查问题。
 
 ## 安装方法
 1. 编译mod生成jar文件
@@ -106,40 +119,43 @@ nestedlogic "encodedNestedCode"
 
 ## 使用示例
 
+### 嵌套逻辑示例 - push和pop操作
+```
+# 定义变量
+set myVar 100
+# 将变量压入默认栈的索引0
+nestedlogic push myVar 0 default
+# 清空变量
+set myVar 0
+# 从栈中恢复变量值
+nestedlogic pop myVar 0 default
+# 输出结果（应该是100）
+print myVar
+```
+
+### 单位绑定组示例
+```
+# 绑定3个多足单位到变量currentUnit和indexUnit，使用模式2
+unitBindGroup @poly 3 2 currentUnit indexUnit
+# 控制当前单位移动
+ucontrol currentUnit move 100 100
+```
+
 ### 字符串合并示例
 ```
+# 合并两个字符串
 stringmerge greeting "Hello, " "Commander!"
+# 输出结果
 print greeting
 ```
 
-### 弹药创建与使用示例
+### 弹药创建示例
 ```
 # 创建一种新的基本子弹
 createammo BasicBullet "mybullet"
 # 设置子弹属性
 setammo set damage "mybullet" 50
 setammo set speed "mybullet" 10
-# 在世界中创建子弹
-setammo create "mybullet" "player" @sharded 500 500 0
-```
-
-### 嵌套逻辑示例
-```
-# 主逻辑
-set x 10
-set y 20
-# 嵌套逻辑，与主逻辑共享变量
-nestedlogic "c2V0IHogPSAqIHggeSAKcHJpbnQgeng="
-```
-
-### 单位绑定组示例
-```
-# 创建绑定组
-unitbindgroup create "mygroup" 10
-# 绑定单位
-unitbindgroup bind "mygroup" @unit
-# 查看绑定组信息
-unitbindgroup info "mygroup"
 ```
 
 ## 开发信息
@@ -148,12 +164,12 @@ unitbindgroup info "mygroup"
 兼容性: Mindustry 151.1+
 
 ## 注意事项
+- 嵌套逻辑指令支持多层嵌套，但请注意不要超过最大深度5层
 - 确保合理设置最大绑定数量，避免过多占用单位资源
 - 在共享组模式下，多个控制器共享单位池，请注意协调控制逻辑
-- 使用模式2时，确保已经有控制器在模式1下创建并填充了共享组
 - 当不再需要控制单位时，建议显式解绑以释放资源
-- 嵌套逻辑指令支持多层嵌套，但请注意不要过度嵌套，以免影响性能
 - 弹药创建和设置指令需要特权权限，仅在服务器端或单机游戏中可用
+- 可以在游戏设置中启用调试日志，帮助排查问题
 
 ## 更新日志
 
@@ -163,15 +179,14 @@ unitbindgroup info "mygroup"
 
 ### v1.0.0
 - 初始版本
+- 添加了嵌套逻辑指令（push、call、pop）
+- 添加了单位绑定组指令
 - 添加了字符串合并指令
 - 添加了弹药创建和设置指令
-- 添加了函数指令
-- 添加了嵌套逻辑指令
-- 添加了单位绑定组系统
 - 添加了快速单位控制功能
 - 支持自定义类别和图标
-- 支持语言包
-- 添加了tooltip提示
+- 支持语言包和tooltip提示
+- 添加了可配置的调试日志功能
 
 ## 贡献
 欢迎提交Issue和Pull Request，帮助改进这个模组！
