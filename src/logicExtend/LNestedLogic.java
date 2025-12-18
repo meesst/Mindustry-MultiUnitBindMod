@@ -192,17 +192,17 @@ public class LNestedLogic {
                     b.clicked(() -> {
                         log("开始点击Edit Logic按钮");
                         
-                        // 简化的canvas处理
-                        mindustry.logic.LCanvas originalCanvas = null;
-                        java.lang.reflect.Field canvasField = null;
-                        boolean reflectionSuccess = false;
+                        // 保存当前的canvas静态变量，使用数组包装以便在lambda中访问
+                        final mindustry.logic.LCanvas[] originalCanvas = {null};
+                        final java.lang.reflect.Field[] canvasField = {null};
+                        final boolean[] reflectionSuccess = {false};
                         
                         try {
                             Class<?> lCanvasClass = mindustry.logic.LCanvas.class;
-                            canvasField = lCanvasClass.getDeclaredField("canvas");
-                            canvasField.setAccessible(true);
-                            originalCanvas = (mindustry.logic.LCanvas) canvasField.get(null);
-                            reflectionSuccess = true;
+                            canvasField[0] = lCanvasClass.getDeclaredField("canvas");
+                            canvasField[0].setAccessible(true);
+                            originalCanvas[0] = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                            reflectionSuccess[0] = true;
                             log("成功获取canvas字段");
                         } catch (Exception e) {
                             log("无法获取canvas字段: " + e.getMessage());
@@ -210,15 +210,36 @@ public class LNestedLogic {
                         
                         // 恢复canvas的Runnable
                         Runnable restoreCanvas = () -> {
-                            if (reflectionSuccess && originalCanvas != null) {
+                            log("开始执行恢复canvas的Runnable");
+                            // 恢复原始canvas静态变量
+                            if (reflectionSuccess[0]) {
                                 try {
-                                    canvasField.set(null, originalCanvas);
-                                    originalCanvas.rebuild();
-                                    log("成功恢复canvas");
+                                    if (canvasField[0] != null && originalCanvas[0] != null) {
+                                        // 获取当前canvas值，用于比较
+                                        mindustry.logic.LCanvas currentCanvas = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                                        log("当前canvas值: " + currentCanvas + ", 原始canvas值: " + originalCanvas[0]);
+                                        
+                                        // 恢复原始canvas值
+                                        canvasField[0].set(null, originalCanvas[0]);
+                                        log("成功恢复原始canvas");
+                                        
+                                        // 获取恢复后的canvas值，用于验证
+                                        mindustry.logic.LCanvas restoredCanvas = (mindustry.logic.LCanvas) canvasField[0].get(null);
+                                        log("恢复后的canvas值: " + restoredCanvas);
+                                        
+                                        // 触发主编辑器的UI重绘
+                                        log("开始触发主编辑器UI重绘");
+                                        originalCanvas[0].rebuild();
+                                        log("调用rebuild()");
+                                        log("主编辑器UI重绘完成");
+                                    }
                                 } catch (Exception e) {
-                                    log("无法恢复canvas: " + e.getMessage());
+                                    log("无法恢复原始canvas字段: " + e.getMessage());
                                 }
+                            } else {
+                                log("反射获取失败，跳过恢复操作");
                             }
+                            log("恢复canvas的Runnable执行完成");
                         };
                         
                         // 打开嵌套逻辑编辑器
@@ -320,14 +341,22 @@ public class LNestedLogic {
                         synchronized(stackLock) {
                             Seq<CallStackElement> currentStack = getStack(encodedStackName);
                             
-                            CallStackElement existing = currentStack.find(e -> e.index == index);
-                            if (existing != null) {
-                                existing.varName = p1;
-                                existing.varValue = pushValue;
-                                existing.stackName = encodedStackName;
-                                existing.lastPushTime = System.currentTimeMillis();
-                                log("更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的" + (isVariable ? "变量 " : "值 ") + p1 + " 值为 " + existing.varValue);
-                            } else {
+                            // 检查调用栈中是否已经存在该索引，如果存在则更新其值
+                            boolean alreadyExists = false;
+                            for (CallStackElement existingElem : currentStack) {
+                                if (existingElem.index == index) {
+                                    // 更新已有索引的值
+                                    existingElem.varName = p1;
+                                    existingElem.varValue = pushValue;
+                                    existingElem.stackName = encodedStackName;
+                                    existingElem.lastPushTime = System.currentTimeMillis();
+                                    alreadyExists = true;
+                                    log("更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的" + (isVariable ? "变量 " : "值 ") + p1 + " 值为 " + existingElem.varValue);
+                                    break;
+                                }
+                            }
+                            
+                            if (!alreadyExists) {
                                 CallStackElement elem = new CallStackElement();
                                 elem.varName = p1;
                                 elem.varValue = pushValue;
@@ -488,7 +517,15 @@ public class LNestedLogic {
                                 return;
                             }
                             
-                            CallStackElement targetElem = currentStack.find(e -> e.index == index);
+                            // 查找指定索引的元素
+                            CallStackElement targetElem = null;
+                            for (CallStackElement elem : currentStack) {
+                                if (elem.index == index) {
+                                    targetElem = elem;
+                                    break;
+                                }
+                            }
+                            
                             if (targetElem != null) {
                                 LVar targetVar = exec.optionalVar(p1);
                                 if (targetVar == null) {
