@@ -409,7 +409,10 @@ public class LNestedLogic {
                     if (!p2.isEmpty()) {
                         builder.var(p2);
                     }
-                    // p3不注册为变量，只作为文本使用
+                    // p3使用builder.var处理，支持@开头的特殊变量
+                    if (!p3.isEmpty()) {
+                        builder.var(p3);
+                    }
                     // push指令：将变量压入全局调用栈，支持索引和多栈
                         return (LExecutor exec) -> {
                             // 处理p1：检查是否为变量引用
@@ -478,12 +481,12 @@ public class LNestedLogic {
                                 }
                             }
                             
-                            // 处理栈名：支持变量引用和@开头的特殊变量
+                            // 处理栈名：检查是否为变量引用
                             String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
-                            // 检查栈名是否为变量引用，包括@开头的特殊变量
+                            // 检查栈名是否为变量引用
                             LVar stackNameVar = exec.optionalVar(stackName);
                             if (stackNameVar != null) {
-                                // 是变量或特殊变量，获取其值作为实际栈名
+                                // 是变量，获取其值作为实际栈名
                                 if (stackNameVar.isobj) {
                                     stackName = stackNameVar.objval != null ? stackNameVar.objval.toString() : "default";
                                 } else {
@@ -679,15 +682,18 @@ public class LNestedLogic {
                     if (!p2.isEmpty()) {
                         builder.var(p2);
                     }
-                    // p3不注册为变量，只作为文本使用
+                    // p3使用builder.var处理，支持@开头的特殊变量
+                    if (!p3.isEmpty()) {
+                        builder.var(p3);
+                    }
                     // pop指令：从全局调用栈中弹出指定索引的值到指定变量，支持多栈
                         return (LExecutor exec) -> {
-                            // 处理栈名：支持变量引用和@开头的特殊变量
+                            // 处理栈名：检查是否为变量引用
                             String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
-                            // 检查栈名是否为变量引用，包括@开头的特殊变量
+                            // 检查栈名是否为变量引用
                             LVar stackNameVar = exec.optionalVar(stackName);
                             if (stackNameVar != null) {
-                                // 是变量或特殊变量，获取其值作为实际栈名
+                                // 是变量，获取其值作为实际栈名
                                 if (stackNameVar.isobj) {
                                     stackName = stackNameVar.objval != null ? stackNameVar.objval.toString() : "default";
                                 } else {
