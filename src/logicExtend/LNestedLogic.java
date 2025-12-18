@@ -511,9 +511,18 @@ public class LNestedLogic {
                         }
                         
                         synchronized(stackLock) {
+                            LVar targetVar = exec.optionalVar(p1);
+                            if (targetVar == null) {
+                                log("目标变量 " + p1 + " 不存在");
+                                return;
+                            }
+                            
                             Seq<CallStackElement> currentStack = getStack(encodedStackName);
                             if (currentStack.isEmpty()) {
                                 log("栈 \"" + encodedStackName + "\" 为空，无法读取值");
+                                // 将目标变量设置为null
+                                targetVar.isobj = true;
+                                targetVar.objval = null;
                                 return;
                             }
                             
@@ -527,12 +536,6 @@ public class LNestedLogic {
                             }
                             
                             if (targetElem != null) {
-                                LVar targetVar = exec.optionalVar(p1);
-                                if (targetVar == null) {
-                                    log("目标变量 " + p1 + " 不存在");
-                                    return;
-                                }
-                                
                                 if (targetElem.varValue instanceof Double) {
                                     targetVar.isobj = false;
                                     targetVar.numval = (Double) targetElem.varValue;
@@ -541,9 +544,15 @@ public class LNestedLogic {
                                     targetVar.objval = targetElem.varValue;
                                 }
                                 
+                                // 更新元素的lastPushTime，延长生命周期
+                                targetElem.lastPushTime = System.currentTimeMillis();
+                                
                                 log("从栈 \"" + encodedStackName + "\" 的索引 " + index + " 读取值 " + targetElem.varValue + " 到变量 " + p1);
                             } else {
                                 log("栈 \"" + encodedStackName + "\" 中不存在索引为 " + index + " 的元素");
+                                // 将目标变量设置为null
+                                targetVar.isobj = true;
+                                targetVar.objval = null;
                             }
                         }
                     };
