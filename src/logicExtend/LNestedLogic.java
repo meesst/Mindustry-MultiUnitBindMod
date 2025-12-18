@@ -412,86 +412,118 @@ public class LNestedLogic {
                     // p3不注册为变量，只作为文本使用
                     // push指令：将变量压入全局调用栈，支持索引和多栈
                         return (LExecutor exec) -> {
-                            // 获取要压入的变量
+                            // 处理p1：检查是否为变量引用
+                            Object pushValue = null;
+                            boolean isVariable = false;
+                            
+                            // 首先尝试将p1作为变量名获取值
                             LVar var = exec.optionalVar(p1);
                             if (var != null) {
-                                // 解析索引值，支持变量引用
-                                int index = 0;
-                                if (!p2.isEmpty()) {
-                                    // 首先尝试将p2作为变量名获取值
-                                    LVar indexVar = exec.optionalVar(p2);
-                                    if (indexVar != null) {
-                                        // 是变量名
-                                        if (!indexVar.isobj) {
-                                            // 数值类型：直接使用其值
-                                            index = (int) indexVar.numval;
-                                            log("push: 使用变量 " + p2 + " 的值 " + indexVar.numval + " 作为索引");
-                                        } else {
-                                            // 对象类型：检查是否为文本
-                                            if (indexVar.objval instanceof String) {
-                                                // 文本类型：尝试解析为数字
-                                                String textValue = (String) indexVar.objval;
-                                                try {
-                                                    index = Integer.parseInt(textValue);
-                                                    log("push: 成功将文本变量 \"" + p2 + "\" 的值 \"" + textValue + "\" 解析为索引 " + index);
-                                                } catch (NumberFormatException e) {
-                                                    log("push: 无法将文本变量 \"" + p2 + "\" 的值 \"" + textValue + "\" 解析为数字，使用默认索引 0");
-                                                }
-                                            } else {
-                                                // 其他对象类型：使用默认值
-                                                log("push: 变量 " + p2 + " 是对象类型，使用默认索引 0");
-                                            }
-                                        }
-                                    } else {
-                                        // 尝试作为直接数字解析
-                                        try {
-                                            index = Integer.parseInt(p2);
-                                            log("push: 使用直接数字 " + p2 + " 作为索引");
-                                        } catch (NumberFormatException e) {
-                                            log("push: 无法解析 \"" + p2 + "\" 为数字，使用默认索引 0");
-                                        }
-                                    }
-                                }
-                                
-                                // 对栈名进行Base64编码
-                                String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
-                                String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
-                                
-                                // 加锁确保栈操作的线程安全，同一时间只能读或写，支持同时读，不支持同时写
-                                synchronized(stackLock) {
-                                    // 获取指定名称的栈
-                                    Seq<CallStackElement> currentStack = getStack(encodedStackName);
-                                    
-                                    // 检查调用栈中是否已经存在该索引，如果存在则更新其值
-                                    boolean alreadyExists = false;
-                                    for (CallStackElement existingElem : currentStack) {
-                                        if (existingElem.index == index) {
-                                            // 更新已有索引的值
-                                            existingElem.varName = p1;
-                                            existingElem.varValue = var.isobj ? var.objval : var.numval;
-                                            existingElem.stackName = encodedStackName;
-                                            existingElem.lastPushTime = System.currentTimeMillis();
-                                            alreadyExists = true;
-                                            log("push: 更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的变量 " + p1 + " 值为 " + existingElem.varValue);
-                                            break;
-                                        }
-                                    }
-                                    
-                                    if (!alreadyExists) {
-                                        CallStackElement elem = new CallStackElement();
-                                        elem.varName = p1;
-                                        elem.varValue = var.isobj ? var.objval : var.numval;
-                                        elem.index = index;
-                                        elem.stackName = encodedStackName;
-                                        elem.lastPushTime = System.currentTimeMillis();
-                                        currentStack.add(elem);
-                                        // 记录日志
-                                        log("push: 将变量 " + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
-                                    }
-                                }
+                                // 是变量，获取其值
+                                isVariable = true;
+                                pushValue = var.isobj ? var.objval : var.numval;
                             } else {
-                                // 记录日志
-                                log("push: 变量 " + p1 + " 不存在，无法压入调用栈");
+                                // 不是变量，直接使用p1作为值
+                                // 尝试解析为数字
+                                try {
+                                    pushValue = Double.parseDouble(p1);
+                                } catch (NumberFormatException e) {
+                                    // 不是数字，作为字符串处理
+                                    // 检查是否有引号包裹
+                                    if (p1.startsWith("\"") && p1.endsWith("\"")) {
+                                        // 去除引号
+                                        pushValue = p1.substring(1, p1.length() - 1);
+                                    } else {
+                                        // 直接作为字符串
+                                        pushValue = p1;
+                                    }
+                                }
+                            }
+                            
+                            // 解析索引值，支持变量引用
+                            int index = 0;
+                            if (!p2.isEmpty()) {
+                                // 首先尝试将p2作为变量名获取值
+                                LVar indexVar = exec.optionalVar(p2);
+                                if (indexVar != null) {
+                                    // 是变量名
+                                    if (!indexVar.isobj) {
+                                        // 数值类型：直接使用其值
+                                        index = (int) indexVar.numval;
+                                        log("push: 使用变量 " + p2 + " 的值 " + indexVar.numval + " 作为索引");
+                                    } else {
+                                        // 对象类型：检查是否为文本
+                                        if (indexVar.objval instanceof String) {
+                                            // 文本类型：尝试解析为数字
+                                            String textValue = (String) indexVar.objval;
+                                            try {
+                                                index = Integer.parseInt(textValue);
+                                                log("push: 成功将文本变量 \"" + p2 + "\" 的值 \"" + textValue + "\" 解析为索引 " + index);
+                                            } catch (NumberFormatException e) {
+                                                log("push: 无法将文本变量 \"" + p2 + "\" 的值 \"" + textValue + "\" 解析为数字，使用默认索引 0");
+                                            }
+                                        } else {
+                                            // 其他对象类型：使用默认值
+                                            log("push: 变量 " + p2 + " 是对象类型，使用默认索引 0");
+                                        }
+                                    }
+                                } else {
+                                    // 尝试作为直接数字解析
+                                    try {
+                                        index = Integer.parseInt(p2);
+                                        log("push: 使用直接数字 " + p2 + " 作为索引");
+                                    } catch (NumberFormatException e) {
+                                        log("push: 无法解析 \"" + p2 + "\" 为数字，使用默认索引 0");
+                                    }
+                                }
+                            }
+                            
+                            // 处理栈名：检查是否为变量引用
+                            String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
+                            // 检查栈名是否为变量引用
+                            LVar stackNameVar = exec.optionalVar(stackName);
+                            if (stackNameVar != null) {
+                                // 是变量，获取其值作为实际栈名
+                                if (stackNameVar.isobj) {
+                                    stackName = stackNameVar.objval != null ? stackNameVar.objval.toString() : "default";
+                                } else {
+                                    stackName = String.valueOf(stackNameVar.numval);
+                                }
+                            }
+                            // 对最终的栈名进行Base64编码
+                            String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
+                            
+                            // 加锁确保栈操作的线程安全，同一时间只能读或写，支持同时读，不支持同时写
+                            synchronized(stackLock) {
+                                // 获取指定名称的栈
+                                Seq<CallStackElement> currentStack = getStack(encodedStackName);
+                                
+                                // 检查调用栈中是否已经存在该索引，如果存在则更新其值
+                                boolean alreadyExists = false;
+                                for (CallStackElement existingElem : currentStack) {
+                                    if (existingElem.index == index) {
+                                        // 更新已有索引的值
+                                        existingElem.varName = p1;
+                                        existingElem.varValue = pushValue;
+                                        existingElem.stackName = encodedStackName;
+                                        existingElem.lastPushTime = System.currentTimeMillis();
+                                        alreadyExists = true;
+                                        log("push: 更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的" + (isVariable ? "变量 " : "值 ") + p1 + " 值为 " + existingElem.varValue);
+                                        break;
+                                    }
+                                }
+                                
+                                if (!alreadyExists) {
+                                    CallStackElement elem = new CallStackElement();
+                                    elem.varName = p1;
+                                    elem.varValue = pushValue;
+                                    elem.index = index;
+                                    elem.stackName = encodedStackName;
+                                    elem.lastPushTime = System.currentTimeMillis();
+                                    currentStack.add(elem);
+                                    // 记录日志
+                                    log("push: 将" + (isVariable ? "变量 " : "值 ") + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
+                                }
                             }
                         };
                     
@@ -650,8 +682,19 @@ public class LNestedLogic {
                     // p3不注册为变量，只作为文本使用
                     // pop指令：从全局调用栈中弹出指定索引的值到指定变量，支持多栈
                         return (LExecutor exec) -> {
-                            // 对栈名进行Base64编码
+                            // 处理栈名：检查是否为变量引用
                             String stackName = p3 == null || p3.isEmpty() ? "default" : p3;
+                            // 检查栈名是否为变量引用
+                            LVar stackNameVar = exec.optionalVar(stackName);
+                            if (stackNameVar != null) {
+                                // 是变量，获取其值作为实际栈名
+                                if (stackNameVar.isobj) {
+                                    stackName = stackNameVar.objval != null ? stackNameVar.objval.toString() : "default";
+                                } else {
+                                    stackName = String.valueOf(stackNameVar.numval);
+                                }
+                            }
+                            // 对最终的栈名进行Base64编码
                             String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
                             
                             // 解析索引值，支持变量引用
