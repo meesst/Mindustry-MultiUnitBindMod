@@ -160,46 +160,51 @@ public class LNestedLogic {
             table.setColor(table.color);
             table.left();
             
-            // 分支选择按钮 - 使用游戏原生showSelect方法
+            // 分支选择按钮
             table.button(b -> {
                 b.label(() -> type.name());
-                b.clicked(() -> showSelect(b, NestedLogicType.values(), type, t -> {
-                    type = t;
-                    saveUI();
-                    // 让游戏原生机制更新UI
-                }));
-            }, Styles.logict, () -> {}).color(table.color).left().padLeft(2);
-            
-            // 使用游戏原生row方法，根据屏幕宽度自动判断是否换行
-            row(table);
+                b.clicked(() -> {
+                    super.showSelect(b, NestedLogicType.values(), type, t -> {
+                        type = t;
+                        saveUI();
+                        table.parent.invalidateHierarchy();
+                        table.clearChildren();
+                        build(table);
+                    }, 2, cell -> cell.size(120, 50));
+                });
+            }, Styles.logict, () -> {}).size(120, 40).color(table.color).left().padLeft(2);
             
             // 根据当前选项动态创建UI元素
             if (type == NestedLogicType.push) {
-                // 使用fields方法创建输入框，让游戏自动处理布局
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                });
+                }).size(80f, 40f).pad(2f);
                 
+                row(table);
+
                 fields(table, "Index", p2, str -> {
                     try {
                         Integer.parseInt(str);
                         p2 = str;
                     } catch (NumberFormatException ignored) {}
                     saveUI();
-                });
+                }).size(80f, 40f).pad(2f);
                 
+                row(table);
+
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                });
+                }).size(80f, 40f).pad(2f);
             } else if (type == NestedLogicType.call) {
                 fields(table, "Logic Name", p1, str -> {
                     p1 = str;
                     saveUI();
-                });
+                }).size(120f, 40f).pad(2f);
+                  
+                row(table);
                 
-                // Edit Logic按钮，使用游戏默认尺寸
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
@@ -263,13 +268,14 @@ public class LNestedLogic {
                             saveUI();
                         });
                     });
-                }, Styles.logict, () -> {}).color(table.color).pad(2f)
+                }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.editlogic", "Edit Logic")));
             } else if (type == NestedLogicType.pop) {
                 fields(table, "Variable", p1, str -> {
                     p1 = str;
                     saveUI();
-                }).self(elem -> tooltip(elem, bundle.get("lnestedlogic.variable", "Variable")));
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, bundle.get("lnestedlogic.variable", "Variable")));
                 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -277,12 +283,13 @@ public class LNestedLogic {
                         p2 = str;
                     } catch (NumberFormatException ignored) {}
                     saveUI();
-                }).self(elem -> tooltip(elem, bundle.get("lnestedlogic.index", "Index")));
+                }).size(80f, 40f).pad(2f)
+                .self(elem -> tooltip(elem, bundle.get("lnestedlogic.index", "Index")));
                 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
-                })
+                }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.stackname", "Stack Name")));
             }
         }
