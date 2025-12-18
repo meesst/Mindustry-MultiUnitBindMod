@@ -204,7 +204,7 @@ public class LNestedLogic {
                 }).size(120f, 40f).pad(2f);
                   
                 row(table);
-                
+
                 table.button(b -> {
                     b.label(() -> "Edit Logic");
                     b.clicked(() -> {
@@ -276,7 +276,9 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.variable", "Variable")));
-                
+                  
+                row(table);
+
                 fields(table, "Index", p2, str -> {
                     try {
                         Integer.parseInt(str);
@@ -286,6 +288,8 @@ public class LNestedLogic {
                 }).size(80f, 40f).pad(2f)
                 .self(elem -> tooltip(elem, bundle.get("lnestedlogic.index", "Index")));
                 
+                row(table);
+
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
                     saveUI();
