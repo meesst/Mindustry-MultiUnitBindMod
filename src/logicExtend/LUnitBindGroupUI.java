@@ -60,7 +60,7 @@ public class LUnitBindGroupUI {
             table.left();
             
             // 显示type参数和输入框，使用fields方法
-            TextField typeField = fields(table, "type", type, str -> type = str).size(80f, 40f).pad(2f).get();
+            TextField typeField = fields(table, "type", type, str -> type = str).size(120f, 40f).get();
 
             // 添加选择按钮，点击后显示单位类型选择界面
             table.button(b -> {
@@ -112,7 +112,7 @@ public class LUnitBindGroupUI {
                 b.clicked(() -> showSelect(b, Mode.values(), mode, m -> {
                     mode = m;
                     rebuild(table);
-                }, 2, cell -> cell.size(80, 40)));
+                }, 2, cell -> cell.size(40, 40)));
             }, Styles.logict, () -> {}).size(80, 40).color(table.color).left().self(c -> tooltip(c, "unitbindgroup.mode"));
             
             // 换行到第二排
