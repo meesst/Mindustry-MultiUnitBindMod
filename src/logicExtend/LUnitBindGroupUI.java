@@ -59,11 +59,8 @@ public class LUnitBindGroupUI {
             table.setColor(table.color);
             table.left();
             
-            // 显示type参数
-            table.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));  // 显示标签，添加空格并添加左对齐和参数样式及悬浮提示
-
-            // 创建可编辑的文本字段，用于输入或显示单位类型标识
-            TextField typeField = field(table, type, str -> type = str).get();
+            // 显示type参数和输入框，使用fields方法
+            TextField typeField = fields(table, "type", type, str -> type = str).size(80f, 40f).pad(2f).get();
 
             // 添加选择按钮，点击后显示单位类型选择界面
             table.button(b -> {
@@ -96,7 +93,6 @@ public class LUnitBindGroupUI {
             row(table);
 
             // 添加count标签和文本输入框
-            table.add(" count ").left().self(c -> tooltip(c, "unitbindgroup.count"));
             fields(table, "count", count, str -> {
                 try {
                     int value = Integer.parseInt(str);
@@ -123,13 +119,11 @@ public class LUnitBindGroupUI {
             table.row();
             
             // 添加unitVar标签和输入框
-            table.add(" unitVar ").left().self(c -> tooltip(c, "unitbindgroup.unitvar"));
             fields(table, "unitVar", unitVar, str -> unitVar = str).size(80f, 40f).pad(2f);
               
             row(table);
 
             // 添加indexVar标签和输入框
-            table.add(" indexVar ").left().self(c -> tooltip(c, "unitbindgroup.indexvar"));
             fields(table, "indexVar", indexVar, str -> indexVar = str).size(80f, 40f).pad(2f);
         }
         
