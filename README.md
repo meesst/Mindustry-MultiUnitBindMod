@@ -134,6 +134,10 @@ nestedlogic "c2V0IHogPSAqIHggeSAKcHJpbnQgeng="
 - 支持语言包
 - 添加了tooltip提示
 
+### v1.0.1
+- 添加了128*128像素的mod图标
+- 修改了build.gradle配置，确保图标被正确包含在编译后的jar包中
+
 ## 贡献
 欢迎提交Issue和Pull Request，帮助改进这个模组！
 
