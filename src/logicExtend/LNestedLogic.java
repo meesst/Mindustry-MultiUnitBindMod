@@ -276,7 +276,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                   
-                row(table);
+                //row(table);
 
                 fields(table, "Index", p2, str -> {
                     try {
@@ -286,7 +286,7 @@ public class LNestedLogic {
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
-                row(table);
+                //row(table);
 
                 fields(table, "Stack Name", p3, str -> {
                     p3 = str;
