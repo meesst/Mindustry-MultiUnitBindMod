@@ -56,7 +56,6 @@ public class LUnitBindGroupUI {
             table.left();
             
             // 使用fieldst方法将type参数放在一个嵌套Table中
-            Cell<TextField> typeFieldCell;
             table.table(t -> {
                 t.setColor(table.color);
                 
@@ -64,7 +63,6 @@ public class LUnitBindGroupUI {
                 t.add(" type ").left().self(c -> tooltip(c, "unitbindgroup.type"));
                 // 创建可编辑的文本字段
                 TextField typeField = field(t, type, str -> type = str).get();
-                typeFieldCell = t.getCell(typeField);
                 
                 // 添加选择按钮
                 t.button(b -> {
