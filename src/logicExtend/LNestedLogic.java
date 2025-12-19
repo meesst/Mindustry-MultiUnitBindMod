@@ -184,10 +184,7 @@ public class LNestedLogic {
                 row(table);
 
                 fields(table, "Index", p2, str -> {
-                    try {
-                        Integer.parseInt(str);
-                        p2 = str;
-                    } catch (NumberFormatException ignored) {}
+                    p2 = str;
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
@@ -279,10 +276,7 @@ public class LNestedLogic {
                 row(table);
 
                 fields(table, "Index", p2, str -> {
-                    try {
-                        Integer.parseInt(str);
-                        p2 = str;
-                    } catch (NumberFormatException ignored) {}
+                    p2 = str;
                     saveUI();
                 }).size(80f, 40f).pad(2f);
                 
