@@ -48,6 +48,11 @@ public class LNestedLogic {
     private static final java.util.concurrent.locks.Lock readLock = lock.readLock();
     private static final java.util.concurrent.locks.Lock writeLock = lock.writeLock();
     
+    /** 栈锁映射表：stackName -> Lock，用于保护栈的创建和索引锁的获取 */
+    private static final arc.struct.ObjectMap<String, java.util.concurrent.locks.Lock> stackLocks = new arc.struct.ObjectMap<>();
+    /** 索引锁映射表：stackName -> (index -> Lock)，为每个栈的每个索引分配独立锁 */
+    private static final arc.struct.ObjectMap<String, arc.struct.ObjectMap<Integer, java.util.concurrent.locks.Lock>> indexLocks = new arc.struct.ObjectMap<>();
+    
     /** 定时器，用于自动回收栈元素 */
     private static Timer.Task cleanupTask;
     
@@ -121,6 +126,36 @@ public class LNestedLogic {
                 stacks.put(stackName, new Seq<>());
             }
             return stacks.get(stackName);
+        } finally {
+            writeLock.unlock();
+        }
+    }
+    
+    /** 获取或创建栈锁，用于保护栈的创建和索引锁的获取 */
+    private static java.util.concurrent.locks.Lock getStackLock(String stackName) {
+        writeLock.lock();
+        try {
+            if (!stackLocks.containsKey(stackName)) {
+                stackLocks.put(stackName, new java.util.concurrent.locks.ReentrantLock());
+            }
+            return stackLocks.get(stackName);
+        } finally {
+            writeLock.unlock();
+        }
+    }
+    
+    /** 获取或创建索引锁，为每个栈的每个索引分配独立锁 */
+    private static java.util.concurrent.locks.Lock getIndexLock(String stackName, int index) {
+        writeLock.lock();
+        try {
+            if (!indexLocks.containsKey(stackName)) {
+                indexLocks.put(stackName, new arc.struct.ObjectMap<>());
+            }
+            arc.struct.ObjectMap<Integer, java.util.concurrent.locks.Lock> stackIndexLocks = indexLocks.get(stackName);
+            if (!stackIndexLocks.containsKey(index)) {
+                stackIndexLocks.put(index, new java.util.concurrent.locks.ReentrantLock());
+            }
+            return stackIndexLocks.get(index);
         } finally {
             writeLock.unlock();
         }
@@ -351,37 +386,48 @@ public class LNestedLogic {
                         
                         String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
                         
-                        writeLock.lock();
+                        // 1. 获取栈锁，用于保护栈的创建和访问
+                        java.util.concurrent.locks.Lock stackLock = getStackLock(encodedStackName);
+                        stackLock.lock();
                         try {
                             Seq<CallStackElement> currentStack = getStack(encodedStackName);
                             
-                            // 检查调用栈中是否已经存在该索引，如果存在则更新其值
-                            boolean alreadyExists = false;
-                            for (CallStackElement existingElem : currentStack) {
-                                if (existingElem.index == index) {
-                                    // 更新已有索引的值
-                                    existingElem.varName = p1;
-                                    existingElem.varValue = pushValue;
-                                    existingElem.stackName = encodedStackName;
-                                    existingElem.lastPushTime = System.currentTimeMillis();
-                                    alreadyExists = true;
-                                    log("更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的" + (isVariable ? "变量 " : "值 ") + p1 + " 值为 " + existingElem.varValue);
-                                    break;
+                            // 2. 获取索引锁，为当前索引分配独立锁
+                            java.util.concurrent.locks.Lock indexLock = getIndexLock(encodedStackName, index);
+                            indexLock.lock();
+                            try {
+                                // 检查调用栈中是否已经存在该索引，如果存在则更新其值
+                                boolean alreadyExists = false;
+                                for (CallStackElement existingElem : currentStack) {
+                                    if (existingElem.index == index) {
+                                        // 更新已有索引的值
+                                        existingElem.varName = p1;
+                                        existingElem.varValue = pushValue;
+                                        existingElem.stackName = encodedStackName;
+                                        existingElem.lastPushTime = System.currentTimeMillis();
+                                        alreadyExists = true;
+                                        log("更新栈 \"" + encodedStackName + "\" 中索引 " + index + " 的" + (isVariable ? "变量 " : "值 ") + p1 + " 值为 " + existingElem.varValue);
+                                        break;
+                                    }
                                 }
-                            }
-                            
-                            if (!alreadyExists) {
-                                CallStackElement elem = new CallStackElement();
-                                elem.varName = p1;
-                                elem.varValue = pushValue;
-                                elem.index = index;
-                                elem.stackName = encodedStackName;
-                                elem.lastPushTime = System.currentTimeMillis();
-                                currentStack.add(elem);
-                                log("将" + (isVariable ? "变量 " : "值 ") + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
+                                
+                                if (!alreadyExists) {
+                                    CallStackElement elem = new CallStackElement();
+                                    elem.varName = p1;
+                                    elem.varValue = pushValue;
+                                    elem.index = index;
+                                    elem.stackName = encodedStackName;
+                                    elem.lastPushTime = System.currentTimeMillis();
+                                    currentStack.add(elem);
+                                    log("将" + (isVariable ? "变量 " : "值 ") + p1 + " 压入栈 \"" + encodedStackName + "\" 的索引 " + index + "，值为 " + elem.varValue);
+                                }
+                            } finally {
+                                // 3. 先释放索引锁
+                                indexLock.unlock();
                             }
                         } finally {
-                            writeLock.unlock();
+                            // 4. 再释放栈锁
+                            stackLock.unlock();
                         }
                     };
                     
@@ -532,7 +578,9 @@ public class LNestedLogic {
                             return;
                         }
                         
-                        readLock.lock();
+                        // 1. 获取栈锁，用于保护栈的访问
+                        java.util.concurrent.locks.Lock stackLock = getStackLock(encodedStackName);
+                        stackLock.lock();
                         try {
                             // 直接访问stacks变量，不调用getStack方法，避免创建新栈
                             Seq<CallStackElement> currentStack = stacks.get(encodedStackName);
@@ -544,33 +592,42 @@ public class LNestedLogic {
                                 return;
                             }
                             
-                            // 查找指定索引的元素
-                            CallStackElement targetElem = null;
-                            for (CallStackElement elem : currentStack) {
-                                if (elem.index == index) {
-                                    targetElem = elem;
-                                    break;
-                                }
-                            }
-                            
-                            if (targetElem != null) {
-                                if (targetElem.varValue instanceof Double) {
-                                    targetVar.isobj = false;
-                                    targetVar.numval = (Double) targetElem.varValue;
-                                } else {
-                                    targetVar.isobj = true;
-                                    targetVar.objval = targetElem.varValue;
+                            // 2. 获取索引锁，为当前索引分配独立锁
+                            java.util.concurrent.locks.Lock indexLock = getIndexLock(encodedStackName, index);
+                            indexLock.lock();
+                            try {
+                                // 查找指定索引的元素
+                                CallStackElement targetElem = null;
+                                for (CallStackElement elem : currentStack) {
+                                    if (elem.index == index) {
+                                        targetElem = elem;
+                                        break;
+                                    }
                                 }
                                 
-                                log("从栈 \"" + encodedStackName + "\" 的索引 " + index + " 读取值 " + targetElem.varValue + " 到变量 " + p1);
-                            } else {
-                                log("栈 \"" + encodedStackName + "\" 中不存在索引为 " + index + " 的元素");
-                                // 将目标变量设置为null
-                                targetVar.isobj = true;
-                                targetVar.objval = null;
+                                if (targetElem != null) {
+                                    if (targetElem.varValue instanceof Double) {
+                                        targetVar.isobj = false;
+                                        targetVar.numval = (Double) targetElem.varValue;
+                                    } else {
+                                        targetVar.isobj = true;
+                                        targetVar.objval = targetElem.varValue;
+                                    }
+                                    
+                                    log("从栈 \"" + encodedStackName + "\" 的索引 " + index + " 读取值 " + targetElem.varValue + " 到变量 " + p1);
+                                } else {
+                                    log("栈 \"" + encodedStackName + "\" 中不存在索引为 " + index + " 的元素");
+                                    // 将目标变量设置为null
+                                    targetVar.isobj = true;
+                                    targetVar.objval = null;
+                                }
+                            } finally {
+                                // 3. 先释放索引锁
+                                indexLock.unlock();
                             }
                         } finally {
-                            readLock.unlock();
+                            // 4. 再释放栈锁
+                            stackLock.unlock();
                         }
                     };
                     
