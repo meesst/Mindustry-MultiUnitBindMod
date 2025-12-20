@@ -1,5 +1,6 @@
 package logicExtend;
 
+import arc.Core;
 import arc.struct.Seq;
 import arc.struct.ObjectMap;
 import mindustry.gen.Unit;
@@ -34,16 +35,24 @@ public class LUnitBindGroupRUN {
         if (type.isobj && type.obj() instanceof UnitType) {
             unitType = (UnitType) type.obj();
         } else {
-            unitVar.setobj("无效单位类型");
+            unitVar.setobj(Core.bundle.get("unitbindgroup.error.invalidtype", "无效单位类型"));
             indexVar.setnum(-1);
             return;
         }
         
         try {
             bindCount = count.isobj ? Integer.parseInt(count.obj().toString()) : (int)count.num();
-            if (bindCount < 1) bindCount = 1;
+            if (bindCount < 1) {
+                // 返回错误信息：绑定数量必须大于0
+                unitVar.setobj(Core.bundle.get("unitbindgroup.error.invalidcount", "绑定数量必须大于0"));
+                indexVar.setnum(-1);
+                return;
+            }
         } catch (NumberFormatException | ClassCastException e) {
-            bindCount = 1;
+            // 返回错误信息：无效的绑定数量格式
+            unitVar.setobj(Core.bundle.get("unitbindgroup.error.invalidformat", "无效的绑定数量格式"));
+            indexVar.setnum(-1);
+            return;
         }
         
         // 解析mode参数
@@ -66,7 +75,7 @@ public class LUnitBindGroupRUN {
         // 检查维护后单位池是否为空
         if (pool.units.isEmpty()) {
             pool.isUsed = false;
-            unitVar.setobj("单位池为空");
+            unitVar.setobj(Core.bundle.get("unitbindgroup.error.emptyunitpool", "单位池为空"));
             indexVar.setnum(-1);
             return;
         }
