@@ -94,13 +94,8 @@ public class LUnitBindGroupUI {
 
             // 添加count标签和文本输入框
             fields(table, "count", count, str -> {
-                try {
-                    int value = Integer.parseInt(str);
-                    count = value < 1 ? "1" : str;
-                } catch (NumberFormatException e) {
-            // 如果输入不是数字，设置为默认值1
-                    count = "1";
-                }
+                // 允许输入变量，不在UI层面进行验证，延迟到执行时验证
+                count = str;
             }).size(60f, 40f).pad(2f);
 
             row(table);
