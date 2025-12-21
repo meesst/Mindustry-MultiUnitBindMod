@@ -56,6 +56,7 @@ public class LUnitBindGroupUI {
         }
         
         private void rebuild(Table table) {
+            table.clearChildren();
             table.setColor(table.color);
             table.left();
             
