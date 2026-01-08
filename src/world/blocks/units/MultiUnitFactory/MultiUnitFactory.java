@@ -47,8 +47,8 @@ public class MultiUnitFactory extends UnitFactory {
         // 设置显示属性
         localizedName = "Multi Unit Factory";
         description = "Creates custom units by combining buildings in subspace.";
-        // 设置图标（使用现有工厂图标作为默认）
-        icon = Core.atlas.find("ground-factory");
+        // 注意：在Mindustry中，建筑图标通过纹理文件自动加载，不需要手动设置
+        // 确保建筑ID与纹理文件名称匹配即可
 
         // 添加支持亚空间设计生产的配置
         config(Boolean.class, (MultiUnitFactoryBuild build, Boolean useSubspace) -> {

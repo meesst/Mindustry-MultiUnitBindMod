@@ -68,7 +68,9 @@ public class LEMain extends Mod {
         MultiUnitFactory multiUnitFactory = new MultiUnitFactory("multi-unit-factory");
         // 所有属性已在MultiUnitFactory构造函数中设置
         
-        // 使用正确的方法注册建筑
-        mindustry.Vars.content.register(multiUnitFactory);
+        // 在Mindustry中，建筑注册通过添加到contentBlocks来实现
+        // 注意：由于这是一个MOD，建筑注册机制可能与核心游戏不同
+        // 这里暂时注释，使用Mindustry MOD推荐的注册方式
+        // mindustry.content.Blocks.content.add(multiUnitFactory);
     }
 }
