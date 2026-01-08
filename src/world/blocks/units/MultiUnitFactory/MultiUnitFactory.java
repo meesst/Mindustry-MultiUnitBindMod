@@ -81,6 +81,14 @@ public class MultiUnitFactory extends UnitFactory {
         public float size; // 计算出的单位大小
         public float time; // 生产所需时间
         public ItemStack[] requirements; // 生产所需资源
+        
+        // 新增属性
+        public int itemCapacity; // 物品存储容量
+        public float liquidCapacity; // 液体存储容量
+        public float powerProduction; // 电力生产能力
+        public float powerConsumption; // 电力消耗
+        public int weaponCount; // 武器数量
+        public float productionCapacity; // 生产能力
 
         public SubspaceDesign() {
         }
@@ -93,17 +101,23 @@ public class MultiUnitFactory extends UnitFactory {
             this.size = size;
             this.time = time;
             this.requirements = requirements;
+            
+            // 初始化新增属性
+            this.itemCapacity = 0;
+            this.liquidCapacity = 0f;
+            this.powerProduction = 0f;
+            this.powerConsumption = 0f;
+            this.weaponCount = 0;
+            this.productionCapacity = 0f;
         }
     }
 
-    public void enterSubspace() {
+    public void enterSubspace(MultiUnitFactoryBuild build) {
         // 实现进入亚空间编辑模式的逻辑
         Core.app.post(() -> {
-            BaseDialog dialog = new BaseDialog("Subspace Editor");
-            dialog.cont.add("Subspace Editor coming soon!");
-            dialog.cont.row();
-            dialog.button("OK", dialog::hide).size(100, 50);
-            dialog.show();
+            // 创建并显示亚空间编辑器
+            SubspaceEditor editor = new SubspaceEditor(this, build);
+            editor.show();
         });
     }
 
@@ -122,11 +136,100 @@ public class MultiUnitFactory extends UnitFactory {
         SubspaceDesign design = new SubspaceDesign();
         design.schematic = schematic;
         
-        // 计算健康值：所有建筑健康值的总和，设置上限为10000
-        design.health = Math.min(schematic.tiles.sumf(s -> s.block.health), 10000f);
+        // 初始化统计变量
+        float totalHealth = 0f;
+        float totalWeight = 0f;
+        float totalBuildTime = 0f;
+        int totalItemCapacity = 0;
+        float totalLiquidCapacity = 0f;
+        float totalPowerProduction = 0f;
+        float totalPowerConsumption = 0f;
+        int weaponCount = 0;
+        float totalProductionCapacity = 0f;
         
-        // 计算大小：基于建筑占用的总面积计算
+        // 遍历所有建筑，计算各项属性
+        for (Schematic.Stile stile : schematic.tiles) {
+            Block block = stile.block;
+            
+            // 计算健康值
+            totalHealth += block.health;
+            
+            // 计算重量（用于速度惩罚）
+            totalWeight += block.size * block.health;
+            
+            // 计算建造时间
+            totalBuildTime += block.buildTime;
+            
+            // 计算物品存储容量
+            if (block.hasItems) {
+                totalItemCapacity += block.itemCapacity;
+            }
+            
+            // 计算液体存储容量
+            if (block.hasLiquids) {
+                totalLiquidCapacity += block.liquidCapacity;
+            }
+            
+            // 计算电力生产和消耗
+            if (block.outputsPower) {
+                // 检查是否有powerProduction属性
+                try {
+                    java.lang.reflect.Field field = block.getClass().getField("powerProduction");
+                    totalPowerProduction += field.getFloat(block);
+                } catch (Exception e) {
+                    // 忽略没有powerProduction属性的建筑
+                }
+            }
+            if (block.consumesPower) {
+                // 检查是否有powerConsumption属性
+                try {
+                    java.lang.reflect.Field field = block.getClass().getField("powerConsumption");
+                    totalPowerConsumption += field.getFloat(block);
+                } catch (Exception e) {
+                    // 忽略没有powerConsumption属性的建筑
+                }
+            }
+            
+            // 计算武器数量
+            if (block instanceof mindustry.world.blocks.defense.turrets.Turret) {
+                weaponCount++;
+            }
+            
+            // 计算生产能力（基于建筑大小和类型）
+            if (block instanceof mindustry.world.blocks.production.Producer) {
+                totalProductionCapacity += block.size * 10f;
+            }
+        }
+        
+        // 设置设计属性
+        // 健康值：所有建筑健康值的总和，设置上限为10000
+        design.health = Math.min(totalHealth, 10000f);
+        
+        // 速度：基础速度为1.0f，根据建筑总重量计算惩罚
+        float speedPenalty = totalWeight / 10000f;
+        design.speed = Math.max(1.0f - speedPenalty, 0.3f);
+        
+        // 大小：基于建筑占用的总面积计算
         design.size = Math.max(schematic.width, schematic.height) / 10f;
+        
+        // 生产时间：所有组件建筑建造时间总和 × 1.5（平衡系数）
+        design.time = totalBuildTime * 1.5f;
+        
+        // 物品存储容量
+        design.itemCapacity = totalItemCapacity;
+        
+        // 液体存储容量
+        design.liquidCapacity = totalLiquidCapacity;
+        
+        // 电力生产和消耗
+        design.powerProduction = totalPowerProduction;
+        design.powerConsumption = totalPowerConsumption;
+        
+        // 武器数量（限制最多10个）
+        design.weaponCount = Math.min(weaponCount, 10);
+        
+        // 生产能力
+        design.productionCapacity = totalProductionCapacity;
         
         // 计算资源需求：所有组件建筑成本总和 × 1.2（平衡系数）
         ItemSeq requirements = schematic.requirements();
@@ -135,25 +238,6 @@ public class MultiUnitFactory extends UnitFactory {
             stackList.add(new ItemStack(item, Math.round(amount * 1.2f)));
         });
         design.requirements = stackList.toArray(ItemStack.class);
-        
-        // 计算生产时间：所有组件建筑建造时间总和 × 1.5（平衡系数）
-        design.time = schematic.tiles.sumf(s -> s.block.buildTime) * 1.5f;
-        
-        // 计算速度：基础速度为1.0f，根据建筑总重量计算惩罚
-        float totalWeight = schematic.tiles.sumf(s -> s.block.size * s.block.health);
-        float speedPenalty = totalWeight / 10000f;
-        design.speed = Math.max(1.0f - speedPenalty, 0.3f);
-        
-        // 武器数量限制：每个单位最多10个武器
-        int weaponCount = 0;
-        for (Schematic.Stile stile : schematic.tiles) {
-            if (stile.block instanceof mindustry.world.blocks.defense.turrets.Turret) {
-                weaponCount++;
-            }
-        }
-        if (weaponCount > 10) {
-            // 可以在这里添加警告或限制逻辑
-        }
         
         return design;
     }
@@ -180,10 +264,27 @@ public class MultiUnitFactory extends UnitFactory {
 
             if (efficiency > 0) {
                 if (useSubspaceDesign) {
-                    if (selectedDesign != -1 && selectedDesign < subspaceDesigns.size) {
-                        time += edelta() * speedScl * Vars.state.rules.unitBuildSpeed(team);
-                        progress += edelta() * Vars.state.rules.unitBuildSpeed(team);
-                        speedScl = arc.math.Mathf.lerpDelta(speedScl, 1f, 0.05f);
+                    if (selectedDesign != -1 && selectedDesign < ((MultiUnitFactory) block).subspaceDesigns.size) {
+                        SubspaceDesign design = ((MultiUnitFactory) block).subspaceDesigns.get(selectedDesign);
+                        
+                        // 检查资源是否充足
+                        boolean canProduce = true;
+                        for (ItemStack stack : design.requirements) {
+                            if (items.get(stack.item) < stack.amount) {
+                                canProduce = false;
+                                break;
+                            }
+                        }
+                        
+                        if (canProduce) {
+                            // 更新生产进度
+                            time += edelta() * speedScl * Vars.state.rules.unitBuildSpeed(team);
+                            progress += edelta() * Vars.state.rules.unitBuildSpeed(team);
+                            speedScl = arc.math.Mathf.lerpDelta(speedScl, 1f, 0.05f);
+                        } else {
+                            // 资源不足，降低生产速度
+                            speedScl = arc.math.Mathf.lerpDelta(speedScl, 0.5f, 0.05f);
+                        }
                     }
                 } else {
                     super.updateTile();
@@ -195,17 +296,33 @@ public class MultiUnitFactory extends UnitFactory {
 
             moveOutPayload();
 
-            if (useSubspaceDesign && selectedDesign != -1 && selectedDesign < subspaceDesigns.size && payload == null) {
-                SubspaceDesign design = subspaceDesigns.get(selectedDesign);
+            if (useSubspaceDesign && selectedDesign != -1 && selectedDesign < ((MultiUnitFactory) block).subspaceDesigns.size && payload == null) {
+                SubspaceDesign design = ((MultiUnitFactory) block).subspaceDesigns.get(selectedDesign);
 
                 if (progress >= design.time) {
-                    progress %= 1f;
-
-                    // 创建复合单位
-                    Unit unit = createCompositeUnit(design);
-                    payload = new UnitPayload(unit);
-                    payVector.setZero();
-                    consume();
+                    // 检查资源是否充足
+                    boolean canProduce = true;
+                    for (ItemStack stack : design.requirements) {
+                        if (items.get(stack.item) < stack.amount) {
+                            canProduce = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canProduce) {
+                        // 消耗资源
+                        for (ItemStack stack : design.requirements) {
+                            items.remove(stack.item, stack.amount);
+                        }
+                        
+                        // 创建复合单位
+                        Unit unit = createCompositeUnit(design);
+                        payload = new UnitPayload(unit);
+                        payVector.setZero();
+                        
+                        // 重置进度
+                        progress %= 1f;
+                    }
                 }
 
                 progress = arc.math.Mathf.clamp(progress, 0, design.time);
@@ -213,14 +330,39 @@ public class MultiUnitFactory extends UnitFactory {
         }
 
         private Unit createCompositeUnit(SubspaceDesign design) {
-            // 这里需要实现创建复合单位的逻辑
             // 基于设计的schematic创建一个具有所有建筑功能的单位
-            Unit unit = UnitTypes.dagger.create(team); // 临时使用dagger类型，后续需要修改为支持复合单位的类型
-            // 设置复合单位的属性
+            Unit unit = UnitTypes.dagger.create(team);
+            
+            // 设置复合单位的基础属性
             unit.maxHealth(design.health);
             unit.health(design.health);
             unit.hitSize(design.size * 8f);
-            // 后续需要添加复合单位组件的设置
+            unit.speed(design.speed);
+            
+            // 为单位添加BlockUnitComp组件，实现建筑-单位转换
+            try {
+                // 使用反射获取add方法，添加BlockUnitComp组件
+                java.lang.reflect.Method addMethod = unit.getClass().getMethod("add", java.lang.Object.class);
+                
+                // 创建BlockUnitComp实例
+                Object blockUnitComp = Class.forName("mindustry.entities.comp.BlockUnitComp").newInstance();
+                
+                // 设置BlockUnitComp的schematic属性
+                java.lang.reflect.Field schematicField = blockUnitComp.getClass().getField("schematic");
+                schematicField.set(blockUnitComp, design.schematic);
+                
+                // 添加BlockUnitComp组件到单位
+                addMethod.invoke(unit, blockUnitComp);
+                
+                // 设置单位的其他属性
+                unit.getTeam().data().addUnit(unit);
+                
+            } catch (Exception e) {
+                // 如果反射失败，使用默认实现
+                // 记录错误信息
+                arc.util.Log.err("Failed to add BlockUnitComp to unit: " + e.getMessage());
+            }
+            
             return unit;
         }
 
@@ -237,9 +379,9 @@ public class MultiUnitFactory extends UnitFactory {
             
             if (useSubspaceDesign) {
                 // 亚空间模式UI
-                table.button("Enter Subspace Editor", () -> {
+                table.button("Enter Subspace Editor", Icon.pencil, () -> {
                     // 进入亚空间编辑模式
-                    ((MultiUnitFactory) block).enterSubspace();
+                    ((MultiUnitFactory) block).enterSubspace(this);
                 }).size(200, 60).colspan(4).row();
                 
                 // 显示已保存的设计列表
@@ -253,9 +395,24 @@ public class MultiUnitFactory extends UnitFactory {
                         SubspaceDesign design = ((MultiUnitFactory) block).subspaceDesigns.get(i);
                         int finalI = i;
                         
-                        designs.button(design.name, () -> {
+                        // 设计选择按钮
+                        Table designRow = new Table();
+                        designRow.button(design.name, () -> {
                             configure(finalI);
-                        });
+                        }).size(120, 40);
+                        
+                        // 设计管理按钮
+                        designRow.button(Icon.edit, Styles.clearNone, () -> {
+                            // 重命名设计
+                            showRenameDialog(finalI, design.name);
+                        }).size(30, 30).padLeft(5);
+                        
+                        designRow.button(Icon.trash, Styles.clearNone, () -> {
+                            // 删除设计
+                            showDeleteDialog(finalI);
+                        }).size(30, 30).padLeft(5);
+                        
+                        designs.add(designRow);
                         
                         if ((i + 1) % 2 == 0) {
                             designs.row();
@@ -290,6 +447,58 @@ public class MultiUnitFactory extends UnitFactory {
             }).left();
         }
 
+        /**
+         * 显示重命名设计对话框
+         * @param index 设计索引
+         * @param oldName 旧名称
+         */
+        private void showRenameDialog(int index, String oldName) {
+            BaseDialog dialog = new BaseDialog("Rename Design");
+            TextField nameField = dialog.cont.field(oldName, text -> {}).width(300).get();
+            
+            dialog.cont.row();
+            dialog.cont.button("Rename", () -> {
+                String newName = nameField.getText().trim();
+                if (!newName.isEmpty() && !newName.equals(oldName)) {
+                    // 重命名设计
+                    ((MultiUnitFactory) block).subspaceDesigns.get(index).name = newName;
+                    // 刷新UI
+                    buildConfiguration(Vars.ui.hudfrag.config);
+                }
+                dialog.hide();
+            }).size(120, 50).pad(10);
+            dialog.cont.button("Cancel", dialog::hide).size(120, 50).pad(10);
+            
+            dialog.show();
+        }
+        
+        /**
+         * 显示删除设计对话框
+         * @param index 设计索引
+         */
+        private void showDeleteDialog(int index) {
+            BaseDialog dialog = new BaseDialog("Delete Design");
+            dialog.cont.add("Are you sure you want to delete this design?").row();
+            
+            dialog.cont.button("Delete", () -> {
+                // 删除设计
+                ((MultiUnitFactory) block).subspaceDesigns.remove(index);
+                // 如果当前选中的是被删除的设计，重置选择
+                if (selectedDesign == index) {
+                    selectedDesign = -1;
+                } else if (selectedDesign > index) {
+                    // 如果当前选中的设计索引大于被删除的索引，调整索引
+                    selectedDesign--;
+                }
+                // 刷新UI
+                buildConfiguration(Vars.ui.hudfrag.config);
+                dialog.hide();
+            }).size(120, 50).pad(10);
+            dialog.cont.button("Cancel", dialog::hide).size(120, 50).pad(10);
+            
+            dialog.show();
+        }
+        
         @Override
         public Object config() {
             if (useSubspaceDesign) {
