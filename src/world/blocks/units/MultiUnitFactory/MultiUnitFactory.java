@@ -227,7 +227,13 @@ public class MultiUnitFactory extends UnitFactory {
         @Override
         public void buildConfiguration(Table table) {
             // 添加亚空间模式切换开关
-            table.checkBox("Use Subspace Design", () -> useSubspaceDesign, this::configure).left().colspan(4).row();
+            table.add(new CheckBox("Use Subspace Design") {{ 
+                changed(() -> {
+                    useSubspaceDesign = isChecked();
+                    configure(useSubspaceDesign);
+                });
+                setChecked(useSubspaceDesign);
+            }}).left().colspan(4).row();
             
             if (useSubspaceDesign) {
                 // 亚空间模式UI
@@ -238,7 +244,7 @@ public class MultiUnitFactory extends UnitFactory {
                 
                 // 显示已保存的设计列表
                 if (((MultiUnitFactory) block).subspaceDesigns.size > 0) {
-                    table.label("Saved Designs:").left().colspan(4).row();
+                    table.label(() -> "Saved Designs:").left().colspan(4).row();
                     
                     Table designs = new Table();
                     designs.defaults().size(120, 40);
@@ -271,7 +277,13 @@ public class MultiUnitFactory extends UnitFactory {
             table.row();
             table.table(t -> {
                 t.left();
-                t.checkBox("Use Subspace Design", () -> useSubspaceDesign, this::configure).left().padRight(10);
+                t.add(new CheckBox("Use Subspace Design") {{ 
+                    changed(() -> {
+                        useSubspaceDesign = isChecked();
+                        configure(useSubspaceDesign);
+                    });
+                    setChecked(useSubspaceDesign);
+                }}).left().padRight(10);
                 if (useSubspaceDesign) {
                     t.label(() -> selectedDesign == -1 ? "No Design Selected" : ((MultiUnitFactory) block).subspaceDesigns.get(selectedDesign).name).color(Color.lightGray).left();
                 }
