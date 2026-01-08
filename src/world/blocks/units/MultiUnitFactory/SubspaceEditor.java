@@ -63,18 +63,17 @@ public class SubspaceEditor {
      */
     private void initDialog() {
         dialog = new BaseDialog("Subspace Editor") {
-            @Override
-            public void shown() {
-                super.shown();
-                isEditing = true;
-            }
-            
-            @Override
-            public void hidden() {
-                super.hidden();
-                isEditing = false;
-            }
+            // 移除@Override注解和错误的方法调用，使用默认实现
         };
+        
+        // 使用正确的方式监听对话框显示和隐藏事件
+        dialog.shown(() -> {
+            isEditing = true;
+        });
+        
+        dialog.hidden(() -> {
+            isEditing = false;
+        });
         
         // 设置对话框大小
         dialog.setSize(1000, 800);
@@ -126,8 +125,8 @@ public class SubspaceEditor {
         
         // 简单的建筑列表
         Seq<Block> availableBlocks = getAvailableBlocks();
-        ScrollPane scrollPane = new ScrollPane(new Table(), Styles.defaultPane);
-        Table blockList = scrollPane.getContent();
+        Table blockList = new Table();
+        ScrollPane scrollPane = new ScrollPane(blockList, Styles.defaultPane);
         blockList.defaults().size(180, 40).pad(5);
         
         ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
@@ -181,7 +180,7 @@ public class SubspaceEditor {
                 Table cell = new Table();
                 cell.background(Tex.whiteui);
                 cell.setColor(Color.gray);
-                cell.size(cellSize);
+                cell.size(cellSize, cellSize);
                 
                 // 检查当前位置是否有建筑
                 Stile existingTile = findTileAt(finalX, finalY);
@@ -198,7 +197,8 @@ public class SubspaceEditor {
                         tempSchematic.tiles.remove(tile);
                     } else {
                         // 放置建筑
-                        Stile newTile = new Stile(finalX, finalY, selectedBlock[0], 0, null);
+                        // 根据Mindustry Stile构造函数的正确参数顺序：x, y, block, rotation, floor
+                        Stile newTile = new Stile(finalX, finalY, selectedBlock[0], 0, Blocks.air);
                         tempSchematic.tiles.add(newTile);
                     }
                 });
@@ -222,7 +222,7 @@ public class SubspaceEditor {
                     Table cell = new Table();
                     cell.background(Tex.whiteui);
                     cell.setColor(Color.gray);
-                    cell.size(cellSize);
+                    cell.size(cellSize, cellSize);
                     
                     // 检查当前位置是否有建筑
                     Stile existingTile = findTileAt(finalX, finalY);
@@ -239,7 +239,8 @@ public class SubspaceEditor {
                             tempSchematic.tiles.remove(tile);
                         } else {
                             // 放置建筑
-                            Stile newTile = new Stile(finalX, finalY, selectedBlock[0], 0, null);
+                            // 根据Mindustry Stile构造函数的正确参数顺序：x, y, block, rotation, floor
+                            Stile newTile = new Stile(finalX, finalY, selectedBlock[0], 0, Blocks.air);
                             tempSchematic.tiles.add(newTile);
                         }
                     });
