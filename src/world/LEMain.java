@@ -69,6 +69,6 @@ public class LEMain extends Mod {
         // 所有属性已在MultiUnitFactory构造函数中设置
         
         // 添加到游戏内容中
-        mindustry.Vars.content.blocks.add(multiUnitFactory);
+        mindustry.Vars.content.register(multiUnitFactory);
     }
 }

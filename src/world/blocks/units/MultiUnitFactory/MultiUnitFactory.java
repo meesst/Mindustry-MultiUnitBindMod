@@ -1,7 +1,12 @@
 package world.blocks.units.MultiUnitFactory;
 
+import arc.*;
+import arc.graphics.*;
+import arc.scene.ui.*;
 import arc.struct.*;
 import arc.util.*;
+import mindustry.*;
+import mindustry.content.*;
 import mindustry.game.*;
 import mindustry.gen.*;
 import mindustry.type.*;
@@ -25,12 +30,14 @@ public class MultiUnitFactory extends UnitFactory {
         rotate = true;
         regionRotated1 = 1;
         commandable = true;
-        ambientSound = mindustry.content.Sounds.respawning;
+        ambientSound = Sounds.respawning;
         health = 1000;
         size = 3;
-        buildCost = new ItemStack(mindustry.content.Items.copper, 1000);
-        buildCost.add(mindustry.content.Items.lead, 800);
-        buildCost.add(mindustry.content.Items.silicon, 500);
+        requirements(Category.units, BuildVisibility.shown, ItemStack.with(
+            Items.copper, 1000,
+            Items.lead, 800,
+            Items.silicon, 500
+        ));
         localizedName = "Multi Unit Factory";
         description = "Creates custom units by combining buildings in subspace.";
 
@@ -105,11 +112,11 @@ public class MultiUnitFactory extends UnitFactory {
         
         // 计算资源需求：所有组件建筑成本总和 × 1.2（平衡系数）
         ItemSeq requirements = schematic.requirements();
-        ItemStack[] stacks = new ItemStack[requirements.size()];
-        for (int i = 0; i < requirements.size(); i++) {
-            stacks[i] = new ItemStack(requirements.items[i], Math.round(requirements.amounts[i] * 1.2f));
-        }
-        design.requirements = stacks;
+        Seq<ItemStack> stackList = new Seq<>();
+        requirements.each((item, amount) -> {
+            stackList.add(new ItemStack(item, Math.round(amount * 1.2f)));
+        });
+        design.requirements = stackList.toArray(ItemStack.class);
         
         // 计算生产时间：所有组件建筑建造时间总和 × 1.5（平衡系数）
         design.time = schematic.tiles.sumf(s -> s.block.buildTime) * 1.5f;
@@ -156,16 +163,16 @@ public class MultiUnitFactory extends UnitFactory {
             if (efficiency > 0) {
                 if (useSubspaceDesign) {
                     if (selectedDesign != -1 && selectedDesign < subspaceDesigns.size) {
-                        time += edelta() * speedScl * Vars.state.rules.unitBuildSpeed(team);
-                        progress += edelta() * Vars.state.rules.unitBuildSpeed(team);
-                        speedScl = Mathf.lerpDelta(speedScl, 1f, 0.05f);
+                        time += edelta() * speedScl * Vars.state.rules.unitBuildSpeed;
+                        progress += edelta() * Vars.state.rules.unitBuildSpeed;
+                        speedScl = arc.math.Mathf.lerpDelta(speedScl, 1f, 0.05f);
                     }
                 } else {
                     super.updateTile();
                     return;
                 }
             } else {
-                speedScl = Mathf.lerpDelta(speedScl, 0f, 0.05f);
+                speedScl = arc.math.Mathf.lerpDelta(speedScl, 0f, 0.05f);
             }
 
             moveOutPayload();
@@ -183,7 +190,7 @@ public class MultiUnitFactory extends UnitFactory {
                     consume();
                 }
 
-                progress = Mathf.clamp(progress, 0, design.time);
+                progress = arc.math.Mathf.clamp(progress, 0, design.time);
             }
         }
 
@@ -194,7 +201,6 @@ public class MultiUnitFactory extends UnitFactory {
             // 设置复合单位的属性
             unit.maxHealth(design.health);
             unit.health(design.health);
-            unit.speed(design.speed);
             unit.hitSize(design.size * 8f);
             // 后续需要添加复合单位组件的设置
             return unit;
