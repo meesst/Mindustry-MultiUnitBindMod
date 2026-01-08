@@ -64,13 +64,7 @@ public class LEMain extends Mod {
         // 初始化debugLog值
         LELog.debugLog = Core.settings.getBool("lnestedlogic-debug-log") ? 1 : 0;
         
-        // 注册多单位工厂
-        MultiUnitFactory multiUnitFactory = new MultiUnitFactory("multi-unit-factory");
-        // 所有属性已在MultiUnitFactory构造函数中设置
-        
-        // 在Mindustry中，建筑注册通过添加到contentBlocks来实现
-        // 注意：由于这是一个MOD，建筑注册机制可能与核心游戏不同
-        // 这里暂时注释，使用Mindustry MOD推荐的注册方式
-        // mindustry.content.Blocks.content.add(multiUnitFactory);
+        // 加载多单位工厂建筑
+        world.blocks.units.MultiUnitFactory.MultiUnitFactoryBlock.load();
     }
 }
