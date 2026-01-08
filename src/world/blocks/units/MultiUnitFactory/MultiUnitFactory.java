@@ -96,6 +96,13 @@ public class MultiUnitFactory extends UnitFactory {
 
     public void enterSubspace() {
         // 实现进入亚空间编辑模式的逻辑
+        Core.app.post(() -> {
+            BaseDialog dialog = new BaseDialog("Subspace Editor");
+            dialog.cont.add("Subspace Editor coming soon!");
+            dialog.cont.row();
+            dialog.button("OK", dialog::hide).size(100, 50);
+            dialog.show();
+        });
     }
 
     public void saveSubspaceDesign(String name, Schematic schematic) {
@@ -215,10 +222,48 @@ public class MultiUnitFactory extends UnitFactory {
             return unit;
         }
 
-        // 暂时注释display方法，避免Table类依赖
-        /*
         @Override
-        public void display(arc.scene.ui.Table table) {
+        public void buildConfiguration(Table table) {
+            // 添加亚空间模式切换开关
+            table.checkBox("Use Subspace Design", () -> useSubspaceDesign, this::configure).left().colspan(4).row();
+            
+            if (useSubspaceDesign) {
+                // 亚空间模式UI
+                table.button("Enter Subspace Editor", () -> {
+                    // 进入亚空间编辑模式
+                    ((MultiUnitFactory) block).enterSubspace();
+                }).size(200, 60).colspan(4).row();
+                
+                // 显示已保存的设计列表
+                if (((MultiUnitFactory) block).subspaceDesigns.size > 0) {
+                    table.label("Saved Designs:").left().colspan(4).row();
+                    
+                    Table designs = new Table();
+                    designs.defaults().size(120, 40);
+                    
+                    for (int i = 0; i < ((MultiUnitFactory) block).subspaceDesigns.size; i++) {
+                        SubspaceDesign design = ((MultiUnitFactory) block).subspaceDesigns.get(i);
+                        int finalI = i;
+                        
+                        designs.button(design.name, () -> {
+                            configure(finalI);
+                        });
+                        
+                        if ((i + 1) % 2 == 0) {
+                            designs.row();
+                        }
+                    }
+                    
+                    table.add(designs).colspan(4).row();
+                }
+            } else {
+                // 普通单位工厂模式，使用原有逻辑
+                super.buildConfiguration(table);
+            }
+        }
+        
+        @Override
+        public void display(Table table) {
             super.display(table);
 
             table.row();
@@ -226,11 +271,10 @@ public class MultiUnitFactory extends UnitFactory {
                 t.left();
                 t.checkBox("Use Subspace Design", () -> useSubspaceDesign, this::configure).left().padRight(10);
                 if (useSubspaceDesign) {
-                    t.label(() -> selectedDesign == -1 ? "No Design Selected" : subspaceDesigns.get(selectedDesign).name).color(arc.graphics.Color.lightGray).left();
+                    t.label(() -> selectedDesign == -1 ? "No Design Selected" : ((MultiUnitFactory) block).subspaceDesigns.get(selectedDesign).name).color(Color.lightGray).left();
                 }
             }).left();
         }
-        */
 
         @Override
         public Object config() {
