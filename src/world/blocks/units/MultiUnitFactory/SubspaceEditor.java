@@ -6,13 +6,14 @@ import arc.func.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
+import arc.math.*;
 import arc.math.geom.*;
-import arc.input.*;
 import arc.scene.*;
 import arc.scene.event.*;
 import arc.scene.ui.*;
 import arc.scene.ui.ImageButton.*;
 import arc.scene.ui.layout.*;
+import arc.graphics.g2d.*;
 import arc.struct.*;
 import arc.util.*;
 import mindustry.*;
@@ -200,19 +201,20 @@ public class SubspaceEditor implements Disposable {
         // 创建建筑选择按钮组
         ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
         for (Block block : availableBlocks) {
-            // 直接创建带图标的按钮
-            ImageButton button = blockList.button(new TextureRegionDrawable(block.uiIcon), Styles.togglet, () -> {
+            // 使用Table创建带图标的按钮行
+            Table buttonRow = new Table();
+            
+            // 添加建筑图标
+            buttonRow.image(block.uiIcon).size(32f).padRight(10f);
+            
+            // 添加选择按钮
+            TextButton button = buttonRow.button(block.localizedName, Styles.togglet, () -> {
                 selectedBlock = block;
-            }).size(180f, 40f).update(b -> {
+            }).size(140f, 40f).update(b -> {
                 b.setChecked(selectedBlock == block);
             }).group(buttonGroup).get();
             
-            // 添加按钮文本
-            button.label.setColor(Color.white);
-            button.label.setText(block.localizedName);
-            button.label.setFontScale(0.8f);
-            
-            blockList.row();
+            blockList.add(buttonRow).pad(5f).row();
         }
         
         blockPalette.add(scrollPane).grow().row();
