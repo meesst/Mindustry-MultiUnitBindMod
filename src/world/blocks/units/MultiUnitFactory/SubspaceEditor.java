@@ -180,8 +180,8 @@ public class SubspaceEditor {
                 Table cell = new Table();
                 cell.background(Tex.whiteui);
                 cell.setColor(Color.gray);
-                // 使用width和height方法设置Table大小，而不是size方法
-                cell.width(cellSize).height(cellSize);
+                // 使用add方法添加一个空标签来设置单元格大小，或者使用固定大小的添加方式
+                cell.add("").size(cellSize, cellSize);
                 
                 // 检查当前位置是否有建筑
                 Stile existingTile = findTileAt(finalX, finalY);
@@ -223,8 +223,8 @@ public class SubspaceEditor {
                     Table cell = new Table();
                     cell.background(Tex.whiteui);
                     cell.setColor(Color.gray);
-                    // 使用width和height方法设置Table大小，而不是size方法
-                    cell.width(cellSize).height(cellSize);
+                    // 使用add方法添加一个空标签来设置单元格大小，或者使用固定大小的添加方式
+                    cell.add("").size(cellSize, cellSize);
                     
                     // 检查当前位置是否有建筑
                     Stile existingTile = findTileAt(finalX, finalY);
