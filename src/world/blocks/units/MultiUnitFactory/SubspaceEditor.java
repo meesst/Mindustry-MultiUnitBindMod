@@ -180,7 +180,8 @@ public class SubspaceEditor {
                 Table cell = new Table();
                 cell.background(Tex.whiteui);
                 cell.setColor(Color.gray);
-                cell.size(cellSize, cellSize);
+                // 使用width和height方法设置Table大小，而不是size方法
+                cell.width(cellSize).height(cellSize);
                 
                 // 检查当前位置是否有建筑
                 Stile existingTile = findTileAt(finalX, finalY);
@@ -197,8 +198,8 @@ public class SubspaceEditor {
                         tempSchematic.tiles.remove(tile);
                     } else {
                         // 放置建筑
-                        // 根据Mindustry Stile构造函数的正确参数顺序：x, y, block, rotation, floor
-                        Stile newTile = new Stile(finalX, finalY, selectedBlock[0], 0, Blocks.air);
+                        // 根据Mindustry Stile构造函数的正确参数顺序：Block block, int x, int y, Object config, byte rotation
+                        Stile newTile = new Stile(selectedBlock[0], finalX, finalY, null, (byte)0);
                         tempSchematic.tiles.add(newTile);
                     }
                 });
@@ -222,7 +223,8 @@ public class SubspaceEditor {
                     Table cell = new Table();
                     cell.background(Tex.whiteui);
                     cell.setColor(Color.gray);
-                    cell.size(cellSize, cellSize);
+                    // 使用width和height方法设置Table大小，而不是size方法
+                    cell.width(cellSize).height(cellSize);
                     
                     // 检查当前位置是否有建筑
                     Stile existingTile = findTileAt(finalX, finalY);
@@ -239,8 +241,8 @@ public class SubspaceEditor {
                             tempSchematic.tiles.remove(tile);
                         } else {
                             // 放置建筑
-                            // 根据Mindustry Stile构造函数的正确参数顺序：x, y, block, rotation, floor
-                            Stile newTile = new Stile(finalX, finalY, selectedBlock[0], 0, Blocks.air);
+                            // 根据Mindustry Stile构造函数的正确参数顺序：Block block, int x, int y, Object config, byte rotation
+                            Stile newTile = new Stile(selectedBlock[0], finalX, finalY, null, (byte)0);
                             tempSchematic.tiles.add(newTile);
                         }
                     });
