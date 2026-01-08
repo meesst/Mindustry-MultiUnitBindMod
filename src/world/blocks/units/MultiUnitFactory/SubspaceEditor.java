@@ -7,9 +7,11 @@ import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
+import arc.input.*;
 import arc.scene.*;
 import arc.scene.event.*;
 import arc.scene.ui.*;
+import arc.scene.ui.ImageButton.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
 import arc.util.*;
@@ -112,33 +114,43 @@ public class SubspaceEditor implements Disposable {
         
         // 添加事件监听器
         editorUI.addListener(new InputListener() {
+            private Vec2 lastTouchPos = new Vec2();
+            
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, KeyCode button) {
-                if (active && button == KeyCode.mouseLeft) {
-                    placeBlock(x, y);
-                    return true;
-                } else if (active && button == KeyCode.mouseRight) {
-                    removeBlock(x, y);
-                    return true;
+                if (active) {
+                    lastTouchPos.set(x, y);
+                    if (button == KeyCode.mouseLeft) {
+                        placeBlock(x, y);
+                        return true;
+                    } else if (button == KeyCode.mouseRight) {
+                        removeBlock(x, y);
+                        return true;
+                    }
                 }
                 return false;
             }
             
             @Override
-            public void mouseDragged(InputEvent event, float x, float y, int pointer) {
+            public void touchDragged(InputEvent event, float x, float y, int pointer) {
                 if (active && pointer == 0) {
-                    cameraPos.add(event.deltaX, event.deltaY);
+                    float deltaX = x - lastTouchPos.x;
+                    float deltaY = y - lastTouchPos.y;
+                    cameraPos.add(deltaX, deltaY);
+                    lastTouchPos.set(x, y);
                 }
             }
         });
         
         // 添加滚轮缩放支持
-        editorUI.addListener(new ScrollListener() {
+        editorUI.addListener(new InputListener() {
             @Override
-            public void scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+            public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
                 if (active) {
                     zoom = Mathf.clamp(zoom - amountY * 0.1f, 0.5f, 3f);
+                    return true;
                 }
+                return false;
             }
         });
         
@@ -181,21 +193,21 @@ public class SubspaceEditor implements Disposable {
         blockPalette.image().fillX().height(2f).color(Pal.accent).row();
         
         // 创建建筑列表滚动面板
-        ScrollPane scrollPane = new ScrollPane(new Table(), Styles.defaultPane);
-        Table blockList = scrollPane.getContent();
+        Table blockList = new Table();
+        ScrollPane scrollPane = new ScrollPane(blockList, Styles.defaultPane);
         blockList.defaults().size(180f, 40f).pad(5f);
         
         // 创建建筑选择按钮组
         ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
         for (Block block : availableBlocks) {
-            ImageButton button = blockList.button(block.localizedName, Styles.togglet, () -> {
+            TextButton button = blockList.button(block.localizedName, Styles.togglet, () -> {
                 selectedBlock = block;
             }).update(b -> {
                 b.setChecked(selectedBlock == block);
             }).group(buttonGroup).get();
             
             // 为按钮添加图标
-            button.getImageCell().size(32f).padRight(5f).setActor(new Image(block.uiIcon));
+            button.getCells().first().add(new Image(block.uiIcon)).size(32f).padRight(5f).left();
             blockList.row();
         }
         
@@ -242,7 +254,7 @@ public class SubspaceEditor implements Disposable {
         blocks.add(Blocks.wave);
         blocks.add(Blocks.battery);
         blocks.add(Blocks.powerNode);
-        blocks.add(Blocks.copperGenerator);
+        blocks.add(Blocks.copperWall);
         blocks.add(Blocks.siliconSmelter);
         blocks.add(Blocks.mechanicalDrill);
         return blocks;
@@ -324,7 +336,7 @@ public class SubspaceEditor implements Disposable {
             // 绘制建筑名称
             Draw.color(Color.white);
             Fonts.outline.draw(stile.block.localizedName, x, y + gridPixelSize / 2f + 10f, 
-                              Align.center, 0.5f, false);
+                              Align.center, (int)0.5f, false);
             Draw.color();
         }
     }
