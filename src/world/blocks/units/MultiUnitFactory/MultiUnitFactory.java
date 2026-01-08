@@ -113,12 +113,12 @@ public class MultiUnitFactory extends UnitFactory {
         }
     }
 
-    public void enterSubspace(MultiUnitFactoryBuild build) {
+    public void enterSubspace(MultiUnitFactoryBuild build, Player player) {
         // 实现进入亚空间编辑模式的逻辑
         Core.app.post(() -> {
             // 创建并显示亚空间编辑器
             SubspaceEditor editor = new SubspaceEditor(this, build);
-            editor.show();
+            editor.open(player);
         });
     }
 
@@ -381,8 +381,9 @@ public class MultiUnitFactory extends UnitFactory {
             if (useSubspaceDesign) {
                 // 亚空间模式UI
                 table.button("Enter Subspace Editor", Icon.pencil, () -> {
-                    // 进入亚空间编辑模式
-                    ((MultiUnitFactory) block).enterSubspace(this);
+                    // 进入亚空间编辑模式，获取当前玩家
+                    Player player = Vars.player;
+                    ((MultiUnitFactory) block).enterSubspace(this, player);
                 }).size(200, 60).colspan(4).row();
                 
                 // 显示已保存的设计列表
