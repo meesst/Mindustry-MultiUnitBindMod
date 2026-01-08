@@ -196,7 +196,7 @@ public class MultiUnitFactory extends UnitFactory {
             }
             
             // 计算生产能力（基于建筑大小和类型）
-            if (block instanceof mindustry.world.blocks.production.Producer) {
+            if (block instanceof mindustry.world.blocks.production.GenericCrafter) {
                 totalProductionCapacity += block.size * 10f;
             }
         }
@@ -337,7 +337,7 @@ public class MultiUnitFactory extends UnitFactory {
             unit.maxHealth(design.health);
             unit.health(design.health);
             unit.hitSize(design.size * 8f);
-            unit.speed(design.speed);
+            // Unit.speed()是获取速度的方法，不是设置速度的方法，移除这个调用
             
             // 为单位添加BlockUnitComp组件，实现建筑-单位转换
             try {
@@ -354,8 +354,8 @@ public class MultiUnitFactory extends UnitFactory {
                 // 添加BlockUnitComp组件到单位
                 addMethod.invoke(unit, blockUnitComp);
                 
-                // 设置单位的其他属性
-                unit.getTeam().data().addUnit(unit);
+                // Unit对象没有getTeam()方法，直接使用team变量
+                // 单位创建后会自动添加到团队数据中，不需要手动添加
                 
             } catch (Exception e) {
                 // 如果反射失败，使用默认实现
@@ -402,12 +402,12 @@ public class MultiUnitFactory extends UnitFactory {
                         }).size(120, 40);
                         
                         // 设计管理按钮
-                        designRow.button(Icon.edit, Styles.clearNone, () -> {
+                        designRow.button(Icon.edit, () -> {
                             // 重命名设计
                             showRenameDialog(finalI, design.name);
                         }).size(30, 30).padLeft(5);
                         
-                        designRow.button(Icon.trash, Styles.clearNone, () -> {
+                        designRow.button(Icon.trash, () -> {
                             // 删除设计
                             showDeleteDialog(finalI);
                         }).size(30, 30).padLeft(5);
@@ -462,8 +462,7 @@ public class MultiUnitFactory extends UnitFactory {
                 if (!newName.isEmpty() && !newName.equals(oldName)) {
                     // 重命名设计
                     ((MultiUnitFactory) block).subspaceDesigns.get(index).name = newName;
-                    // 刷新UI
-                    buildConfiguration(Vars.ui.hudfrag.config);
+                    // 移除错误的UI刷新调用
                 }
                 dialog.hide();
             }).size(120, 50).pad(10);
@@ -490,8 +489,7 @@ public class MultiUnitFactory extends UnitFactory {
                     // 如果当前选中的设计索引大于被删除的索引，调整索引
                     selectedDesign--;
                 }
-                // 刷新UI
-                buildConfiguration(Vars.ui.hudfrag.config);
+                // 移除错误的UI刷新调用
                 dialog.hide();
             }).size(120, 50).pad(10);
             dialog.cont.button("Cancel", dialog::hide).size(120, 50).pad(10);
