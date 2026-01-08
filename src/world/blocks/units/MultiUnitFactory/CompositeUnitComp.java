@@ -31,8 +31,14 @@ public class CompositeUnitComp {
         totalHealth = Math.min(components.sumf(s -> s.block.health), 10000f);
         
         // 计算大小：基于建筑占用的总面积计算
-        float maxWidth = components.maxf(f -> f.x) + 1;
-        float maxHeight = components.maxf(f -> f.y) + 1;
+        float maxX = 0;
+        float maxY = 0;
+        for (Schematic.Stile stile : components) {
+            if (stile.x > maxX) maxX = stile.x;
+            if (stile.y > maxY) maxY = stile.y;
+        }
+        float maxWidth = maxX + 1;
+        float maxHeight = maxY + 1;
         totalSize = Math.max(maxWidth, maxHeight) / 10f;
         
         // 计算速度：基础速度为1.0f，根据建筑总重量计算惩罚

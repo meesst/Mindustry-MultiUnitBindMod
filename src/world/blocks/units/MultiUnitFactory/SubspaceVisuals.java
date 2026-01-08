@@ -40,12 +40,19 @@ public class SubspaceVisuals {
         float unitSize = unit.hitSize();
         
         // 计算组件建筑的缩放比例
-        float maxComponentSize = components.maxf(f -> f.block.size);
+        float maxComponentSize = 0;
+        float maxX = 0;
+        float maxY = 0;
+        for (Schematic.Stile stile : components) {
+            if (stile.block.size > maxComponentSize) maxComponentSize = stile.block.size;
+            if (stile.x > maxX) maxX = stile.x;
+            if (stile.y > maxY) maxY = stile.y;
+        }
         float scale = unitSize / (maxComponentSize * 8f * 2f);
         
         // 计算组件建筑的偏移量，使它们围绕单位中心分布
-        float centerX = components.maxf(f -> f.x) / 2f;
-        float centerY = components.maxf(f -> f.y) / 2f;
+        float centerX = maxX / 2f;
+        float centerY = maxY / 2f;
         
         // 限制组件数量，避免性能问题
         int maxComponents = Math.min(components.size, 20);

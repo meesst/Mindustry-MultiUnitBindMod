@@ -208,8 +208,10 @@ public class MultiUnitFactory extends UnitFactory {
             return unit;
         }
 
+        // 暂时注释display方法，避免Table类依赖
+        /*
         @Override
-        public void display(Table table) {
+        public void display(arc.scene.ui.Table table) {
             super.display(table);
 
             table.row();
@@ -217,10 +219,11 @@ public class MultiUnitFactory extends UnitFactory {
                 t.left();
                 t.checkBox("Use Subspace Design", () -> useSubspaceDesign, this::configure).left().padRight(10);
                 if (useSubspaceDesign) {
-                    t.label(() -> selectedDesign == -1 ? "No Design Selected" : subspaceDesigns.get(selectedDesign).name).color(Color.lightGray).left();
+                    t.label(() -> selectedDesign == -1 ? "No Design Selected" : subspaceDesigns.get(selectedDesign).name).color(arc.graphics.Color.lightGray).left();
                 }
             }).left();
         }
+        */
 
         @Override
         public Object config() {
