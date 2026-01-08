@@ -10,8 +10,10 @@ import mindustry.content.*;
 import mindustry.game.*;
 import mindustry.gen.*;
 import mindustry.type.*;
+import mindustry.world.*;
 import mindustry.world.blocks.payloads.*;
 import mindustry.world.blocks.units.*;
+import mindustry.world.meta.*;
 
 public class MultiUnitFactory extends UnitFactory {
     public boolean supportSubspace = true;
@@ -33,7 +35,7 @@ public class MultiUnitFactory extends UnitFactory {
         ambientSound = Sounds.respawning;
         health = 1000;
         size = 3;
-        requirements(Category.units, BuildVisibility.shown, ItemStack.with(
+        requirements(Category.units, mindustry.world.meta.BuildVisibility.shown, ItemStack.with(
             Items.copper, 1000,
             Items.lead, 800,
             Items.silicon, 500
@@ -163,8 +165,8 @@ public class MultiUnitFactory extends UnitFactory {
             if (efficiency > 0) {
                 if (useSubspaceDesign) {
                     if (selectedDesign != -1 && selectedDesign < subspaceDesigns.size) {
-                        time += edelta() * speedScl * Vars.state.rules.unitBuildSpeed;
-                        progress += edelta() * Vars.state.rules.unitBuildSpeed;
+                        time += edelta() * speedScl * Vars.state.rules.unitBuildSpeed(team);
+                        progress += edelta() * Vars.state.rules.unitBuildSpeed(team);
                         speedScl = arc.math.Mathf.lerpDelta(speedScl, 1f, 0.05f);
                     }
                 } else {
