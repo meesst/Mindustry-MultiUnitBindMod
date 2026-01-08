@@ -200,14 +200,18 @@ public class SubspaceEditor implements Disposable {
         // 创建建筑选择按钮组
         ButtonGroup<Button> buttonGroup = new ButtonGroup<>();
         for (Block block : availableBlocks) {
-            TextButton button = blockList.button(block.localizedName, Styles.togglet, () -> {
+            // 直接创建带图标的按钮
+            ImageButton button = blockList.button(new TextureRegionDrawable(block.uiIcon), Styles.togglet, () -> {
                 selectedBlock = block;
-            }).update(b -> {
+            }).size(180f, 40f).update(b -> {
                 b.setChecked(selectedBlock == block);
             }).group(buttonGroup).get();
             
-            // 为按钮添加图标
-            button.getCells().first().add(new Image(block.uiIcon)).size(32f).padRight(5f).left();
+            // 添加按钮文本
+            button.label.setColor(Color.white);
+            button.label.setText(block.localizedName);
+            button.label.setFontScale(0.8f);
+            
             blockList.row();
         }
         
