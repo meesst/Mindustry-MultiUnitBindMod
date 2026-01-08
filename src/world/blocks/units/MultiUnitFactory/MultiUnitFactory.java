@@ -35,13 +35,20 @@ public class MultiUnitFactory extends UnitFactory {
         ambientSound = Sounds.respawning;
         health = 1000;
         size = 3;
-        requirements(Category.units, mindustry.world.meta.BuildVisibility.shown, ItemStack.with(
+        // 设置建筑类别和可见性
+        category = Category.units;
+        buildVisibility = BuildVisibility.shown;
+        // 设置建造成本
+        requirements(Category.units, BuildVisibility.shown, ItemStack.with(
             Items.copper, 1000,
             Items.lead, 800,
             Items.silicon, 500
         ));
+        // 设置显示属性
         localizedName = "Multi Unit Factory";
         description = "Creates custom units by combining buildings in subspace.";
+        // 设置图标（使用现有工厂图标作为默认）
+        icon = Core.atlas.find("ground-factory");
 
         // 添加支持亚空间设计生产的配置
         config(Boolean.class, (MultiUnitFactoryBuild build, Boolean useSubspace) -> {
