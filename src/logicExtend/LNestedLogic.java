@@ -301,21 +301,25 @@ public class LNestedLogic {
                         
                         // 如果存在缓存的执行器，使用它来显示变量值
                         if (cachedNestedExec != null) {
+                            LELog.debug("使用缓存的执行器显示变量值");
                             LELog.info("使用缓存的执行器显示变量值");
                             nestedExecutor = cachedNestedExec;
                             // 打印缓存执行器中的变量信息
                             if (nestedExecutor.vars != null) {
+                                LELog.debug("缓存执行器中的变量数量: " + nestedExecutor.vars.length);
                                 LELog.info("缓存执行器中的变量数量: " + nestedExecutor.vars.length);
                                 for (int i = 0; i < nestedExecutor.vars.length; i++) {
                                     mindustry.logic.LVar var = nestedExecutor.vars[i];
                                     if (!var.constant) {
                                         String value = var.isobj ? (var.objval != null ? var.objval.toString() : "null") : var.numval + "";
+                                        LELog.debug("变量 " + var.name + " = " + value);
                                         LELog.info("变量 " + var.name + " = " + value);
                                     }
                                 }
                             }
                         } else {
                             // 否则创建一个新的 LExecutor 对象
+                            LELog.debug("创建新的执行器显示变量值");
                             LELog.info("创建新的执行器显示变量值");
                             nestedExecutor = new mindustry.logic.LExecutor();
                             nestedExecutor.privileged = false;
@@ -326,11 +330,13 @@ public class LNestedLogic {
                                 nestedExecutor.load(nestedBuilder);
                                 // 打印新执行器中的变量信息
                                 if (nestedExecutor.vars != null) {
+                                    LELog.debug("新执行器中的变量数量: " + nestedExecutor.vars.length);
                                     LELog.info("新执行器中的变量数量: " + nestedExecutor.vars.length);
                                     for (int i = 0; i < nestedExecutor.vars.length; i++) {
                                         mindustry.logic.LVar var = nestedExecutor.vars[i];
                                         if (!var.constant) {
                                             String value = var.isobj ? (var.objval != null ? var.objval.toString() : "null") : var.numval + "";
+                                            LELog.debug("变量 " + var.name + " = " + value);
                                             LELog.info("变量 " + var.name + " = " + value);
                                         }
                                     }
@@ -342,14 +348,17 @@ public class LNestedLogic {
                             }
                         }
                         
+                        LELog.debug("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
                         LELog.info("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
                         
                         nestedDialog.show(nestedCode, nestedExecutor, false, modifiedCode -> {
+                            LELog.debug("嵌套逻辑代码已更新");
                             LELog.info("嵌套逻辑代码已更新");
                             nestedCode = modifiedCode;
                             saveUI();
                             // 更新嵌套代码时清除缓存
                             setNestedCode(nestedCode);
+                            LELog.debug("已清除缓存的执行器");
                             LELog.info("已清除缓存的执行器");
                         });
                     });
