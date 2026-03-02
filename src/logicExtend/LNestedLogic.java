@@ -345,31 +345,50 @@ public class LNestedLogic {
                             }
                         }
                         
-                        // 确保每次打开编辑器时都能获取到最新的执行器实例
-                        // 创建一个包装类，用于实时更新变量值
-                        mindustry.logic.LExecutor liveExecutor = new mindustry.logic.LExecutor() {
-                            @Override
-                            public LVar optionalVar(String name) {
-                                // 每次获取变量时，先从全局缓存中获取最新的执行器实例
-                                if (executorCache.containsKey(uniqueId)) {
-                                    mindustry.logic.LExecutor latestExecutor = executorCache.get(uniqueId);
-                                    return latestExecutor.optionalVar(name);
+                        // 从栈中更新执行器中的变量值
+                        if (nestedExecutor.vars != null) {
+                            LELog.debug("从栈中更新执行器中的变量值");
+                            LELog.info("从栈中更新执行器中的变量值");
+                            
+                            // 遍历执行器中的所有变量
+                            for (int i = 0; i < nestedExecutor.vars.length; i++) {
+                                mindustry.logic.LVar var = nestedExecutor.vars[i];
+                                if (!var.constant) {
+                                    // 尝试从栈中获取最新的变量值
+                                    String stackName = "default";
+                                    String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
+                                    
+                                    // 获取栈锁，用于保护栈的访问
+                                    java.util.concurrent.locks.Lock stackLock = getStackLock(encodedStackName);
+                                    stackLock.lock();
+                                    try {
+                                        // 直接访问stacks变量，不调用getStack方法，避免创建新栈
+                                        Seq<CallStackElement> currentStack = stacks.get(encodedStackName);
+                                        if (currentStack != null && !currentStack.isEmpty()) {
+                                            // 查找与变量名匹配的元素
+                                            for (CallStackElement elem : currentStack) {
+                                                if (elem.varName.equals(var.name)) {
+                                                    // 更新执行器中的变量值
+                                                    if (elem.varValue instanceof Double) {
+                                                        var.isobj = false;
+                                                        var.numval = (Double) elem.varValue;
+                                                    } else {
+                                                        var.isobj = true;
+                                                        var.objval = elem.varValue;
+                                                    }
+                                                    LELog.debug("从栈中更新变量 " + var.name + " 值为 " + elem.varValue);
+                                                    LELog.info("从栈中更新变量 " + var.name + " 值为 " + elem.varValue);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    } finally {
+                                        // 释放栈锁
+                                        stackLock.unlock();
+                                    }
                                 }
-                                return super.optionalVar(name);
                             }
-                        };
-                        
-                        // 复制原始执行器的属性
-                        liveExecutor.build = nestedExecutor.build;
-                        liveExecutor.team = nestedExecutor.team;
-                        liveExecutor.privileged = nestedExecutor.privileged;
-                        liveExecutor.links = nestedExecutor.links;
-                        liveExecutor.linkIds = nestedExecutor.linkIds;
-                        liveExecutor.vars = nestedExecutor.vars;
-                        liveExecutor.instructions = nestedExecutor.instructions;
-                        liveExecutor.counter = nestedExecutor.counter;
-                        liveExecutor.thisv = nestedExecutor.thisv;
-                        liveExecutor.unit = nestedExecutor.unit;
+                        }
                         
                         // 打印执行器中的变量信息
                         if (nestedExecutor.vars != null) {
@@ -385,10 +404,10 @@ public class LNestedLogic {
                             }
                         }
                         
-                        LELog.debug("打开嵌套逻辑编辑器，使用执行器: " + liveExecutor);
-                        LELog.info("打开嵌套逻辑编辑器，使用执行器: " + liveExecutor);
+                        LELog.debug("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
+                        LELog.info("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
                         
-                        nestedDialog.show(nestedCode, liveExecutor, false, modifiedCode -> {
+                        nestedDialog.show(nestedCode, nestedExecutor, false, modifiedCode -> {
                             LELog.debug("嵌套逻辑代码已更新");
                             LELog.info("嵌套逻辑代码已更新");
                             nestedCode = modifiedCode;
