@@ -28,68 +28,70 @@ public class LELog {
      * 初始化日志文件
      */
     public static void initLogFile() {
-        // 无论日志开关是否开启，都尝试初始化并输出调试信息
-        Log.infoTag("嵌套逻辑", "开始初始化日志文件...");
-        Log.infoTag("嵌套逻辑", "LOG_DIR: " + LOG_DIR);
-        
-        try {
-            // 测试文件路径是否正确
-            File testFile = new File(LOG_DIR);
-            String absolutePath = testFile.getAbsolutePath();
-            Log.infoTag("嵌套逻辑", "绝对路径: " + absolutePath);
-            logFilePath = absolutePath + "\\nestedlogic.log";
-            Log.infoTag("嵌套逻辑", "完整日志文件路径: " + logFilePath);
+        // 只在日志开关开启时初始化日志文件
+        if (debugLog == 1) {
+            Log.infoTag("嵌套逻辑", "开始初始化日志文件...");
+            Log.infoTag("嵌套逻辑", "LOG_DIR: " + LOG_DIR);
             
-            // 检查目录是否存在
-            File logDir = new File(absolutePath);
-            Log.infoTag("嵌套逻辑", "目录存在: " + logDir.exists());
-            
-            if (!logDir.exists()) {
-                Log.infoTag("嵌套逻辑", "目录不存在，尝试创建...");
-                boolean created = logDir.mkdirs();
-                Log.infoTag("嵌套逻辑", "目录创建结果: " + created);
-                Log.infoTag("嵌套逻辑", "创建后目录存在: " + logDir.exists());
-            }
-            
-            if (logDir.exists()) {
-                Log.infoTag("嵌套逻辑", "目录存在，检查写入权限...");
-                boolean canWrite = logDir.canWrite();
-                Log.infoTag("嵌套逻辑", "目录写入权限: " + canWrite);
+            try {
+                // 测试文件路径是否正确
+                File testFile = new File(LOG_DIR);
+                String absolutePath = testFile.getAbsolutePath();
+                Log.infoTag("嵌套逻辑", "绝对路径: " + absolutePath);
+                logFilePath = absolutePath + "\\nestedlogic.log";
+                Log.infoTag("嵌套逻辑", "完整日志文件路径: " + logFilePath);
                 
-                // 直接使用完整路径创建文件
-                File logFile = new File(logFilePath);
-                Log.infoTag("嵌套逻辑", "日志文件存在: " + logFile.exists());
-                Log.infoTag("嵌套逻辑", "日志文件可写: " + logFile.canWrite());
+                // 检查目录是否存在
+                File logDir = new File(absolutePath);
+                Log.infoTag("嵌套逻辑", "目录存在: " + logDir.exists());
                 
-                try {
-                    // 尝试创建文件
-                    if (!logFile.exists()) {
-                        boolean fileCreated = logFile.createNewFile();
-                        Log.infoTag("嵌套逻辑", "文件创建结果: " + fileCreated);
-                        Log.infoTag("嵌套逻辑", "创建后文件存在: " + logFile.exists());
-                    }
-                    
-                    // 尝试打开文件写入
-                    logWriter = new PrintWriter(new FileWriter(logFile, true));
-                    Log.infoTag("嵌套逻辑", "日志文件已成功初始化: " + logFile.getAbsolutePath());
-                    
-                    // 写入测试日志
-                    Log.infoTag("嵌套逻辑", "尝试写入测试日志...");
-                    String testMessage = "日志文件初始化成功 - " + new Date().toString();
-                    logWriter.println("[" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] [嵌套逻辑] " + testMessage);
-                    logWriter.flush();
-                    Log.infoTag("嵌套逻辑", "测试日志写入成功");
-                    
-                } catch (IOException e) {
-                    Log.errTag("嵌套逻辑", "无法创建或写入日志文件: " + e.getMessage());
-                    e.printStackTrace();
+                if (!logDir.exists()) {
+                    Log.infoTag("嵌套逻辑", "目录不存在，尝试创建...");
+                    boolean created = logDir.mkdirs();
+                    Log.infoTag("嵌套逻辑", "目录创建结果: " + created);
+                    Log.infoTag("嵌套逻辑", "创建后目录存在: " + logDir.exists());
                 }
-            } else {
-                Log.errTag("嵌套逻辑", "无法创建目录: " + absolutePath);
+                
+                if (logDir.exists()) {
+                    Log.infoTag("嵌套逻辑", "目录存在，检查写入权限...");
+                    boolean canWrite = logDir.canWrite();
+                    Log.infoTag("嵌套逻辑", "目录写入权限: " + canWrite);
+                    
+                    // 直接使用完整路径创建文件
+                    File logFile = new File(logFilePath);
+                    Log.infoTag("嵌套逻辑", "日志文件存在: " + logFile.exists());
+                    Log.infoTag("嵌套逻辑", "日志文件可写: " + logFile.canWrite());
+                    
+                    try {
+                        // 尝试创建文件
+                        if (!logFile.exists()) {
+                            boolean fileCreated = logFile.createNewFile();
+                            Log.infoTag("嵌套逻辑", "文件创建结果: " + fileCreated);
+                            Log.infoTag("嵌套逻辑", "创建后文件存在: " + logFile.exists());
+                        }
+                        
+                        // 尝试打开文件写入
+                        logWriter = new PrintWriter(new FileWriter(logFile, true));
+                        Log.infoTag("嵌套逻辑", "日志文件已成功初始化: " + logFile.getAbsolutePath());
+                        
+                        // 写入测试日志
+                        Log.infoTag("嵌套逻辑", "尝试写入测试日志...");
+                        String testMessage = "日志文件初始化成功 - " + new Date().toString();
+                        logWriter.println("[" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] [嵌套逻辑] " + testMessage);
+                        logWriter.flush();
+                        Log.infoTag("嵌套逻辑", "测试日志写入成功");
+                        
+                    } catch (IOException e) {
+                        Log.errTag("嵌套逻辑", "无法创建或写入日志文件: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    Log.errTag("嵌套逻辑", "无法创建目录: " + absolutePath);
+                }
+            } catch (Exception e) {
+                Log.errTag("嵌套逻辑", "初始化日志文件时发生错误: " + e.getMessage());
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            Log.errTag("嵌套逻辑", "初始化日志文件时发生错误: " + e.getMessage());
-            e.printStackTrace();
         }
     }
     
@@ -108,8 +110,8 @@ public class LELog {
      * @param message 日志消息
      */
     private static void writeToFile(String message) {
-        // 无论日志开关是否开启，都尝试写入文件
-        if (logWriter != null) {
+        // 只在日志开关开启时写入文件
+        if (debugLog == 1 && logWriter != null) {
             try {
                 String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
                 logWriter.println("[" + timestamp + "] [嵌套逻辑] " + message);
@@ -119,7 +121,7 @@ public class LELog {
                 Log.errTag("嵌套逻辑", "写入日志文件时发生错误: " + e.getMessage());
                 e.printStackTrace();
             }
-        } else {
+        } else if (logWriter == null && debugLog == 1) {
             Log.infoTag("嵌套逻辑", "日志写入失败: logWriter 为 null");
         }
     }
@@ -140,8 +142,10 @@ public class LELog {
      * @param message 日志消息
      */
     public static void info(String message) {
-        Log.infoTag("嵌套逻辑", message);
-        writeToFile("INFO: " + message);
+        if (debugLog == 1) {
+            Log.infoTag("嵌套逻辑", message);
+            writeToFile("INFO: " + message);
+        }
     }
     
     /**
@@ -150,8 +154,10 @@ public class LELog {
      * @param t 异常对象
      */
     public static void error(String message, Throwable t) {
-        Log.errTag("嵌套逻辑", message + ": " + t.getMessage());
-        writeToFile("ERROR: " + message + ": " + t.getMessage());
+        if (debugLog == 1) {
+            Log.errTag("嵌套逻辑", message + ": " + t.getMessage());
+            writeToFile("ERROR: " + message + ": " + t.getMessage());
+        }
     }
     
     /**
@@ -159,7 +165,9 @@ public class LELog {
      * @param message 日志消息
      */
     public static void error(String message) {
-        Log.errTag("嵌套逻辑", message);
-        writeToFile("ERROR: " + message);
+        if (debugLog == 1) {
+            Log.errTag("嵌套逻辑", message);
+            writeToFile("ERROR: " + message);
+        }
     }
 }
