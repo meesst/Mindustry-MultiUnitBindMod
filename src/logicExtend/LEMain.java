@@ -24,6 +24,8 @@ public class LEMain extends Mod {
             // 添加日志开关选项，使用checkPref方法的正确参数（3个参数）
             settings.checkPref("lnestedlogic-debug-log", false, value -> {
                 LELog.debugLog = value ? 1 : 0;
+                // 重新初始化日志文件
+                LELog.initLogFile();
             });
             
             settingsTable.add(settings);
@@ -55,5 +57,7 @@ public class LEMain extends Mod {
         
         // 初始化debugLog值
         LELog.debugLog = Core.settings.getBool("lnestedlogic-debug-log") ? 1 : 0;
+        // 初始化日志文件
+        LELog.initLogFile();
     }
 }
