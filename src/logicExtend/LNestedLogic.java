@@ -43,6 +43,9 @@ public class LNestedLogic {
     /** 全局栈存储，key为栈名称，value为该栈的元素列表 */
     public static final arc.struct.ObjectMap<String, Seq<CallStackElement>> stacks = new arc.struct.ObjectMap<>();
     
+    /** 全局执行器缓存，key为uniqueId，value为对应的执行器实例 */
+    public static final arc.struct.ObjectMap<String, mindustry.logic.LExecutor> executorCache = new arc.struct.ObjectMap<>();
+    
     /** 用于管理栈操作的读写锁 */
     private static final java.util.concurrent.locks.ReadWriteLock lock = new java.util.concurrent.locks.ReentrantReadWriteLock();
     private static final java.util.concurrent.locks.Lock readLock = lock.readLock();
@@ -299,24 +302,18 @@ public class LNestedLogic {
                         // 用于嵌套逻辑编辑器的执行器
                         mindustry.logic.LExecutor nestedExecutor;
                         
-                        // 如果存在缓存的执行器，使用它来显示变量值
-                        if (cachedNestedExec != null) {
+                        // 优先从全局缓存中获取执行器
+                        if (executorCache.containsKey(uniqueId)) {
+                            LELog.debug("从全局缓存中获取执行器显示变量值");
+                            LELog.info("从全局缓存中获取执行器显示变量值");
+                            nestedExecutor = executorCache.get(uniqueId);
+                            // 同时更新实例缓存
+                            cachedNestedExec = nestedExecutor;
+                        } else if (cachedNestedExec != null) {
+                            // 如果全局缓存中没有，使用实例缓存的执行器
                             LELog.debug("使用缓存的执行器显示变量值");
                             LELog.info("使用缓存的执行器显示变量值");
                             nestedExecutor = cachedNestedExec;
-                            // 打印缓存执行器中的变量信息
-                            if (nestedExecutor.vars != null) {
-                                LELog.debug("缓存执行器中的变量数量: " + nestedExecutor.vars.length);
-                                LELog.info("缓存执行器中的变量数量: " + nestedExecutor.vars.length);
-                                for (int i = 0; i < nestedExecutor.vars.length; i++) {
-                                    mindustry.logic.LVar var = nestedExecutor.vars[i];
-                                    if (!var.constant) {
-                                        String value = var.isobj ? (var.objval != null ? var.objval.toString() : "null") : var.numval + "";
-                                        LELog.debug("变量 " + var.name + " = " + value);
-                                        LELog.info("变量 " + var.name + " = " + value);
-                                    }
-                                }
-                            }
                         } else {
                             // 否则创建一个新的 LExecutor 对象
                             LELog.debug("创建新的执行器显示变量值");
@@ -345,6 +342,20 @@ public class LNestedLogic {
                                 LELog.error("编译嵌套逻辑代码失败: " + e.getMessage());
                                 // 如果编译失败，使用空代码
                                 nestedExecutor.load(mindustry.logic.LAssembler.assemble("", false));
+                            }
+                        }
+                        
+                        // 打印执行器中的变量信息
+                        if (nestedExecutor.vars != null) {
+                            LELog.debug("执行器中的变量数量: " + nestedExecutor.vars.length);
+                            LELog.info("执行器中的变量数量: " + nestedExecutor.vars.length);
+                            for (int i = 0; i < nestedExecutor.vars.length; i++) {
+                                mindustry.logic.LVar var = nestedExecutor.vars[i];
+                                if (!var.constant) {
+                                    String value = var.isobj ? (var.objval != null ? var.objval.toString() : "null") : var.numval + "";
+                                    LELog.debug("变量 " + var.name + " = " + value);
+                                    LELog.info("变量 " + var.name + " = " + value);
+                                }
                             }
                         }
                         
@@ -536,7 +547,10 @@ public class LNestedLogic {
                                 
                                 cachedNestedBuilder = nestedBuilder;
                                 cachedNestedExec = nestedExec;
+                                // 同时存储到全局缓存中
+                                executorCache.put(uniqueId, nestedExec);
                                 log("缓存嵌套逻辑和执行器");
+                                log("将执行器存储到全局缓存，uniqueId: " + uniqueId);
                             } else {
                                 nestedExec = cachedNestedExec;
                                 nestedExec.build = exec.build;
@@ -726,6 +740,11 @@ public class LNestedLogic {
             this.nestedCode = nestedCode;
             this.cachedNestedBuilder = null;
             this.cachedNestedExec = null;
+            // 同时从全局缓存中移除
+            if (executorCache.containsKey(uniqueId)) {
+                executorCache.remove(uniqueId);
+                log("从全局缓存中移除执行器，uniqueId: " + uniqueId);
+            }
             log("nestedCode更新，清除缓存");
         }
         
