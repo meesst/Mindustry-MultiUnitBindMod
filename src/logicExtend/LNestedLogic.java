@@ -345,6 +345,32 @@ public class LNestedLogic {
                             }
                         }
                         
+                        // 确保每次打开编辑器时都能获取到最新的执行器实例
+                        // 创建一个包装类，用于实时更新变量值
+                        mindustry.logic.LExecutor liveExecutor = new mindustry.logic.LExecutor() {
+                            @Override
+                            public LVar optionalVar(String name) {
+                                // 每次获取变量时，先从全局缓存中获取最新的执行器实例
+                                if (executorCache.containsKey(uniqueId)) {
+                                    mindustry.logic.LExecutor latestExecutor = executorCache.get(uniqueId);
+                                    return latestExecutor.optionalVar(name);
+                                }
+                                return super.optionalVar(name);
+                            }
+                        };
+                        
+                        // 复制原始执行器的属性
+                        liveExecutor.build = nestedExecutor.build;
+                        liveExecutor.team = nestedExecutor.team;
+                        liveExecutor.privileged = nestedExecutor.privileged;
+                        liveExecutor.links = nestedExecutor.links;
+                        liveExecutor.linkIds = nestedExecutor.linkIds;
+                        liveExecutor.vars = nestedExecutor.vars;
+                        liveExecutor.instructions = nestedExecutor.instructions;
+                        liveExecutor.counter = nestedExecutor.counter;
+                        liveExecutor.thisv = nestedExecutor.thisv;
+                        liveExecutor.unit = nestedExecutor.unit;
+                        
                         // 打印执行器中的变量信息
                         if (nestedExecutor.vars != null) {
                             LELog.debug("执行器中的变量数量: " + nestedExecutor.vars.length);
@@ -359,10 +385,10 @@ public class LNestedLogic {
                             }
                         }
                         
-                        LELog.debug("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
-                        LELog.info("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
+                        LELog.debug("打开嵌套逻辑编辑器，使用执行器: " + liveExecutor);
+                        LELog.info("打开嵌套逻辑编辑器，使用执行器: " + liveExecutor);
                         
-                        nestedDialog.show(nestedCode, nestedExecutor, false, modifiedCode -> {
+                        nestedDialog.show(nestedCode, liveExecutor, false, modifiedCode -> {
                             LELog.debug("嵌套逻辑代码已更新");
                             LELog.info("嵌套逻辑代码已更新");
                             nestedCode = modifiedCode;
