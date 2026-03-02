@@ -303,6 +303,17 @@ public class LNestedLogic {
                         if (cachedNestedExec != null) {
                             log("使用缓存的执行器显示变量值");
                             nestedExecutor = cachedNestedExec;
+                            // 打印缓存执行器中的变量信息
+                            if (nestedExecutor.vars != null) {
+                                log("缓存执行器中的变量数量: " + nestedExecutor.vars.length);
+                                for (int i = 0; i < nestedExecutor.vars.length; i++) {
+                                    mindustry.logic.LVar var = nestedExecutor.vars[i];
+                                    if (!var.constant) {
+                                        String value = var.isobj ? (var.objval != null ? var.objval.toString() : "null") : var.numval + "";
+                                        log("变量 " + var.name + " = " + value);
+                                    }
+                                }
+                            }
                         } else {
                             // 否则创建一个新的 LExecutor 对象
                             log("创建新的执行器显示变量值");
@@ -313,17 +324,33 @@ public class LNestedLogic {
                             try {
                                 mindustry.logic.LAssembler nestedBuilder = mindustry.logic.LAssembler.assemble(nestedCode, false);
                                 nestedExecutor.load(nestedBuilder);
-                            } catch (Exception ignored) {
+                                // 打印新执行器中的变量信息
+                                if (nestedExecutor.vars != null) {
+                                    log("新执行器中的变量数量: " + nestedExecutor.vars.length);
+                                    for (int i = 0; i < nestedExecutor.vars.length; i++) {
+                                        mindustry.logic.LVar var = nestedExecutor.vars[i];
+                                        if (!var.constant) {
+                                            String value = var.isobj ? (var.objval != null ? var.objval.toString() : "null") : var.numval + "";
+                                            log("变量 " + var.name + " = " + value);
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                log("编译嵌套逻辑代码失败: " + e.getMessage());
                                 // 如果编译失败，使用空代码
                                 nestedExecutor.load(mindustry.logic.LAssembler.assemble("", false));
                             }
                         }
                         
+                        log("打开嵌套逻辑编辑器，使用执行器: " + nestedExecutor);
+                        
                         nestedDialog.show(nestedCode, nestedExecutor, false, modifiedCode -> {
+                            log("嵌套逻辑代码已更新");
                             nestedCode = modifiedCode;
                             saveUI();
                             // 更新嵌套代码时清除缓存
                             setNestedCode(nestedCode);
+                            log("已清除缓存的执行器");
                         });
                     });
                 }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f)
