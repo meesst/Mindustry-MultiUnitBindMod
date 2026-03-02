@@ -249,6 +249,8 @@ public class LNestedLogic {
                         final mindustry.logic.LCanvas[] originalCanvas = {null};
                         final java.lang.reflect.Field[] canvasField = {null};
                         final boolean[] reflectionSuccess = {false};
+                        // 保存游戏当前的暂停状态
+                        final boolean[] wasPaused = {false};
                         
                         try {
                             Class<?> lCanvasClass = mindustry.logic.LCanvas.class;
@@ -260,6 +262,10 @@ public class LNestedLogic {
                         } catch (Exception e) {
                             log("无法获取canvas字段: " + e.getMessage());
                         }
+                        
+                        // 保存游戏当前的暂停状态
+                        wasPaused[0] = mindustry.core.GameState.State.paused.equals(mindustry.Vars.state.state);
+                        log("保存游戏暂停状态: " + wasPaused[0]);
                         
                         // 恢复canvas的Runnable
                         Runnable restoreCanvas = () -> {
@@ -292,11 +298,30 @@ public class LNestedLogic {
                             } else {
                                 log("反射获取失败，跳过恢复操作");
                             }
+                            
+                            // 恢复游戏之前的暂停状态
+                            log("恢复游戏暂停状态: " + wasPaused[0]);
+                            if (wasPaused[0] && !mindustry.Vars.net.active() && !mindustry.Vars.state.isMenu()) {
+                                mindustry.Vars.state.set(mindustry.core.GameState.State.paused);
+                            }
+                            
                             log("恢复canvas的Runnable执行完成");
                         };
                         
                         // 打开嵌套逻辑编辑器
                         mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
+                        
+                        // 关键修复：使用反射修改shouldPause字段为false
+                        // 这样LogicDialog就不会自动暂停游戏，变量对话框的回调就能正常工作
+                        try {
+                            java.lang.reflect.Field shouldPauseField = mindustry.ui.dialogs.BaseDialog.class.getDeclaredField("shouldPause");
+                            shouldPauseField.setAccessible(true);
+                            shouldPauseField.setBoolean(nestedDialog, false);
+                            log("成功将嵌套逻辑编辑器的shouldPause设置为false");
+                        } catch (Exception e) {
+                            log("无法修改shouldPause字段: " + e.getMessage());
+                        }
+                        
                         nestedDialog.hidden(restoreCanvas);
                         
                         // 用于嵌套逻辑编辑器的执行器
@@ -342,51 +367,6 @@ public class LNestedLogic {
                                 LELog.error("编译嵌套逻辑代码失败: " + e.getMessage());
                                 // 如果编译失败，使用空代码
                                 nestedExecutor.load(mindustry.logic.LAssembler.assemble("", false));
-                            }
-                        }
-                        
-                        // 从栈中更新执行器中的变量值
-                        if (nestedExecutor.vars != null) {
-                            LELog.debug("从栈中更新执行器中的变量值");
-                            LELog.info("从栈中更新执行器中的变量值");
-                            
-                            // 遍历执行器中的所有变量
-                            for (int i = 0; i < nestedExecutor.vars.length; i++) {
-                                mindustry.logic.LVar var = nestedExecutor.vars[i];
-                                if (!var.constant) {
-                                    // 尝试从栈中获取最新的变量值
-                                    String stackName = "default";
-                                    String encodedStackName = Base64.getEncoder().encodeToString(stackName.getBytes(StandardCharsets.UTF_8));
-                                    
-                                    // 获取栈锁，用于保护栈的访问
-                                    java.util.concurrent.locks.Lock stackLock = getStackLock(encodedStackName);
-                                    stackLock.lock();
-                                    try {
-                                        // 直接访问stacks变量，不调用getStack方法，避免创建新栈
-                                        Seq<CallStackElement> currentStack = stacks.get(encodedStackName);
-                                        if (currentStack != null && !currentStack.isEmpty()) {
-                                            // 查找与变量名匹配的元素
-                                            for (CallStackElement elem : currentStack) {
-                                                if (elem.varName.equals(var.name)) {
-                                                    // 更新执行器中的变量值
-                                                    if (elem.varValue instanceof Double) {
-                                                        var.isobj = false;
-                                                        var.numval = (Double) elem.varValue;
-                                                    } else {
-                                                        var.isobj = true;
-                                                        var.objval = elem.varValue;
-                                                    }
-                                                    LELog.debug("从栈中更新变量 " + var.name + " 值为 " + elem.varValue);
-                                                    LELog.info("从栈中更新变量 " + var.name + " 值为 " + elem.varValue);
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    } finally {
-                                        // 释放栈锁
-                                        stackLock.unlock();
-                                    }
-                                }
                             }
                         }
                         
