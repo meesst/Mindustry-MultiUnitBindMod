@@ -296,22 +296,34 @@ public class LNestedLogic {
                         mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
                         nestedDialog.hidden(restoreCanvas);
                         
-                        // 创建一个新的 LExecutor 对象，用于嵌套逻辑编辑器
-                        mindustry.logic.LExecutor nestedExecutor = new mindustry.logic.LExecutor();
-                        nestedExecutor.privileged = false;
+                        // 用于嵌套逻辑编辑器的执行器
+                        mindustry.logic.LExecutor nestedExecutor;
                         
-                        // 编译嵌套逻辑代码，获取变量信息
-                        try {
-                            mindustry.logic.LAssembler nestedBuilder = mindustry.logic.LAssembler.assemble(nestedCode, false);
-                            nestedExecutor.load(nestedBuilder);
-                        } catch (Exception ignored) {
-                            // 如果编译失败，使用空代码
-                            nestedExecutor.load(mindustry.logic.LAssembler.assemble("", false));
+                        // 如果存在缓存的执行器，使用它来显示变量值
+                        if (cachedNestedExec != null) {
+                            log("使用缓存的执行器显示变量值");
+                            nestedExecutor = cachedNestedExec;
+                        } else {
+                            // 否则创建一个新的 LExecutor 对象
+                            log("创建新的执行器显示变量值");
+                            nestedExecutor = new mindustry.logic.LExecutor();
+                            nestedExecutor.privileged = false;
+                            
+                            // 编译嵌套逻辑代码，获取变量信息
+                            try {
+                                mindustry.logic.LAssembler nestedBuilder = mindustry.logic.LAssembler.assemble(nestedCode, false);
+                                nestedExecutor.load(nestedBuilder);
+                            } catch (Exception ignored) {
+                                // 如果编译失败，使用空代码
+                                nestedExecutor.load(mindustry.logic.LAssembler.assemble("", false));
+                            }
                         }
                         
                         nestedDialog.show(nestedCode, nestedExecutor, false, modifiedCode -> {
                             nestedCode = modifiedCode;
                             saveUI();
+                            // 更新嵌套代码时清除缓存
+                            setNestedCode(nestedCode);
                         });
                     });
                 }, Styles.logict, () -> {}).size(120f, 40f).color(table.color).pad(2f)
