@@ -33,8 +33,7 @@ public class LELog {
                     logDir.mkdirs();
                 }
                 
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                String fileName = "nestedlogic-" + sdf.format(new Date()) + ".log";
+                String fileName = "nestedlogic.log";
                 File logFile = new File(logDir, fileName);
                 
                 logWriter = new PrintWriter(new FileWriter(logFile, true));
