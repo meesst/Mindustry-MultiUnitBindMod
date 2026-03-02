@@ -264,7 +264,7 @@ public class LNestedLogic {
                         }
                         
                         // 保存游戏当前的暂停状态
-                        wasPaused[0] = mindustry.core.GameState.State.paused.equals(mindustry.Vars.state.state);
+                        wasPaused[0] = mindustry.Vars.state.isPaused();
                         log("保存游戏暂停状态: " + wasPaused[0]);
                         
                         // 恢复canvas的Runnable
