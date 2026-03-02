@@ -1,19 +1,11 @@
-package world;
+package logicExtend;
 
 import arc.Core;
 import arc.func.Cons;
-import mindustry.content.*;
 import mindustry.mod.Mod;
 import mindustry.ui.dialogs.SettingsMenuDialog;
 import mindustry.ui.Styles;
 import arc.scene.ui.layout.Table;
-import world.blocks.units.MultiUnitFactory.MultiUnitFactory;
-import world.logicExtend.LStringMerge;
-import world.logicExtend.LAmmo;
-import world.logicExtend.LNestedLogic;
-import world.logicExtend.LUnitBindGroupUI;
-import world.logicExtend.FastUnitControl;
-import world.logicExtend.LELog;
 
 public class LEMain extends Mod {
     public LEMain() {}
@@ -63,8 +55,5 @@ public class LEMain extends Mod {
         
         // 初始化debugLog值
         LELog.debugLog = Core.settings.getBool("lnestedlogic-debug-log") ? 1 : 0;
-        
-        // 加载多单位工厂建筑
-        world.blocks.units.MultiUnitFactory.MultiUnitFactoryBlock.load();
     }
 }

@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.func.Cons;
 import arc.scene.ui.TextField;

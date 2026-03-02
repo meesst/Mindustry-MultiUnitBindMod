@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.Core;
 import arc.math.geom.Vec2;

@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.struct.Seq;
 import arc.scene.ui.layout.Table;

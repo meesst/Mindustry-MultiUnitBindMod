@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.graphics.Color;
 import mindustry.logic.LCategory;

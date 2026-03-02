@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.scene.ui.layout.Table;
 import mindustry.gen.LogicIO;

@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.scene.style.TextureRegionDrawable;
 import arc.struct.ObjectMap;

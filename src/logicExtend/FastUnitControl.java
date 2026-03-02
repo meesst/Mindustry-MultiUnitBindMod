@@ -1,4 +1,4 @@
-package world.logicExtend;
+package logicExtend;
 
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
