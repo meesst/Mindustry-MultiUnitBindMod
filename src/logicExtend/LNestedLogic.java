@@ -295,7 +295,21 @@ public class LNestedLogic {
                         // 打开嵌套逻辑编辑器
                         mindustry.logic.LogicDialog nestedDialog = new mindustry.logic.LogicDialog();
                         nestedDialog.hidden(restoreCanvas);
-                        nestedDialog.show(nestedCode, null, false, modifiedCode -> {
+                        
+                        // 创建一个新的 LExecutor 对象，用于嵌套逻辑编辑器
+                        mindustry.logic.LExecutor nestedExecutor = new mindustry.logic.LExecutor();
+                        nestedExecutor.privileged = false;
+                        
+                        // 编译嵌套逻辑代码，获取变量信息
+                        try {
+                            mindustry.logic.LAssembler nestedBuilder = mindustry.logic.LAssembler.assemble(nestedCode, false);
+                            nestedExecutor.load(nestedBuilder);
+                        } catch (Exception ignored) {
+                            // 如果编译失败，使用空代码
+                            nestedExecutor.load(mindustry.logic.LAssembler.assemble("", false));
+                        }
+                        
+                        nestedDialog.show(nestedCode, nestedExecutor, false, modifiedCode -> {
                             nestedCode = modifiedCode;
                             saveUI();
                         });
