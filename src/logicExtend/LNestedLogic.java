@@ -770,9 +770,21 @@ public class LNestedLogic {
         }
 
         @Override
+        public LStatement copy() {
+            LStatement copy = super.copy();
+            if (copy instanceof LNestedLogicStatement && ((LNestedLogicStatement) copy).type == NestedLogicType.call) {
+                // 为复制的call类型指令生成新的uniqueId
+                ((LNestedLogicStatement) copy).uniqueId = UUID.randomUUID().toString();
+                log("copy: 为call指令生成新的uniqueId: " + ((LNestedLogicStatement) copy).uniqueId);
+            }
+            return copy;
+        }
+        
+        @Override
         public void afterRead() {
-            // 对于call类型的指令，生成新的uniqueId，确保复制的指令有唯一标识
-            if (type == NestedLogicType.call) {
+            // 对于call类型的指令，如果没有uniqueId（例如新创建的指令），则生成新的uniqueId
+            // 但不要覆盖已经存在的uniqueId，确保执行和显示使用同一个缓存键
+            if (type == NestedLogicType.call && (uniqueId == null || uniqueId.isEmpty())) {
                 uniqueId = UUID.randomUUID().toString();
                 log("afterRead: 为call指令生成新的uniqueId: " + uniqueId);
             }
