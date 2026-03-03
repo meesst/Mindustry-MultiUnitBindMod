@@ -623,7 +623,11 @@ public class LNestedLogic {
                                 nestedCounter++;
                             }
                             
+                            // 更新全局缓存中的执行器，确保变量值的更新能够同步
+                            executorCache.put(uniqueId, nestedExec);
+                            log("更新全局缓存中的执行器，uniqueId: " + uniqueId);
                             log("嵌套逻辑执行完毕，执行了 " + nestedCounter + " 条指令");
+
                         } finally {
                             nestedDepth.set(nestedDepth.get() - 1);
                             log("退出call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
