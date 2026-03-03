@@ -545,7 +545,18 @@ public class LNestedLogic {
                             
                             LExecutor nestedExec;
                             
-                            if (cachedNestedExec == null) {
+                            // 优先从全局缓存中获取执行器
+                            if (executorCache.containsKey(uniqueId)) {
+                                log("从全局缓存中获取执行器执行逻辑");
+                                nestedExec = executorCache.get(uniqueId);
+                                // 同时更新实例缓存
+                                cachedNestedExec = nestedExec;
+                            } else if (cachedNestedExec != null) {
+                                // 如果全局缓存中没有，使用实例缓存的执行器
+                                log("使用实例缓存的执行器执行逻辑");
+                                nestedExec = cachedNestedExec;
+                            } else {
+                                // 否则创建一个新的执行器
                                 log("第一次执行，编译嵌套逻辑");
                                 
                                 LAssembler nestedBuilder = LAssembler.assemble(nestedCode, false);
@@ -576,15 +587,14 @@ public class LNestedLogic {
                                 executorCache.put(uniqueId, nestedExec);
                                 log("缓存嵌套逻辑和执行器");
                                 log("将执行器存储到全局缓存，uniqueId: " + uniqueId);
-                            } else {
-                                nestedExec = cachedNestedExec;
-                                nestedExec.build = exec.build;
-                                nestedExec.team = exec.team;
-                                nestedExec.privileged = exec.privileged;
-                                nestedExec.links = exec.links;
-                                nestedExec.linkIds = exec.linkIds;
-                                log("使用缓存的执行器，保持变量状态");
                             }
+                            
+                            // 确保执行器的上下文信息是最新的
+                            nestedExec.build = exec.build;
+                            nestedExec.team = exec.team;
+                            nestedExec.privileged = exec.privileged;
+                            nestedExec.links = exec.links;
+                            nestedExec.linkIds = exec.linkIds;
                             
                             // 更新嵌套执行器的常量
                             if (nestedExec.build != null) {
