@@ -797,17 +797,20 @@ public class LNestedLogic {
 
         @Override
         public void write(StringBuilder builder) {
+            log("write: 开始序列化指令，类型: " + type.name());
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
-                // 确保写入的是基于建筑信息生成的 UID，而不是默认的 UUID
-                log("write: 写入 UID: " + uniqueId);
+                log("write: 写入 call 指令，UID: " + uniqueId + "，逻辑名称: " + p1);
                 builder.append(uniqueId).append(" " ).append(p1).append(" ");
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
+                log("write: 写入嵌套代码 (Base64): " + encoded);
                 builder.append('"').append(encoded).append('"');
             } else {
+                log("write: 写入非 call 指令，参数: " + p1 + ", " + p2 + ", " + p3);
                 builder.append(p1).append(" " ).append(p2).append(" " ).append(p3);
             }
+            log("write: 序列化完成");
         }
 
 
@@ -827,87 +830,122 @@ public class LNestedLogic {
         
         public static void create() {
             LAssembler.customParsers.put("nestedlogic", params -> {
+                log("create: 开始解析指令，参数数量: " + params.length);
+                for (int i = 0; i < params.length; i++) {
+                    log("create: 参数[" + i + "]: " + params[i]);
+                }
+                
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
+                log("create: 新建语句，默认 UID: " + stmt.uniqueId);
                 
                 // 处理旧格式兼容性
                 if (params.length >= 2) {
                     try {
                         stmt.type = NestedLogicType.valueOf(params[1]);
+                        log("create: 解析指令类型: " + stmt.type.name());
                     } catch (IllegalArgumentException e) {
                         stmt.type = NestedLogicType.call;
+                        log("create: 解析指令类型失败，使用默认类型: call");
                         if (params.length >= 3) {
                             stmt.nestedCode = params[2];
+                            log("create: 直接设置嵌套代码: " + params[2]);
                         }
+                        log("create: 旧格式处理完成，返回语句");
                         return stmt;
                     }
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
+                    log("create: 处理 call 指令");
                     // 检查是否有 UID 参数
                     if (params.length >= 3) {
                         try {
                             // 尝试解析第二个参数作为 UID
                             String potentialUid = params[2];
+                            log("create: 解析 UID 参数: " + potentialUid);
                             // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
                             if (potentialUid != null && !potentialUid.isEmpty()) {
                                 stmt.uniqueId = potentialUid;
                                 log("create: 恢复保存的 UID: " + stmt.uniqueId);
                             } else {
                                 // 不是有效的 UID，使用构造函数生成的 UID
-                                log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                                log("create: UID 参数为空，使用构造函数生成的 UID: " + stmt.uniqueId);
                             }
                         } catch (Exception e) {
                             // 不是有效的 UID，使用构造函数生成的 UID
-                            log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                            log("create: 解析 UID 失败，使用构造函数生成的 UID: " + stmt.uniqueId);
                         }
                     } else {
                         // 没有足够的参数，使用构造函数生成的 UID
-                        log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                        log("create: 参数不足，使用构造函数生成的 UID: " + stmt.uniqueId);
                     }
                     
                     // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
+                        log("create: 处理逻辑名称和嵌套代码");
                         int codeIndex = -1;
                         for (int i = 3; i < params.length; i++) {
                             if (params[i].startsWith("\"")) {
                                 codeIndex = i;
+                                log("create: 找到嵌套代码索引: " + codeIndex);
                                 break;
                             }
                         }
                         
                         if (codeIndex != -1) {
+                            log("create: 解析嵌套代码");
                             if (codeIndex > 3) {
+                                log("create: 解析逻辑名称，从索引 3 到 " + (codeIndex - 1));
                                 StringBuilder logicName = new StringBuilder();
                                 for (int i = 3; i < codeIndex; i++) {
                                     if (i > 3) logicName.append(" ");
                                     logicName.append(params[i]);
                                 }
                                 stmt.p1 = logicName.toString();
+                                log("create: 解析逻辑名称: " + stmt.p1);
                             }
                             
                             try {
                                 String rawCode = params[codeIndex];
+                                log("create: 原始嵌套代码: " + rawCode);
                                 String encoded = rawCode.substring(1, rawCode.length() - 1);
+                                log("create: Base64 编码的嵌套代码: " + encoded);
                                 byte[] decoded = Base64.getDecoder().decode(encoded);
                                 stmt.nestedCode = new String(decoded, StandardCharsets.UTF_8);
-                            } catch (Exception ignored) {
+                                log("create: 解码后的嵌套代码: " + stmt.nestedCode);
+                            } catch (Exception e) {
+                                log("create: 解码嵌套代码失败: " + e.getMessage());
                                 stmt.nestedCode = "";
                             }
                         } else {
+                            log("create: 未找到嵌套代码，使用默认值");
                             stmt.p1 = params.length > 3 ? params[3] : "";
+                            log("create: 逻辑名称: " + stmt.p1);
                             stmt.nestedCode = "";
                         }
                     }
                 } else {
-                    if (params.length >= 3) stmt.p1 = params[2];
-                    if (params.length >= 4) stmt.p2 = params[3];
-                    if (params.length >= 5) stmt.p3 = params[4];
+                    log("create: 处理非 call 指令");
+                    if (params.length >= 3) {
+                        stmt.p1 = params[2];
+                        log("create: 参数 1: " + stmt.p1);
+                    }
+                    if (params.length >= 4) {
+                        stmt.p2 = params[3];
+                        log("create: 参数 2: " + stmt.p2);
+                    }
+                    if (params.length >= 5) {
+                        stmt.p3 = params[4];
+                        log("create: 参数 3: " + stmt.p3);
+                    }
                 }
                 
+                log("create: 解析完成，返回语句");
                 return stmt;
             });
             
             LogicIO.allStatements.add(LNestedLogicStatement::new);
+            log("create: 注册自定义解析器和语句完成");
         }
     }
 }
