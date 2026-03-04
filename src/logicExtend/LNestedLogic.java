@@ -574,6 +574,8 @@ public class LNestedLogic {
                                     if (!newUid.equals(uniqueId)) {
                                         log("更新 UID 从 " + uniqueId + " 到 " + newUid);
                                         uniqueId = newUid;
+                                        // 确保 UID 被保存到指令中
+                                        log("UID 已更新并保存");
                                     }
                                 } catch (java.security.NoSuchAlgorithmException e) {
                                     //  fallback to UUID
@@ -581,6 +583,8 @@ public class LNestedLogic {
                                     log("生成 fallback UUID: " + newUid);
                                     if (!newUid.equals(uniqueId)) {
                                         uniqueId = newUid;
+                                        // 确保 UID 被保存到指令中
+                                        log("UID 已更新并保存");
                                     }
                                 }
                             } else {
@@ -865,8 +869,9 @@ public class LNestedLogic {
                             log("create: 解析 UID 参数: " + potentialUid);
                             // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
                             if (potentialUid != null && !potentialUid.isEmpty()) {
+                                // 暂时保存解析到的 UID，但在执行时会重新生成基于建筑信息的唯一 UID
                                 stmt.uniqueId = potentialUid;
-                                log("create: 恢复保存的 UID: " + stmt.uniqueId);
+                                log("create: 暂时保存解析到的 UID: " + stmt.uniqueId);
                             } else {
                                 // 不是有效的 UID，使用构造函数生成的 UID
                                 log("create: UID 参数为空，使用构造函数生成的 UID: " + stmt.uniqueId);
@@ -879,6 +884,7 @@ public class LNestedLogic {
                         // 没有足够的参数，使用构造函数生成的 UID
                         log("create: 参数不足，使用构造函数生成的 UID: " + stmt.uniqueId);
                     }
+                    log("create: 注意：UID 将在执行时重新生成基于建筑信息的唯一 UID");
                     
                     // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
