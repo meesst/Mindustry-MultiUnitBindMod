@@ -815,7 +815,10 @@ public class LNestedLogic {
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
-                    if (params.length >= 3) stmt.uniqueId = params[2];
+                    // 为通过解析创建的call类型指令生成新的uniqueId
+                    // 这样无论是通过蓝图还是剪贴板复制的指令，都会生成新的ID
+                    stmt.uniqueId = UUID.randomUUID().toString();
+                    log("create: 为call指令生成新的uniqueId: " + stmt.uniqueId);
                     
                     if (params.length >= 4) {
                         int codeIndex = -1;
