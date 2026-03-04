@@ -800,11 +800,13 @@ public class LNestedLogic {
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
-                builder.append(uniqueId).append(" ").append(p1).append(" ");
+                // 确保写入的是基于建筑信息生成的 UID，而不是默认的 UUID
+                log("write: 写入 UID: " + uniqueId);
+                builder.append(uniqueId).append(" " ).append(p1).append(" ");
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
                 builder.append('"').append(encoded).append('"');
             } else {
-                builder.append(p1).append(" ").append(p2).append(" ").append(p3);
+                builder.append(p1).append(" " ).append(p2).append(" " ).append(p3);
             }
         }
 
@@ -841,10 +843,27 @@ public class LNestedLogic {
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
-                    // 始终生成新的 UID，确保复制粘贴时每个指令都有唯一的 UID
-                    // 执行时会基于建筑、行号、逻辑名称和嵌套代码重新生成更准确的 UID
-                    stmt.uniqueId = UUID.randomUUID().toString();
-                    log("create: 生成新的 UID: " + stmt.uniqueId);
+                    // 检查是否有 UID 参数
+                    if (params.length >= 3) {
+                        try {
+                            // 尝试解析第二个参数作为 UID
+                            String potentialUid = params[2];
+                            // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
+                            if (potentialUid != null && !potentialUid.isEmpty()) {
+                                stmt.uniqueId = potentialUid;
+                                log("create: 恢复保存的 UID: " + stmt.uniqueId);
+                            } else {
+                                // 不是有效的 UID，使用构造函数生成的 UID
+                                log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                            }
+                        } catch (Exception e) {
+                            // 不是有效的 UID，使用构造函数生成的 UID
+                            log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                        }
+                    } else {
+                        // 没有足够的参数，使用构造函数生成的 UID
+                        log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                    }
                     
                     // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
