@@ -563,23 +563,28 @@ public class LNestedLogic {
                                        .append(":")
                                        .append(nestedCode);  // 嵌套代码
                                 
+                                log("生成 UID 的内容: " + content.toString());
+                                
                                 // 使用 SHA-224 生成哈希
                                 try {
                                     java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
                                     byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
                                     String newUid = Base64.getEncoder().encodeToString(hash);
+                                    log("生成的新 UID: " + newUid);
                                     if (!newUid.equals(uniqueId)) {
+                                        log("更新 UID 从 " + uniqueId + " 到 " + newUid);
                                         uniqueId = newUid;
-                                        log("更新 UID: " + uniqueId);
                                     }
                                 } catch (java.security.NoSuchAlgorithmException e) {
                                     //  fallback to UUID
                                     String newUid = UUID.randomUUID().toString();
+                                    log("生成 fallback UUID: " + newUid);
                                     if (!newUid.equals(uniqueId)) {
                                         uniqueId = newUid;
-                                        log("更新 fallback UUID: " + uniqueId);
                                     }
                                 }
+                            } else {
+                                log("exec.build 为 null，无法生成基于建筑的 UID");
                             }
                             
                             log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
