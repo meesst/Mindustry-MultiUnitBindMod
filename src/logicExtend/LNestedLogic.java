@@ -544,8 +544,8 @@ public class LNestedLogic {
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
-                            // 基于建筑、行号、逻辑名称和嵌套代码生成唯一 UID
-                            if (exec.build != null) {
+                            // 只有当 uniqueId 为默认值（随机 UUID）时才生成基于建筑信息的 UID
+                            if (exec.build != null && (uniqueId.length() == 36 && uniqueId.contains("-"))) {
                                 // 获取当前 call 指令在执行器中的索引（行号）
                                 int lineNumber = (int) exec.counter.numval;
                                 
@@ -568,9 +568,11 @@ public class LNestedLogic {
                                     java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
                                     byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
                                     uniqueId = Base64.getEncoder().encodeToString(hash);
+                                    log("生成新的 UID: " + uniqueId);
                                 } catch (java.security.NoSuchAlgorithmException e) {
                                     //  fallback to UUID
                                     uniqueId = UUID.randomUUID().toString();
+                                    log("生成 fallback UUID: " + uniqueId);
                                 }
                             }
                             
@@ -828,7 +830,29 @@ public class LNestedLogic {
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
-                    // 跳过UID参数，直接处理逻辑名称和嵌套代码
+                    // 检查是否有 UID 参数
+                    if (params.length >= 3) {
+                        try {
+                            // 尝试解析第二个参数作为 UID
+                            String potentialUid = params[2];
+                            // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
+                            if (potentialUid != null && !potentialUid.isEmpty()) {
+                                stmt.uniqueId = potentialUid;
+                                log("create: 恢复保存的 UID: " + stmt.uniqueId);
+                            } else {
+                                // 不是有效的 UID，使用构造函数生成的 UID
+                                log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                            }
+                        } catch (Exception e) {
+                            // 不是有效的 UID，使用构造函数生成的 UID
+                            log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                        }
+                    } else {
+                        // 没有足够的参数，使用构造函数生成的 UID
+                        log("create: 使用构造函数生成的 UID: " + stmt.uniqueId);
+                    }
+                    
+                    // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
                         int codeIndex = -1;
                         for (int i = 3; i < params.length; i++) {
