@@ -65,6 +65,9 @@ public class LNestedLogic {
     /** 检查间隔，默认10秒 */
     public static int checkInterval = 10;
     
+    /** 用于跟踪嵌套深度的静态ThreadLocal变量 */
+    private static final ThreadLocal<Integer> nestedDepth = ThreadLocal.withInitial(() -> 0);
+    
     static {
         // 初始化自动回收定时器
         initCleanupTimer();
@@ -532,7 +535,7 @@ public class LNestedLogic {
                 case call:
                     return (exec) -> {
                         // 简化的嵌套深度限制
-                        ThreadLocal<Integer> nestedDepth = ThreadLocal.withInitial(() -> 0);
+                        // 使用静态ThreadLocal变量来跟踪嵌套深度
                         if (nestedDepth.get() >= 5) {
                             log("嵌套深度超过限制，最大深度为5");
                             return;
