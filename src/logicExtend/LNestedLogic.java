@@ -544,8 +544,8 @@ public class LNestedLogic {
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
-                            // 只有当 uniqueId 为默认值（随机 UUID）时才生成基于建筑信息的 UID
-                            if (exec.build != null && (uniqueId.length() == 36 && uniqueId.contains("-"))) {
+                            // 每次执行都重新生成 UID，确保基于当前建筑、行号、逻辑名称和嵌套代码
+                            if (exec.build != null) {
                                 // 获取当前 call 指令在执行器中的索引（行号）
                                 int lineNumber = (int) exec.counter.numval;
                                 
@@ -567,12 +567,18 @@ public class LNestedLogic {
                                 try {
                                     java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
                                     byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
-                                    uniqueId = Base64.getEncoder().encodeToString(hash);
-                                    log("生成新的 UID: " + uniqueId);
+                                    String newUid = Base64.getEncoder().encodeToString(hash);
+                                    if (!newUid.equals(uniqueId)) {
+                                        uniqueId = newUid;
+                                        log("更新 UID: " + uniqueId);
+                                    }
                                 } catch (java.security.NoSuchAlgorithmException e) {
                                     //  fallback to UUID
-                                    uniqueId = UUID.randomUUID().toString();
-                                    log("生成 fallback UUID: " + uniqueId);
+                                    String newUid = UUID.randomUUID().toString();
+                                    if (!newUid.equals(uniqueId)) {
+                                        uniqueId = newUid;
+                                        log("更新 fallback UUID: " + uniqueId);
+                                    }
                                 }
                             }
                             
