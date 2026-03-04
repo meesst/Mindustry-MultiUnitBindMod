@@ -544,6 +544,36 @@ public class LNestedLogic {
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
+                            // 基于建筑、行号、逻辑名称和嵌套代码生成唯一 UID
+                            if (exec.build != null) {
+                                // 获取当前 call 指令在执行器中的索引（行号）
+                                int lineNumber = (int) exec.counter.numval;
+                                
+                                // 生成基于建筑、行号、逻辑名称和嵌套代码的 UID
+                                StringBuilder content = new StringBuilder();
+                                content.append(exec.build.id)  // 建筑 ID
+                                       .append(":")
+                                       .append(exec.build.tileX())  // 建筑 X 坐标
+                                       .append(":")
+                                       .append(exec.build.tileY())  // 建筑 Y 坐标
+                                       .append(":")
+                                       .append(lineNumber)  // 行号
+                                       .append(":")
+                                       .append(p1)  // 逻辑名称
+                                       .append(":")
+                                       .append(nestedCode);  // 嵌套代码
+                                
+                                // 使用 SHA-224 生成哈希
+                                try {
+                                    java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
+                                    byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
+                                    uniqueId = Base64.getEncoder().encodeToString(hash);
+                                } catch (java.security.NoSuchAlgorithmException e) {
+                                    //  fallback to UUID
+                                    uniqueId = UUID.randomUUID().toString();
+                                }
+                            }
+                            
                             log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
                             
                             LExecutor nestedExec;
@@ -627,9 +657,11 @@ public class LNestedLogic {
                                 nestedCounter++;
                             }
                             
-                            // 更新全局缓存中的执行器，确保变量值的更新能够同步
+                            // 更新全局缓存和实例缓存中的执行器，确保变量值的更新能够同步
                             executorCache.put(uniqueId, nestedExec);
+                            cachedNestedExec = nestedExec;
                             log("更新全局缓存中的执行器，uniqueId: " + uniqueId);
+                            log("更新实例缓存中的执行器");
                             log("嵌套逻辑执行完毕，执行了 " + nestedCounter + " 条指令");
 
                         } finally {
@@ -763,26 +795,7 @@ public class LNestedLogic {
             }
         }
 
-        @Override
-        public LStatement copy() {
-            LStatement copy = super.copy();
-            if (copy instanceof LNestedLogicStatement && ((LNestedLogicStatement) copy).type == NestedLogicType.call) {
-                // 为复制的call类型指令生成新的uniqueId
-                ((LNestedLogicStatement) copy).uniqueId = UUID.randomUUID().toString();
-                log("copy: 为call指令生成新的uniqueId: " + ((LNestedLogicStatement) copy).uniqueId);
-            }
-            return copy;
-        }
-        
-        @Override
-        public void afterRead() {
-            // 对于call类型的指令，如果没有uniqueId（例如新创建的指令），则生成新的uniqueId
-            // 但不要覆盖已经存在的uniqueId，确保执行和显示使用同一个缓存键
-            if (type == NestedLogicType.call && (uniqueId == null || uniqueId.isEmpty())) {
-                uniqueId = UUID.randomUUID().toString();
-                log("afterRead: 为call指令生成新的uniqueId: " + uniqueId);
-            }
-        }
+
         
         // 更新嵌套代码时清除缓存
         public void setNestedCode(String nestedCode) {
@@ -815,11 +828,7 @@ public class LNestedLogic {
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
-                    // 为通过解析创建的call类型指令生成新的uniqueId
-                    // 这样无论是通过蓝图还是剪贴板复制的指令，都会生成新的ID
-                    stmt.uniqueId = UUID.randomUUID().toString();
-                    log("create: 为call指令生成新的uniqueId: " + stmt.uniqueId);
-                    
+                    // 跳过UID参数，直接处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
                         int codeIndex = -1;
                         for (int i = 3; i < params.length; i++) {
@@ -858,7 +867,6 @@ public class LNestedLogic {
                     if (params.length >= 5) stmt.p3 = params[4];
                 }
                 
-                stmt.afterRead();
                 return stmt;
             });
             
