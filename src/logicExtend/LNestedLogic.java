@@ -931,19 +931,19 @@ public class LNestedLogic {
         
         /** 处理 UID 逻辑 */
         private static void handleUid(LNestedLogicStatement stmt) {
-            uidReadLock.lock();
-            try {
-                // 检查 UID 是否为空
-                if (stmt.uniqueId.isEmpty()) {
-                    // 生成新的 UUID
-                    String newUid = UUID.randomUUID().toString();
-                    stmt.uniqueId = newUid;
-                    log("handleUid: UID 为空，生成新 UID: " + newUid);
-                    // 存储到全局映射
-                    storeUid(stmt, newUid);
-                } else {
-                    // UID 不为空，检查是否与当前实例匹配
-                    boolean found = false;
+            // 检查 UID 是否为空
+            if (stmt.uniqueId.isEmpty()) {
+                // 生成新的 UUID
+                String newUid = UUID.randomUUID().toString();
+                stmt.uniqueId = newUid;
+                log("handleUid: UID 为空，生成新 UID: " + newUid);
+                // 存储到全局映射
+                storeUid(stmt, newUid);
+            } else {
+                // UID 不为空，检查是否与当前实例匹配
+                boolean found = false;
+                uidReadLock.lock();
+                try {
                     for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
                         LNestedLogicStatement existingStmt = entry.key.get();
                         if (existingStmt == stmt) {
@@ -953,17 +953,18 @@ public class LNestedLogic {
                             break;
                         }
                     }
-                    if (!found) {
-                        // 未找到匹配的实例，生成新 UID
-                        String newUid = UUID.randomUUID().toString();
-                        log("handleUid: 未找到匹配的实例，生成新 UID: " + newUid);
-                        stmt.uniqueId = newUid;
-                        // 存储到全局映射
-                        storeUid(stmt, newUid);
-                    }
+                } finally {
+                    uidReadLock.unlock();
                 }
-            } finally {
-                uidReadLock.unlock();
+                
+                if (!found) {
+                    // 未找到匹配的实例，生成新 UID
+                    String newUid = UUID.randomUUID().toString();
+                    log("handleUid: 未找到匹配的实例，生成新 UID: " + newUid);
+                    stmt.uniqueId = newUid;
+                    // 存储到全局映射
+                    storeUid(stmt, newUid);
+                }
             }
         }
         
