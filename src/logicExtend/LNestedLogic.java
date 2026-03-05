@@ -51,6 +51,11 @@ public class LNestedLogic {
     private static final java.util.concurrent.locks.Lock readLock = lock.readLock();
     private static final java.util.concurrent.locks.Lock writeLock = lock.writeLock();
     
+    /** 用于管理 UID 映射的读写锁 */
+    private static final java.util.concurrent.locks.ReadWriteLock uidLock = new java.util.concurrent.locks.ReentrantReadWriteLock();
+    private static final java.util.concurrent.locks.Lock uidReadLock = uidLock.readLock();
+    private static final java.util.concurrent.locks.Lock uidWriteLock = uidLock.writeLock();
+    
     /** 全局 UID 映射，使用弱引用避免内存泄漏 */
     private static final arc.struct.ObjectMap<java.lang.ref.WeakReference<LNestedLogicStatement>, String> uidMap = new arc.struct.ObjectMap<>();
     
@@ -179,7 +184,7 @@ public class LNestedLogic {
         // 指令类型
         public NestedLogicType type = NestedLogicType.push;
         // 唯一编号，用于标识每个call指令实例
-        public String uniqueId = null; // 构造时不生成，只起占位作用
+        public String uniqueId = "";
         // 第一个参数（push的变量名，或call的逻辑名）
         public String p1 = "var";
         // 第二个参数（index，push/pop使用）
@@ -762,59 +767,21 @@ public class LNestedLogic {
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
-                // 处理 UID
-                String uidToUse = null;
+                // 使用逻辑名称和嵌套代码生成 UID
+                StringBuilder content = new StringBuilder();
+                content.append(p1)  // 逻辑名称
+                       .append(":")
+                       .append(nestedCode);  // 嵌套代码
                 
-                // 获取写锁
-                writeLock.lock();
+                String uidToUse = uniqueId;
                 try {
-                    // 清理已被垃圾回收的引用
-                    java.util.ArrayList<java.lang.ref.WeakReference<LNestedLogicStatement>> toRemove = new java.util.ArrayList<>();
-                    for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
-                        if (entry.key.get() == null) {
-                            toRemove.add(entry.key);
-                        }
-                    }
-                    for (java.lang.ref.WeakReference<LNestedLogicStatement> ref : toRemove) {
-                        uidMap.remove(ref);
-                    }
-                    
-                    // 检查 UID 是否为空
-                    if (uniqueId == null) {
-                        // 生成新的 UUID
-                        uidToUse = UUID.randomUUID().toString();
-                        // 保存到全局映射
-                        uidMap.put(new java.lang.ref.WeakReference<>(this), uidToUse);
-                        // 更新实例的 UID
-                        uniqueId = uidToUse;
-                        log("write: 生成新 UID: " + uidToUse);
-                    } else {
-                        // 查找当前实例对应的 UID
-                        boolean found = false;
-                        for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
-                            LNestedLogicStatement stmt = entry.key.get();
-                            if (stmt == this) {
-                                // 找到当前实例，使用存储的 UID
-                                uidToUse = entry.value;
-                                found = true;
-                                log("write: 使用存储的 UID: " + uidToUse);
-                                break;
-                            }
-                        }
-                        
-                        if (!found) {
-                            // 没有找到当前实例，生成新的 UUID
-                            uidToUse = UUID.randomUUID().toString();
-                            // 保存到全局映射
-                            uidMap.put(new java.lang.ref.WeakReference<>(this), uidToUse);
-                            // 更新实例的 UID
-                            uniqueId = uidToUse;
-                            log("write: 未找到存储的 UID，生成新 UID: " + uidToUse);
-                        }
-                    }
-                } finally {
-                    // 释放写锁
-                    writeLock.unlock();
+                    java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
+                    byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
+                    uidToUse = Base64.getEncoder().encodeToString(hash);
+                    // 更新 uniqueId 为生成的值
+                    uniqueId = uidToUse;
+                } catch (java.security.NoSuchAlgorithmException e) {
+                    // fallback to existing uniqueId
                 }
                 
                 log("write: 写入 call 指令，UID: " + uidToUse + "，逻辑名称: " + p1);
@@ -866,6 +833,8 @@ public class LNestedLogic {
                             stmt.nestedCode = params[2];
                             log("create: 直接设置嵌套代码: " + params[2]);
                         }
+                        // 处理 UID
+                        handleUid(stmt);
                         log("create: 旧格式处理完成，返回语句");
                         return stmt;
                     }
@@ -879,24 +848,18 @@ public class LNestedLogic {
                             // 尝试解析第二个参数作为 UID
                             String potentialUid = params[2];
                             log("create: 解析 UID 参数: " + potentialUid);
-                            // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
                             if (potentialUid != null && !potentialUid.isEmpty()) {
-                                // 暂时保存解析到的 UID，但在执行时会重新生成基于建筑信息的唯一 UID
                                 stmt.uniqueId = potentialUid;
-                                log("create: 暂时保存解析到的 UID: " + stmt.uniqueId);
-                            } else {
-                                // 不是有效的 UID，使用构造函数生成的 UID
-                                log("create: UID 参数为空，使用构造函数生成的 UID: " + stmt.uniqueId);
+                                log("create: 设置 UID: " + stmt.uniqueId);
                             }
                         } catch (Exception e) {
-                            // 不是有效的 UID，使用构造函数生成的 UID
-                            log("create: 解析 UID 失败，使用构造函数生成的 UID: " + stmt.uniqueId);
+                            log("create: 解析 UID 失败: " + e.getMessage());
                         }
                     } else {
-                        // 没有足够的参数，使用构造函数生成的 UID
-                        log("create: 参数不足，使用构造函数生成的 UID: " + stmt.uniqueId);
+                        log("create: 参数不足，将在 handleUid 中生成 UID");
                     }
-                    log("create: 注意：UID 将在执行时重新生成基于建筑信息的唯一 UID");
+                    // 处理 UID
+                    handleUid(stmt);
                     
                     // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
@@ -964,6 +927,67 @@ public class LNestedLogic {
             
             LogicIO.allStatements.add(LNestedLogicStatement::new);
             log("create: 注册自定义解析器和语句完成");
+        }
+        
+        /** 处理 UID 逻辑 */
+        private static void handleUid(LNestedLogicStatement stmt) {
+            uidReadLock.lock();
+            try {
+                // 检查 UID 是否为空
+                if (stmt.uniqueId.isEmpty()) {
+                    // 生成新的 UUID
+                    String newUid = UUID.randomUUID().toString();
+                    stmt.uniqueId = newUid;
+                    log("handleUid: UID 为空，生成新 UID: " + newUid);
+                    // 存储到全局映射
+                    storeUid(stmt, newUid);
+                } else {
+                    // UID 不为空，检查是否与当前实例匹配
+                    boolean found = false;
+                    for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
+                        LNestedLogicStatement existingStmt = entry.key.get();
+                        if (existingStmt == stmt) {
+                            // 找到匹配的实例，使用现有 UID
+                            log("handleUid: 找到匹配的实例，使用现有 UID: " + stmt.uniqueId);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        // 未找到匹配的实例，生成新 UID
+                        String newUid = UUID.randomUUID().toString();
+                        log("handleUid: 未找到匹配的实例，生成新 UID: " + newUid);
+                        stmt.uniqueId = newUid;
+                        // 存储到全局映射
+                        storeUid(stmt, newUid);
+                    }
+                }
+            } finally {
+                uidReadLock.unlock();
+            }
+        }
+        
+        /** 存储 UID 到全局映射 */
+        private static void storeUid(LNestedLogicStatement stmt, String uid) {
+            uidWriteLock.lock();
+            try {
+                // 清理过期的弱引用
+                java.util.List<java.lang.ref.WeakReference<LNestedLogicStatement>> toRemove = new java.util.ArrayList<>();
+                for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
+                    if (entry.key.get() == null) {
+                        toRemove.add(entry.key);
+                    }
+                }
+                for (java.lang.ref.WeakReference<LNestedLogicStatement> ref : toRemove) {
+                    uidMap.remove(ref);
+                }
+                
+                // 存储新的映射
+                uidMap.put(new java.lang.ref.WeakReference<>(stmt), uid);
+                log("storeUid: 存储 UID 到全局映射: " + uid);
+            } finally {
+                uidWriteLock.unlock();
+            }
         }
     }
 }
