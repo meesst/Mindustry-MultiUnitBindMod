@@ -544,53 +544,7 @@ public class LNestedLogic {
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
-                            // 每次执行都重新生成 UID，确保基于当前建筑、行号、逻辑名称和嵌套代码
-                            if (exec.build != null) {
-                                // 获取当前 call 指令在执行器中的索引（行号）
-                                int lineNumber = (int) exec.counter.numval;
-                                
-                                // 生成基于建筑、行号、逻辑名称和嵌套代码的 UID
-                                StringBuilder content = new StringBuilder();
-                                content.append(exec.build.id)  // 建筑 ID
-                                       .append(":")
-                                       .append(exec.build.tileX())  // 建筑 X 坐标
-                                       .append(":")
-                                       .append(exec.build.tileY())  // 建筑 Y 坐标
-                                       .append(":")
-                                       .append(lineNumber)  // 行号
-                                       .append(":")
-                                       .append(p1)  // 逻辑名称
-                                       .append(":")
-                                       .append(nestedCode);  // 嵌套代码
-                                
-                                log("生成 UID 的内容: " + content.toString());
-                                
-                                // 使用 SHA-224 生成哈希
-                                try {
-                                    java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
-                                    byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
-                                    String newUid = Base64.getEncoder().encodeToString(hash);
-                                    log("生成的新 UID: " + newUid);
-                                    if (!newUid.equals(uniqueId)) {
-                                        log("更新 UID 从 " + uniqueId + " 到 " + newUid);
-                                        uniqueId = newUid;
-                                        // 确保 UID 被保存到指令中
-                                        log("UID 已更新并保存");
-                                    }
-                                } catch (java.security.NoSuchAlgorithmException e) {
-                                    //  fallback to UUID
-                                    String newUid = UUID.randomUUID().toString();
-                                    log("生成 fallback UUID: " + newUid);
-                                    if (!newUid.equals(uniqueId)) {
-                                        uniqueId = newUid;
-                                        // 确保 UID 被保存到指令中
-                                        log("UID 已更新并保存");
-                                    }
-                                }
-                            } else {
-                                log("exec.build 为 null，无法生成基于建筑的 UID");
-                            }
-                            
+                            // 不再动态生成 UID，使用 write 方法中生成的基于逻辑名称和嵌套代码的 UID
                             log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
                             
                             LExecutor nestedExec;
@@ -805,8 +759,25 @@ public class LNestedLogic {
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
-                log("write: 写入 call 指令，逻辑名称: " + p1);
-                builder.append(p1).append(" ");
+                // 使用逻辑名称和嵌套代码生成 UID
+                StringBuilder content = new StringBuilder();
+                content.append(p1)  // 逻辑名称
+                       .append(":")
+                       .append(nestedCode);  // 嵌套代码
+                
+                String uidToUse = uniqueId;
+                try {
+                    java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
+                    byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
+                    uidToUse = Base64.getEncoder().encodeToString(hash);
+                    // 更新 uniqueId 为生成的值
+                    uniqueId = uidToUse;
+                } catch (java.security.NoSuchAlgorithmException e) {
+                    // fallback to existing uniqueId
+                }
+                
+                log("write: 写入 call 指令，UID: " + uidToUse + "，逻辑名称: " + p1);
+                builder.append(uidToUse).append(" " ).append(p1).append(" ");
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
                 log("write: 写入嵌套代码 (Base64): " + encoded);
                 builder.append('"').append(encoded).append('"');
@@ -861,14 +832,36 @@ public class LNestedLogic {
                 
                 if (stmt.type == NestedLogicType.call) {
                     log("create: 处理 call 指令");
-                    // 忽略 UID 参数，使用构造函数生成的 UID
-                    log("create: 忽略 UID 参数，使用新生成的 UID: " + stmt.uniqueId);
+                    // 检查是否有 UID 参数
+                    if (params.length >= 3) {
+                        try {
+                            // 尝试解析第二个参数作为 UID
+                            String potentialUid = params[2];
+                            log("create: 解析 UID 参数: " + potentialUid);
+                            // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
+                            if (potentialUid != null && !potentialUid.isEmpty()) {
+                                // 暂时保存解析到的 UID，但在执行时会重新生成基于建筑信息的唯一 UID
+                                stmt.uniqueId = potentialUid;
+                                log("create: 暂时保存解析到的 UID: " + stmt.uniqueId);
+                            } else {
+                                // 不是有效的 UID，使用构造函数生成的 UID
+                                log("create: UID 参数为空，使用构造函数生成的 UID: " + stmt.uniqueId);
+                            }
+                        } catch (Exception e) {
+                            // 不是有效的 UID，使用构造函数生成的 UID
+                            log("create: 解析 UID 失败，使用构造函数生成的 UID: " + stmt.uniqueId);
+                        }
+                    } else {
+                        // 没有足够的参数，使用构造函数生成的 UID
+                        log("create: 参数不足，使用构造函数生成的 UID: " + stmt.uniqueId);
+                    }
+                    log("create: 注意：UID 将在执行时重新生成基于建筑信息的唯一 UID");
                     
                     // 处理逻辑名称和嵌套代码
-                    if (params.length >= 3) {
+                    if (params.length >= 4) {
                         log("create: 处理逻辑名称和嵌套代码");
                         int codeIndex = -1;
-                        for (int i = 2; i < params.length; i++) {
+                        for (int i = 3; i < params.length; i++) {
                             if (params[i].startsWith("\"")) {
                                 codeIndex = i;
                                 log("create: 找到嵌套代码索引: " + codeIndex);
@@ -878,11 +871,11 @@ public class LNestedLogic {
                         
                         if (codeIndex != -1) {
                             log("create: 解析嵌套代码");
-                            if (codeIndex > 2) {
-                                log("create: 解析逻辑名称，从索引 2 到 " + (codeIndex - 1));
+                            if (codeIndex > 3) {
+                                log("create: 解析逻辑名称，从索引 3 到 " + (codeIndex - 1));
                                 StringBuilder logicName = new StringBuilder();
-                                for (int i = 2; i < codeIndex; i++) {
-                                    if (i > 2) logicName.append(" ");
+                                for (int i = 3; i < codeIndex; i++) {
+                                    if (i > 3) logicName.append(" ");
                                     logicName.append(params[i]);
                                 }
                                 stmt.p1 = logicName.toString();
@@ -903,7 +896,7 @@ public class LNestedLogic {
                             }
                         } else {
                             log("create: 未找到嵌套代码，使用默认值");
-                            stmt.p1 = params.length > 2 ? params[2] : "";
+                            stmt.p1 = params.length > 3 ? params[3] : "";
                             log("create: 逻辑名称: " + stmt.p1);
                             stmt.nestedCode = "";
                         }
