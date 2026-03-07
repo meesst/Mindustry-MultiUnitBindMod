@@ -330,9 +330,12 @@ public class LNestedLogic {
                         // 用于嵌套逻辑编辑器的执行器
                         mindustry.logic.LExecutor nestedExecutor;
                         
+                        // 打印uid信息
+                        log("准备获取执行器，uniqueId: " + uniqueId);
+                        
                         // 从全局缓存中获取执行器
                         if (executorCache.containsKey(uniqueId)) {
-                            log("从全局缓存中获取执行器显示变量值，uniqueId: " + uniqueId);
+                            log("从全局缓存中获取执行器显示变量值");
                             nestedExecutor = executorCache.get(uniqueId);
                             // 同时更新实例缓存
                             cachedNestedExec = nestedExecutor;
