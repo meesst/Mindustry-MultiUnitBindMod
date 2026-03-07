@@ -740,13 +740,9 @@ public class LNestedLogic {
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
-                // 使用 UUID 生成随机 UID
-                String uidToUse = UUID.randomUUID().toString();
-                // 更新 uniqueId 为生成的值
-                uniqueId = uidToUse;
-                
-                log("write: 写入 call 指令，UID: " + uidToUse + "，逻辑名称: " + p1);
-                builder.append(uidToUse).append(" " ).append(p1).append(" ");
+                // 直接使用现有的 uniqueId，不生成新的 UUID
+                log("write: 写入 call 指令，UID: " + uniqueId + "，逻辑名称: " + p1);
+                builder.append(uniqueId).append(" " ).append(p1).append(" ");
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
                 log("write: 写入嵌套代码 (Base64): " + encoded);
                 builder.append('"').append(encoded).append('"');
@@ -807,36 +803,57 @@ public class LNestedLogic {
                             // 尝试解析第二个参数作为 UID
                             String potentialUid = params[2];
                             log("create: 解析 UID 参数: " + potentialUid);
-                            // 打印完整调用栈
-                            log("create: 完整调用栈:");
-                            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-                            for (int i = 2; i < stackTrace.length; i++) {
-                                StackTraceElement element = stackTrace[i];
-                                log(String.format("create: %s.%s(%s:%d)", 
-                                    element.getClassName(), 
-                                    element.getMethodName(), 
-                                    element.getFileName(), 
-                                    element.getLineNumber()));
-                            }
-                            // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
-                            if (potentialUid != null && !potentialUid.isEmpty()) {
-                                // 暂时保存解析到的 UID，但在执行时会重新生成基于建筑信息的唯一 UID
-                                stmt.uniqueId = potentialUid;
-                                log("create: 暂时保存解析到的 UID: " + stmt.uniqueId);
+                            
+                            // 判断 uid 是否为 null
+                            if (potentialUid == null) {
+                                potentialUid = UUID.randomUUID().toString();
+                                log("create: UID 为 null，生成新的 UUID: " + potentialUid);
                             } else {
-                                // 不是有效的 UID，使用构造函数生成的 UID
-                                log("create: UID 参数为空，使用构造函数生成的 UID: " + stmt.uniqueId);
+                                //分别标记两个copy方法是否存在，需同时满足才判定为复制操作
+                                boolean hasLStatementCopy = false;
+                                boolean hasLCanvasElemCopy = false;
+                                
+                                // 获取调用栈并遍历（不提前break，确保检查所有元素）
+                                StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+                                for (StackTraceElement element : stackTrace) {
+                                    String className = element.getClassName();
+                                    String methodName = element.getMethodName();
+                                    
+                                    // 检查LStatement.copy方法
+                                    if (className.equals("mindustry.logic.LStatement") && methodName.equals("copy")) {
+                                        hasLStatementCopy = true;
+                                    }
+                                    // 检查LCanvas$StatementElem.copy方法（内部类名需和运行时一致）
+                                    if (className.equals("mindustry.logic.LCanvas$StatementElem") && methodName.equals("copy")) {
+                                        hasLCanvasElemCopy = true;
+                                    }
+                                }
+                                
+                                // 核心判断：必须同时包含两个copy方法才判定为复制操作
+                                boolean isCopyOperation = hasLStatementCopy && hasLCanvasElemCopy;
+                                log("create: 调用栈检查结果 - LStatement.copy存在: " + hasLStatementCopy + 
+                                    ", LCanvas$StatementElem.copy存在: " + hasLCanvasElemCopy + 
+                                    ", 判定为复制操作: " + isCopyOperation);
+                                
+                                // 仅当判定为复制操作时，生成新UUID
+                                if (isCopyOperation) {
+                                    potentialUid = UUID.randomUUID().toString();
+                                    log("create: 调用栈包含 copy 方法，生成新的 UUID: " + potentialUid);
+                                }
                             }
+                            
+                            // 设置最终的 uniqueId
+                            stmt.uniqueId = potentialUid;
+                            log("create: 设置 UID: " + stmt.uniqueId);
                         } catch (Exception e) {
-                            // 不是有效的 UID，使用构造函数生成的 UID
+                            // 解析失败，使用构造函数生成的 UID，并打印异常日志便于调试
+                            log("create: 解析 UID 失败，异常信息: " + e.getMessage(), e);
                             log("create: 解析 UID 失败，使用构造函数生成的 UID: " + stmt.uniqueId);
                         }
                     } else {
                         // 没有足够的参数，使用构造函数生成的 UID
-                        log("create: 参数不足，使用构造函数生成的 UID: " + stmt.uniqueId);
+                        log("create: 参数不足（当前参数数: " + params.length + "），使用构造函数生成的 UID: " + stmt.uniqueId);
                     }
-                    log("create: 注意：UID 将在执行时重新生成基于建筑信息的唯一 UID");
-                    
                     // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
                         log("create: 处理逻辑名称和嵌套代码");
