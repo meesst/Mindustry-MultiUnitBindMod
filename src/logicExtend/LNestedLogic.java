@@ -561,6 +561,7 @@ public class LNestedLogic {
                                 executorCache.put(currentUniqueId, nestedExec);
                                 log("缓存嵌套逻辑和执行器");
                                 log("将执行器存储到全局缓存，uniqueId: " + currentUniqueId);
+                                log("this.uniqueId: " + this.uniqueId);
                             } else {
                                 nestedExec = cachedNestedExec;
                                 nestedExec.build = exec.build;
