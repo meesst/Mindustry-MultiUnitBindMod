@@ -541,11 +541,12 @@ public class LNestedLogic {
                             return;
                         }
                         
+                        String currentUniqueId = uniqueId;
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
                             // 动态获取最新的uniqueId值
-                            String currentUniqueId = uniqueId;
+                            currentUniqueId = uniqueId;
                             log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + currentUniqueId);
                             
                             LExecutor nestedExec;
