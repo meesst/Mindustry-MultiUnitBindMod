@@ -544,8 +544,9 @@ public class LNestedLogic {
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
-                            // 不再动态生成 UID，使用 write 方法中生成的基于逻辑名称和嵌套代码的 UID
-                            log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
+                            // 动态获取最新的uniqueId值
+                            String currentUniqueId = uniqueId;
+                            log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + currentUniqueId);
                             
                             LExecutor nestedExec;
                             
@@ -578,9 +579,9 @@ public class LNestedLogic {
                                 cachedNestedBuilder = nestedBuilder;
                                 cachedNestedExec = nestedExec;
                                 // 同时存储到全局缓存中
-                                executorCache.put(uniqueId, nestedExec);
+                                executorCache.put(currentUniqueId, nestedExec);
                                 log("缓存嵌套逻辑和执行器");
-                                log("将执行器存储到全局缓存，uniqueId: " + uniqueId);
+                                log("将执行器存储到全局缓存，uniqueId: " + currentUniqueId);
                             } else {
                                 nestedExec = cachedNestedExec;
                                 nestedExec.build = exec.build;
@@ -629,15 +630,15 @@ public class LNestedLogic {
                             }
                             
                             // 更新全局缓存和实例缓存中的执行器，确保变量值的更新能够同步
-                            executorCache.put(uniqueId, nestedExec);
+                            executorCache.put(currentUniqueId, nestedExec);
                             cachedNestedExec = nestedExec;
-                            log("更新全局缓存中的执行器，uniqueId: " + uniqueId);
+                            log("更新全局缓存中的执行器，uniqueId: " + currentUniqueId);
                             log("更新实例缓存中的执行器");
                             log("嵌套逻辑执行完毕，执行了 " + nestedCounter + " 条指令");
 
                         } finally {
                             nestedDepth.set(nestedDepth.get() - 1);
-                            log("退出call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
+                            log("退出call指令，逻辑名称: " + p1 + "，唯一编号: " + currentUniqueId);
                         }
                     };
                     
