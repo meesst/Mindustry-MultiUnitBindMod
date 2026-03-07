@@ -519,12 +519,12 @@ public class LNestedLogic {
                             return;
                         }
                         
-                        String currentUniqueId = this.uniqueId;
+                        String currentUniqueId = uniqueId;
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
                             // 动态获取最新的uniqueId值
-                            currentUniqueId = this.uniqueId;
+                            currentUniqueId = uniqueId;
                             log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + currentUniqueId);
                             
                             LExecutor nestedExec;
@@ -736,7 +736,19 @@ public class LNestedLogic {
 
         @Override
         public void write(StringBuilder builder) {
+            // 打印完整调用栈
             log("write: 开始序列化指令，类型: " + type.name());
+            log("write: 完整调用栈:");
+            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+            for (int i = 2; i < stackTrace.length; i++) {
+                StackTraceElement element = stackTrace[i];
+                log(String.format("write: %s.%s(%s:%d)", 
+                    element.getClassName(), 
+                    element.getMethodName(), 
+                    element.getFileName(), 
+                    element.getLineNumber()));
+            }
+            
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
