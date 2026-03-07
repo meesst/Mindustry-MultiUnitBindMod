@@ -330,15 +330,10 @@ public class LNestedLogic {
                         // 用于嵌套逻辑编辑器的执行器
                         mindustry.logic.LExecutor nestedExecutor;
                         
-                        // 优先使用实例缓存的执行器，确保与执行时使用同一个执行器
-                        if (cachedNestedExec != null) {
-                            LELog.debug("使用实例缓存的执行器显示变量值");
-                            LELog.info("使用实例缓存的执行器显示变量值");
-                            nestedExecutor = cachedNestedExec;
-                        } else if (executorCache.containsKey(uniqueId)) {
-                            // 如果实例缓存中没有，从全局缓存中获取执行器
-                            LELog.debug("从全局缓存中获取执行器显示变量值");
-                            LELog.info("从全局缓存中获取执行器显示变量值");
+                        // 从全局缓存中获取执行器
+                        if (executorCache.containsKey(uniqueId)) {
+                            LELog.debug("从全局缓存中获取执行器显示变量值，uniqueId: " + uniqueId);
+                            LELog.info("从全局缓存中获取执行器显示变量值，uniqueId: " + uniqueId);
                             nestedExecutor = executorCache.get(uniqueId);
                             // 同时更新实例缓存
                             cachedNestedExec = nestedExecutor;
