@@ -736,19 +736,7 @@ public class LNestedLogic {
 
         @Override
         public void write(StringBuilder builder) {
-            // 打印完整调用栈
             log("write: 开始序列化指令，类型: " + type.name());
-            log("write: 完整调用栈:");
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            for (int i = 2; i < stackTrace.length; i++) {
-                StackTraceElement element = stackTrace[i];
-                log(String.format("write: %s.%s(%s:%d)", 
-                    element.getClassName(), 
-                    element.getMethodName(), 
-                    element.getFileName(), 
-                    element.getLineNumber()));
-            }
-            
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
@@ -819,6 +807,17 @@ public class LNestedLogic {
                             // 尝试解析第二个参数作为 UID
                             String potentialUid = params[2];
                             log("create: 解析 UID 参数: " + potentialUid);
+                            // 打印完整调用栈
+                            log("create: 完整调用栈:");
+                            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+                            for (int i = 2; i < stackTrace.length; i++) {
+                                StackTraceElement element = stackTrace[i];
+                                log(String.format("create: %s.%s(%s:%d)", 
+                                    element.getClassName(), 
+                                    element.getMethodName(), 
+                                    element.getFileName(), 
+                                    element.getLineNumber()));
+                            }
                             // 验证是否为有效的 UID 格式（SHA-224 哈希或 UUID）
                             if (potentialUid != null && !potentialUid.isEmpty()) {
                                 // 暂时保存解析到的 UID，但在执行时会重新生成基于建筑信息的唯一 UID
