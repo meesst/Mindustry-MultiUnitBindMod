@@ -847,7 +847,7 @@ public class LNestedLogic {
                             log("create: 设置 UID: " + stmt.uniqueId);
                         } catch (Exception e) {
                             // 解析失败，使用构造函数生成的 UID，并打印异常日志便于调试
-                            log("create: 解析 UID 失败，异常信息: " + e.getMessage(), e);
+                            log("create: 解析 UID 失败，异常信息: " + e.getMessage());
                             log("create: 解析 UID 失败，使用构造函数生成的 UID: " + stmt.uniqueId);
                         }
                     } else {
