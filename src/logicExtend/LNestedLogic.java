@@ -51,14 +51,6 @@ public class LNestedLogic {
     private static final java.util.concurrent.locks.Lock readLock = lock.readLock();
     private static final java.util.concurrent.locks.Lock writeLock = lock.writeLock();
     
-    /** 用于管理 UID 映射的读写锁 */
-    private static final java.util.concurrent.locks.ReadWriteLock uidLock = new java.util.concurrent.locks.ReentrantReadWriteLock();
-    private static final java.util.concurrent.locks.Lock uidReadLock = uidLock.readLock();
-    private static final java.util.concurrent.locks.Lock uidWriteLock = uidLock.writeLock();
-    
-    /** 全局 UID 映射，使用弱引用避免内存泄漏 */
-    private static final arc.struct.ObjectMap<java.lang.ref.WeakReference<LNestedLogicStatement>, String> uidMap = new arc.struct.ObjectMap<>();
-    
     /** 栈锁映射表：stackName -> Lock，用于保护栈的创建和索引锁的获取 */
     private static final arc.struct.ObjectMap<String, java.util.concurrent.locks.Lock> stackLocks = new arc.struct.ObjectMap<>();
     /** 索引锁映射表：stackName -> (index -> Lock)，为每个栈的每个索引分配独立锁 */
@@ -72,9 +64,6 @@ public class LNestedLogic {
     
     /** 检查间隔，默认10秒 */
     public static int checkInterval = 10;
-    
-    /** 用于跟踪嵌套深度的静态ThreadLocal变量 */
-    private static final ThreadLocal<Integer> nestedDepth = ThreadLocal.withInitial(() -> 0);
     
     static {
         // 初始化自动回收定时器
@@ -184,7 +173,9 @@ public class LNestedLogic {
         // 指令类型
         public NestedLogicType type = NestedLogicType.push;
         // 唯一编号，用于标识每个call指令实例
-        public String uniqueId = "";
+        public String uniqueId = UUID.randomUUID().toString();
+        // 编辑页面是否打开的标志
+        private transient boolean isEditOpen = false;
         // 第一个参数（push的变量名，或call的逻辑名）
         public String p1 = "var";
         // 第二个参数（index，push/pop使用）
@@ -333,23 +324,33 @@ public class LNestedLogic {
                             log("无法修改shouldPause字段: " + e.getMessage());
                         }
                         
-                        nestedDialog.hidden(restoreCanvas);
+                        // 设置编辑页面打开标志
+                        isEditOpen = true;
+                        log("编辑页面已打开，设置isEditOpen为true");
+                        
+                        nestedDialog.hidden(() -> {
+                            // 恢复canvas
+                            restoreCanvas.run();
+                            // 设置编辑页面关闭标志
+                            isEditOpen = false;
+                            log("编辑页面已关闭，设置isEditOpen为false");
+                        });
                         
                         // 用于嵌套逻辑编辑器的执行器
                         mindustry.logic.LExecutor nestedExecutor;
                         
-                        // 优先使用实例缓存的执行器，确保与执行时使用同一个执行器
-                        if (cachedNestedExec != null) {
-                            LELog.debug("使用实例缓存的执行器显示变量值");
-                            LELog.info("使用实例缓存的执行器显示变量值");
-                            nestedExecutor = cachedNestedExec;
-                        } else if (executorCache.containsKey(uniqueId)) {
-                            // 如果实例缓存中没有，从全局缓存中获取执行器
+                        // 优先从全局缓存中获取执行器
+                        if (executorCache.containsKey(uniqueId)) {
                             LELog.debug("从全局缓存中获取执行器显示变量值");
                             LELog.info("从全局缓存中获取执行器显示变量值");
                             nestedExecutor = executorCache.get(uniqueId);
                             // 同时更新实例缓存
                             cachedNestedExec = nestedExecutor;
+                        } else if (cachedNestedExec != null) {
+                            // 如果全局缓存中没有，使用实例缓存的执行器
+                            LELog.debug("使用缓存的执行器显示变量值");
+                            LELog.info("使用缓存的执行器显示变量值");
+                            nestedExecutor = cachedNestedExec;
                         } else {
                             // 否则创建一个新的 LExecutor 对象
                             LELog.debug("创建新的执行器显示变量值");
@@ -543,7 +544,7 @@ public class LNestedLogic {
                 case call:
                     return (exec) -> {
                         // 简化的嵌套深度限制
-                        // 使用静态ThreadLocal变量来跟踪嵌套深度
+                        ThreadLocal<Integer> nestedDepth = ThreadLocal.withInitial(() -> 0);
                         if (nestedDepth.get() >= 5) {
                             log("嵌套深度超过限制，最大深度为5");
                             return;
@@ -552,12 +553,10 @@ public class LNestedLogic {
                         try {
                             nestedDepth.set(nestedDepth.get() + 1);
                             
-                            // 不再动态生成 UID，使用 write 方法中生成的基于逻辑名称和嵌套代码的 UID
                             log("开始执行call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
                             
                             LExecutor nestedExec;
                             
-                            // 优先使用实例缓存的执行器，确保执行流程正常
                             if (cachedNestedExec == null) {
                                 log("第一次执行，编译嵌套逻辑");
                                 
@@ -636,13 +635,7 @@ public class LNestedLogic {
                                 nestedCounter++;
                             }
                             
-                            // 更新全局缓存和实例缓存中的执行器，确保变量值的更新能够同步
-                            executorCache.put(uniqueId, nestedExec);
-                            cachedNestedExec = nestedExec;
-                            log("更新全局缓存中的执行器，uniqueId: " + uniqueId);
-                            log("更新实例缓存中的执行器");
                             log("嵌套逻辑执行完毕，执行了 " + nestedCounter + " 条指令");
-
                         } finally {
                             nestedDepth.set(nestedDepth.get() - 1);
                             log("退出call指令，逻辑名称: " + p1 + "，唯一编号: " + uniqueId);
@@ -763,40 +756,31 @@ public class LNestedLogic {
 
         @Override
         public void write(StringBuilder builder) {
-            log("write: 开始序列化指令，类型: " + type.name());
             builder.append("nestedlogic ").append(type.name()).append(" ");
             
             if (type == NestedLogicType.call) {
-                // 使用逻辑名称和嵌套代码生成 UID
-                StringBuilder content = new StringBuilder();
-                content.append(p1)  // 逻辑名称
-                       .append(":")
-                       .append(nestedCode);  // 嵌套代码
-                
-                String uidToUse = uniqueId;
-                try {
-                    java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-224");
-                    byte[] hash = digest.digest(content.toString().getBytes(StandardCharsets.UTF_8));
-                    uidToUse = Base64.getEncoder().encodeToString(hash);
-                    // 更新 uniqueId 为生成的值
-                    uniqueId = uidToUse;
-                } catch (java.security.NoSuchAlgorithmException e) {
-                    // fallback to existing uniqueId
+                // 只有在编辑页面关闭时才生成新的uid
+                if (!isEditOpen) {
+                    String oldUid = uniqueId;
+                    uniqueId = UUID.randomUUID().toString();
+                    // 从全局缓存中移除旧的执行器
+                    if (executorCache.containsKey(oldUid)) {
+                        executorCache.remove(oldUid);
+                        log("从全局缓存中移除旧执行器，oldUid: " + oldUid);
+                    }
                 }
-                
-                log("write: 写入 call 指令，UID: " + uidToUse + "，逻辑名称: " + p1);
-                builder.append(uidToUse).append(" " ).append(p1).append(" ");
+                builder.append(uniqueId).append(" ").append(p1).append(" ");
                 String encoded = Base64.getEncoder().encodeToString(nestedCode.getBytes(StandardCharsets.UTF_8));
-                log("write: 写入嵌套代码 (Base64): " + encoded);
                 builder.append('"').append(encoded).append('"');
             } else {
-                log("write: 写入非 call 指令，参数: " + p1 + ", " + p2 + ", " + p3);
                 builder.append(p1).append(" " ).append(p2).append(" " ).append(p3);
             }
-            log("write: 序列化完成");
         }
 
-
+        @Override
+        public void afterRead() {
+            // 无需额外处理
+        }
         
         // 更新嵌套代码时清除缓存
         public void setNestedCode(String nestedCode) {
@@ -813,182 +797,67 @@ public class LNestedLogic {
         
         public static void create() {
             LAssembler.customParsers.put("nestedlogic", params -> {
-                log("create: 开始解析指令，参数数量: " + params.length);
-                for (int i = 0; i < params.length; i++) {
-                    log("create: 参数[" + i + "]: " + params[i]);
-                }
-                
                 LNestedLogicStatement stmt = new LNestedLogicStatement();
-                log("create: 新建语句，默认 UID: " + stmt.uniqueId);
                 
                 // 处理旧格式兼容性
                 if (params.length >= 2) {
                     try {
                         stmt.type = NestedLogicType.valueOf(params[1]);
-                        log("create: 解析指令类型: " + stmt.type.name());
                     } catch (IllegalArgumentException e) {
                         stmt.type = NestedLogicType.call;
-                        log("create: 解析指令类型失败，使用默认类型: call");
                         if (params.length >= 3) {
                             stmt.nestedCode = params[2];
-                            log("create: 直接设置嵌套代码: " + params[2]);
                         }
-                        // 处理 UID
-                        handleUid(stmt);
-                        log("create: 旧格式处理完成，返回语句");
                         return stmt;
                     }
                 }
                 
                 if (stmt.type == NestedLogicType.call) {
-                    log("create: 处理 call 指令");
-                    // 检查是否有 UID 参数
-                    if (params.length >= 3) {
-                        try {
-                            // 尝试解析第二个参数作为 UID
-                            String potentialUid = params[2];
-                            log("create: 解析 UID 参数: " + potentialUid);
-                            if (potentialUid != null && !potentialUid.isEmpty()) {
-                                stmt.uniqueId = potentialUid;
-                                log("create: 设置 UID: " + stmt.uniqueId);
-                            }
-                        } catch (Exception e) {
-                            log("create: 解析 UID 失败: " + e.getMessage());
-                        }
-                    } else {
-                        log("create: 参数不足，将在 handleUid 中生成 UID");
-                    }
-                    // 处理 UID
-                    handleUid(stmt);
+                    if (params.length >= 3) stmt.uniqueId = params[2];
                     
-                    // 处理逻辑名称和嵌套代码
                     if (params.length >= 4) {
-                        log("create: 处理逻辑名称和嵌套代码");
                         int codeIndex = -1;
                         for (int i = 3; i < params.length; i++) {
                             if (params[i].startsWith("\"")) {
                                 codeIndex = i;
-                                log("create: 找到嵌套代码索引: " + codeIndex);
                                 break;
                             }
                         }
                         
                         if (codeIndex != -1) {
-                            log("create: 解析嵌套代码");
                             if (codeIndex > 3) {
-                                log("create: 解析逻辑名称，从索引 3 到 " + (codeIndex - 1));
                                 StringBuilder logicName = new StringBuilder();
                                 for (int i = 3; i < codeIndex; i++) {
                                     if (i > 3) logicName.append(" ");
                                     logicName.append(params[i]);
                                 }
                                 stmt.p1 = logicName.toString();
-                                log("create: 解析逻辑名称: " + stmt.p1);
                             }
                             
                             try {
                                 String rawCode = params[codeIndex];
-                                log("create: 原始嵌套代码: " + rawCode);
                                 String encoded = rawCode.substring(1, rawCode.length() - 1);
-                                log("create: Base64 编码的嵌套代码: " + encoded);
                                 byte[] decoded = Base64.getDecoder().decode(encoded);
                                 stmt.nestedCode = new String(decoded, StandardCharsets.UTF_8);
-                                log("create: 解码后的嵌套代码: " + stmt.nestedCode);
-                            } catch (Exception e) {
-                                log("create: 解码嵌套代码失败: " + e.getMessage());
+                            } catch (Exception ignored) {
                                 stmt.nestedCode = "";
                             }
                         } else {
-                            log("create: 未找到嵌套代码，使用默认值");
                             stmt.p1 = params.length > 3 ? params[3] : "";
-                            log("create: 逻辑名称: " + stmt.p1);
                             stmt.nestedCode = "";
                         }
                     }
                 } else {
-                    log("create: 处理非 call 指令");
-                    if (params.length >= 3) {
-                        stmt.p1 = params[2];
-                        log("create: 参数 1: " + stmt.p1);
-                    }
-                    if (params.length >= 4) {
-                        stmt.p2 = params[3];
-                        log("create: 参数 2: " + stmt.p2);
-                    }
-                    if (params.length >= 5) {
-                        stmt.p3 = params[4];
-                        log("create: 参数 3: " + stmt.p3);
-                    }
+                    if (params.length >= 3) stmt.p1 = params[2];
+                    if (params.length >= 4) stmt.p2 = params[3];
+                    if (params.length >= 5) stmt.p3 = params[4];
                 }
                 
-                log("create: 解析完成，返回语句");
+                stmt.afterRead();
                 return stmt;
             });
             
             LogicIO.allStatements.add(LNestedLogicStatement::new);
-            log("create: 注册自定义解析器和语句完成");
-        }
-        
-        /** 处理 UID 逻辑 */
-        private static void handleUid(LNestedLogicStatement stmt) {
-            // 检查 UID 是否为空
-            if (stmt.uniqueId.isEmpty()) {
-                // 生成新的 UUID
-                String newUid = UUID.randomUUID().toString();
-                stmt.uniqueId = newUid;
-                log("handleUid: UID 为空，生成新 UID: " + newUid);
-                // 存储到全局映射
-                storeUid(stmt, newUid);
-            } else {
-                // UID 不为空，检查是否与当前实例匹配
-                boolean found = false;
-                uidReadLock.lock();
-                try {
-                    for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
-                        LNestedLogicStatement existingStmt = entry.key.get();
-                        if (existingStmt == stmt) {
-                            // 找到匹配的实例，使用现有 UID
-                            log("handleUid: 找到匹配的实例，使用现有 UID: " + stmt.uniqueId);
-                            found = true;
-                            break;
-                        }
-                    }
-                } finally {
-                    uidReadLock.unlock();
-                }
-                
-                if (!found) {
-                    // 未找到匹配的实例，生成新 UID
-                    String newUid = UUID.randomUUID().toString();
-                    log("handleUid: 未找到匹配的实例，生成新 UID: " + newUid);
-                    stmt.uniqueId = newUid;
-                    // 存储到全局映射
-                    storeUid(stmt, newUid);
-                }
-            }
-        }
-        
-        /** 存储 UID 到全局映射 */
-        private static void storeUid(LNestedLogicStatement stmt, String uid) {
-            uidWriteLock.lock();
-            try {
-                // 清理过期的弱引用
-                java.util.List<java.lang.ref.WeakReference<LNestedLogicStatement>> toRemove = new java.util.ArrayList<>();
-                for (arc.struct.ObjectMap.Entry<java.lang.ref.WeakReference<LNestedLogicStatement>, String> entry : uidMap) {
-                    if (entry.key.get() == null) {
-                        toRemove.add(entry.key);
-                    }
-                }
-                for (java.lang.ref.WeakReference<LNestedLogicStatement> ref : toRemove) {
-                    uidMap.remove(ref);
-                }
-                
-                // 存储新的映射
-                uidMap.put(new java.lang.ref.WeakReference<>(stmt), uid);
-                log("storeUid: 存储 UID 到全局映射: " + uid);
-            } finally {
-                uidWriteLock.unlock();
-            }
         }
     }
 }
