@@ -800,58 +800,57 @@ public class LNestedLogic {
                     // 检查是否有 UID 参数
                     if (params.length >= 3) {
                         try {
-                            // 尝试解析第二个参数作为 UID
                             String potentialUid = params[2];
                             log("create: 解析 UID 参数: " + potentialUid);
-                            
-                            // 判断 uid 是否为 null
+
                             if (potentialUid == null) {
                                 potentialUid = UUID.randomUUID().toString();
                                 log("create: UID 为 null，生成新的 UUID: " + potentialUid);
                             } else {
-                                //分别标记两个copy方法是否存在，需同时满足才判定为复制操作
+                                //判断调用栈是否包含复制操作的特征片段（覆盖所有触发方式）
+                                boolean isCopyOperation = false;
+                                StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+                                
+                                // 标记是否找到两个核心复制特征（覆盖所有触发方式）
                                 boolean hasLStatementCopy = false;
                                 boolean hasLCanvasElemCopy = false;
-                                
-                                // 获取调用栈并遍历（不提前break，确保检查所有元素）
-                                StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-                                for (StackTraceElement element : stackTrace) {
-                                    String className = element.getClassName();
-                                    String methodName = element.getMethodName();
-                                    
-                                    // 检查LStatement.copy方法
-                                    if (className.equals("mindustry.logic.LStatement") && methodName.equals("copy")) {
+
+                                // 遍历所有栈元素，打印栈信息（方便你调试查看所有栈元素）
+                                log("create: 开始遍历调用栈，共 " + stackTrace.length + " 个元素");
+                                for (int i = 0; i < stackTrace.length; i++) {
+                                    StackTraceElement element = stackTrace[i];
+                                    String stackElementStr = element.toString(); // 获取和日志一致的完整栈字符串
+                                    log("create: 栈元素[" + i + "]: " + stackElementStr);
+
+                                    // 匹配所有包含LStatement.copy的场景（直接调用/Lambda/行号）
+                                    if (stackElementStr.contains("mindustry.logic.LStatement.copy")) {
                                         hasLStatementCopy = true;
                                     }
-                                    // 检查LCanvas$StatementElem.copy方法（内部类名需和运行时一致）
-                                    if (className.equals("mindustry.logic.LCanvas$StatementElem") && methodName.equals("copy")) {
-                                        hasLCanvasElemCopy = true;
+                                    // 匹配所有包含LCanvas$StatementElem.copy的场景（直接调用/Lambda/行号）
+                                    if (stackElementStr.contains("mindustry.logic.LCanvas$StatementElem.copy")) {
+                                        hasLStatementCopy = true;
                                     }
                                 }
-                                
-                                // 核心判断：必须同时包含两个copy方法才判定为复制操作
-                                boolean isCopyOperation = hasLStatementCopy && hasLCanvasElemCopy;
-                                log("create: 调用栈检查结果 - LStatement.copy存在: " + hasLStatementCopy + 
-                                    ", LCanvas$StatementElem.copy存在: " + hasLCanvasElemCopy + 
-                                    ", 判定为复制操作: " + isCopyOperation);
-                                
-                                // 仅当判定为复制操作时，生成新UUID
+
+                                // 核心判断：必须同时找到两个复制特征（覆盖所有触发方式）
+                                isCopyOperation = hasLStatementCopy && hasLCanvasElemCopy;
+                                log("create: 复制操作判定结果 - 包含LStatement.copy: " + hasLStatementCopy + 
+                                    ", 包含LCanvas$StatementElem.copy: " + hasLCanvasElemCopy + 
+                                    ", 最终判定为复制操作: " + isCopyOperation);
+
                                 if (isCopyOperation) {
                                     potentialUid = UUID.randomUUID().toString();
                                     log("create: 调用栈包含 copy 方法，生成新的 UUID: " + potentialUid);
                                 }
                             }
-                            
-                            // 设置最终的 uniqueId
+
                             stmt.uniqueId = potentialUid;
                             log("create: 设置 UID: " + stmt.uniqueId);
                         } catch (Exception e) {
-                            // 解析失败，使用构造函数生成的 UID，并打印异常日志便于调试
                             log("create: 解析 UID 失败，异常信息: " + e.getMessage());
                             log("create: 解析 UID 失败，使用构造函数生成的 UID: " + stmt.uniqueId);
                         }
                     } else {
-                        // 没有足够的参数，使用构造函数生成的 UID
                         log("create: 参数不足（当前参数数: " + params.length + "），使用构造函数生成的 UID: " + stmt.uniqueId);
                     }
                     // 处理逻辑名称和嵌套代码
