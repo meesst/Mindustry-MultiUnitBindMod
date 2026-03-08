@@ -811,9 +811,10 @@ public class LNestedLogic {
                                 boolean isCopyOperation = false;
                                 StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
                                 
-                                // 标记是否找到两个核心复制特征（覆盖所有触发方式）
-                                boolean hasLStatementCopy = false;
-                                boolean hasLCanvasElemCopy = false;
+                                // 标记是否找到复制特征（覆盖所有触发方式）
+                                boolean hasDirectCopy = false; // 直接复制操作
+                                boolean hasLogicDialogSetup = false; // 通过LogicDialog.setup触发
+                                boolean hasLogicBlockUpdate = false; // 通过LogicBlock.updateCode触发
 
                                 // 遍历所有栈元素，打印栈信息（方便你调试查看所有栈元素）
                                 log("create: 开始遍历调用栈，共 " + stackTrace.length + " 个元素");
@@ -822,20 +823,28 @@ public class LNestedLogic {
                                     String stackElementStr = element.toString(); // 获取和日志一致的完整栈字符串
                                     log("create: 栈元素[" + i + "]: " + stackElementStr);
 
-                                    // 匹配所有包含LStatement.copy的场景（直接调用/Lambda/行号）
-                                    if (stackElementStr.contains("mindustry.logic.LStatement.copy")) {
-                                        hasLStatementCopy = true;
+                                    // 1. 直接复制操作
+                                    if (stackElementStr.contains("mindustry.logic.LStatement.copy") || 
+                                        stackElementStr.contains("mindustry.logic.LCanvas$StatementElem.copy")) {
+                                        hasDirectCopy = true;
                                     }
-                                    // 匹配所有包含LCanvas$StatementElem.copy的场景（直接调用/Lambda/行号）
-                                    if (stackElementStr.contains("mindustry.logic.LCanvas$StatementElem.copy")) {
-                                        hasLCanvasElemCopy = true;
+                                    // 2. 通过LogicDialog.setup触发的复制
+                                    if (stackElementStr.contains("mindustry.logic.LogicDialog") && 
+                                        stackElementStr.contains("setup")) {
+                                        hasLogicDialogSetup = true;
+                                    }
+                                    // 3. 通过LogicBlock.updateCode触发的复制
+                                    if (stackElementStr.contains("mindustry.world.blocks.logic.LogicBlock$LogicBuild") && 
+                                        stackElementStr.contains("updateCode")) {
+                                        hasLogicBlockUpdate = true;
                                     }
                                 }
 
-                                // 核心判断：必须同时找到两个复制特征（覆盖所有触发方式）
-                                isCopyOperation = hasLStatementCopy && hasLCanvasElemCopy;
-                                log("create: 复制操作判定结果 - 包含LStatement.copy: " + hasLStatementCopy + 
-                                    ", 包含LCanvas$StatementElem.copy: " + hasLCanvasElemCopy + 
+                                // 核心判断：满足任一复制触发条件
+                                isCopyOperation = hasDirectCopy || hasLogicDialogSetup || hasLogicBlockUpdate;
+                                log("create: 复制操作判定结果 - 直接复制: " + hasDirectCopy + 
+                                    ", LogicDialog.setup: " + hasLogicDialogSetup + 
+                                    ", LogicBlock.updateCode: " + hasLogicBlockUpdate + 
                                     ", 最终判定为复制操作: " + isCopyOperation);
 
                                 if (isCopyOperation) {
