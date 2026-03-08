@@ -828,7 +828,7 @@ public class LNestedLogic {
                                     }
                                     // 匹配所有包含LCanvas$StatementElem.copy的场景（直接调用/Lambda/行号）
                                     if (stackElementStr.contains("mindustry.logic.LCanvas$StatementElem.copy")) {
-                                        hasLStatementCopy = true;
+                                        hasLCanvasElemCopy = true;
                                     }
                                 }
 
