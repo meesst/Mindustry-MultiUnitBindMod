@@ -2,12 +2,10 @@ package logicExtend;
 
 import arc.Core;
 import arc.func.Cons;
-import arc.util.Reflect;
 import mindustry.mod.Mod;
 import mindustry.ui.dialogs.SettingsMenuDialog;
 import mindustry.ui.Styles;
 import arc.scene.ui.layout.Table;
-import mindustry.world.blocks.logic.LogicBlock;
 
 public class LEMain extends Mod {
     public LEMain() {}
@@ -45,9 +43,6 @@ public class LEMain extends Mod {
 
     @Override
     public void loadContent() {
-        // 将逻辑处理器压缩后代码大小限制从 16000 改为 32000
-        Reflect.set(LogicBlock.class, "maxCompressedLen", 32000);
-
         LStringMerge.StringMergeStatement.create();
         LAmmo.CreateAmmoStatement.create();
         LAmmo.SetAmmoStatement.create();
